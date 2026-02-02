@@ -49,29 +49,54 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
     const original = h.trim();
     
     // Map common variations to standard keys (English and Nepali)
-    // Serial Number
-    if (lower.includes('ward') || lower === 'ward no') headerMap['wardNo'] = idx;
-    else if (original === 'सि.नं.' || lower.includes('sn') || lower.includes('s.n')) headerMap['sn'] = idx;
+    // Serial Number - MUST check before other patterns
+    if (original === 'सि.नं.' || original === 'सि.नं' || original === 'क्र.सं.' || lower === 'sn' || lower === 's.n' || lower === 's.n.') {
+      headerMap['sn'] = idx;
+    }
     // Voter ID
-    else if (original === 'मतदाता नं' || lower.includes('voter id') || lower.includes('voter no') || lower === 'id') headerMap['voterId'] = idx;
+    else if (original === 'मतदाता नं' || original === 'मतदाता नं.' || lower.includes('voter id') || lower.includes('voter no') || lower === 'id') {
+      headerMap['voterId'] = idx;
+    }
     // Voter Name
-    else if (original === 'मतदाताको नाम' || lower.includes('voter name') || lower === 'name' || lower.includes('नाम')) headerMap['voterName'] = idx;
+    else if (original === 'मतदाताको नाम' || lower.includes('voter name') || lower === 'name') {
+      headerMap['voterName'] = idx;
+    }
     // Age
-    else if (original === 'उमेर(वर्ष)' || original === 'उमेर' || lower === 'age' || lower.includes('उमेर')) headerMap['age'] = idx;
+    else if (original === 'उमेर(वर्ष)' || original === 'उमेर' || lower === 'age') {
+      headerMap['age'] = idx;
+    }
     // Gender
-    else if (original === 'लिङ्ग' || lower === 'gender' || lower === 'sex' || lower.includes('लिंग')) headerMap['gender'] = idx;
+    else if (original === 'लिङ्ग' || lower === 'gender' || lower === 'sex') {
+      headerMap['gender'] = idx;
+    }
     // Spouse
-    else if (original === 'पति/पत्नीको नाम' || lower.includes('spouse') || lower.includes('पति') || lower.includes('पत्नी')) headerMap['spouse'] = idx;
-    // Parents
-    else if (original === 'पिता/माताको नाम' || lower.includes('parent') || lower.includes('father') || lower.includes('बुबा') || lower.includes('आमा') || lower.includes('पिता') || lower.includes('माता')) headerMap['parents'] = idx;
+    else if (original === 'पति/पत्नीको नाम' || lower.includes('spouse')) {
+      headerMap['spouse'] = idx;
+    }
+    // Parents / Father-Mother
+    else if (original === 'पिता/माताको नाम' || lower.includes('parent') || lower.includes('father')) {
+      headerMap['parents'] = idx;
+    }
     // Caste
-    else if (original === 'जात' || lower === 'caste' || lower.includes('जात')) headerMap['caste'] = idx;
+    else if (original === 'जात' || lower === 'caste') {
+      headerMap['caste'] = idx;
+    }
     // Surname
-    else if (original === 'थर' || lower === 'surname' || lower.includes('थर')) headerMap['surname'] = idx;
+    else if (original === 'थर' || lower === 'surname') {
+      headerMap['surname'] = idx;
+    }
     // Status
-    else if (original === 'स्थिति' || lower === 'status' || lower.includes('स्थिति')) headerMap['status'] = idx;
+    else if (original === 'स्थिति' || lower === 'status') {
+      headerMap['status'] = idx;
+    }
+    // Ward Number
+    else if (lower.includes('ward') || lower === 'ward no') {
+      headerMap['wardNo'] = idx;
+    }
     // Center
-    else if (lower.includes('center') || lower.includes('centre')) headerMap['centerName'] = idx;
+    else if (lower.includes('center') || lower.includes('centre')) {
+      headerMap['centerName'] = idx;
+    }
     // Color codes
     else if (lower === 'green') headerMap['green'] = idx;
     else if (lower === 'yellow') headerMap['yellow'] = idx;
