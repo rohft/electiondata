@@ -19,6 +19,7 @@ const translations: Translations = {
   'nav.edit': { en: 'Edit Data', ne: 'डाटा सम्पादन' },
   'nav.export': { en: 'Export', ne: 'निर्यात' },
   'nav.settings': { en: 'Settings', ne: 'सेटिङहरू' },
+  'nav.templates': { en: 'Templates', ne: 'टेम्प्लेटहरू' },
 
   // Common
   'common.search': { en: 'Search...', ne: 'खोज्नुहोस्...' },
