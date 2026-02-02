@@ -45,15 +45,22 @@ const translations: Translations = {
   'dashboard.dataFiles': { en: 'Data Files', ne: 'डाटा फाइलहरू' },
 
   // Upload
-  'upload.title': { en: 'Upload CSV Data', ne: 'CSV डाटा अपलोड गर्नुहोस्' },
+  'upload.title': { en: 'Upload Voter Data', ne: 'मतदाता डाटा अपलोड गर्नुहोस्' },
   'upload.description': { en: 'Upload voter data files for municipalities and wards', ne: 'नगरपालिका र वडाहरूको लागि मतदाता डाटा फाइलहरू अपलोड गर्नुहोस्' },
   'upload.dragDrop': { en: 'Drag & drop files here, or click to browse', ne: 'फाइलहरू यहाँ तान्नुहोस् वा ब्राउज गर्न क्लिक गर्नुहोस्' },
-  'upload.supportedFormats': { en: 'Supported: CSV files', ne: 'समर्थित: CSV फाइलहरू' },
+  'upload.supportedFormats': { en: 'Supported: CSV, Excel, JSON', ne: 'समर्थित: CSV, Excel, JSON' },
   'upload.selectWard': { en: 'Select Ward', ne: 'वडा छान्नुहोस्' },
   'upload.selectMunicipality': { en: 'Select Municipality', ne: 'नगरपालिका छान्नुहोस्' },
   'upload.addWard': { en: 'Add Ward', ne: 'वडा थप्नुहोस्' },
   'upload.success': { en: 'Upload successful', ne: 'अपलोड सफल भयो' },
   'upload.error': { en: 'Upload failed', ne: 'अपलोड असफल भयो' },
+  'upload.step': { en: 'Step', ne: 'चरण' },
+  'upload.municipalityName': { en: 'Municipality Name', ne: 'नगरपालिकाको नाम' },
+  'upload.numberOfWards': { en: 'Number of Wards', ne: 'वडाहरूको संख्या' },
+  'upload.viewData': { en: 'View Data', ne: 'डाटा हेर्नुहोस्' },
+  'common.next': { en: 'Next', ne: 'अर्को' },
+  'common.back': { en: 'Back', ne: 'पछाडि' },
+  'segments.totalVoters': { en: 'Total Voters', ne: 'कुल मतदाताहरू' },
 
   // Segments
   'segments.title': { en: 'Data Segments', ne: 'डाटा खण्डहरू' },
