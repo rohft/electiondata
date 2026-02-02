@@ -12,6 +12,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from 'lucide-react';
 
 type NavItem = {
@@ -26,6 +27,7 @@ const navItems: NavItem[] = [
   { id: 'segments', icon: PieChart, labelKey: 'nav.segments' },
   { id: 'comparison', icon: GitCompare, labelKey: 'nav.comparison' },
   { id: 'infographics', icon: BarChart3, labelKey: 'nav.infographics' },
+  { id: 'templates', icon: FileText, labelKey: 'nav.templates' },
   { id: 'edit', icon: Edit3, labelKey: 'nav.edit' },
   { id: 'export', icon: Download, labelKey: 'nav.export' },
 ];

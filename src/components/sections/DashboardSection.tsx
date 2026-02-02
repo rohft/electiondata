@@ -2,11 +2,9 @@ import { useState, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useVoterData } from '@/contexts/VoterDataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Users, Building2, Map, FileSpreadsheet, TrendingUp, Activity, Plus, Upload } from 'lucide-react';
+import { Users, Building2, Map, FileSpreadsheet, TrendingUp, Activity, Upload } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { DashboardUploadWizard } from '@/components/upload/DashboardUploadWizard';
+import { Badge } from '@/components/ui/badge';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -20,12 +18,21 @@ const CHART_COLORS = [
 export const DashboardSection = () => {
   const { t } = useLanguage();
   const { municipalities, getTotalVoters, getTotalWards, getSegmentCounts } = useVoterData();
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const totalVoters = getTotalVoters();
   const totalWards = getTotalWards();
   const totalFiles = municipalities.reduce((acc, m) => acc + m.wards.length, 0);
   const segments = getSegmentCounts();
+
+  // Get all ward numbers across all municipalities
+  const allWardNumbers = useMemo(() => {
+    return municipalities.flatMap(m => 
+      m.wards.map(w => {
+        const match = w.name.match(/\d+/);
+        return match ? parseInt(match[0]) : 0;
+      }).filter(n => n > 0)
+    );
+  }, [municipalities]);
 
   const genderData = Object.entries(segments.byGender).map(([name, value]) => ({
     name: t(`segments.${name}`),
@@ -54,7 +61,8 @@ export const DashboardSection = () => {
       label: t('dashboard.totalWards'), 
       value: totalWards, 
       icon: Map,
-      color: 'bg-chart-3/10 text-chart-3'
+      color: 'bg-chart-3/10 text-chart-3',
+      tags: allWardNumbers
     },
     { 
       label: t('dashboard.dataFiles'), 
@@ -74,9 +82,24 @@ export const DashboardSection = () => {
             <Card key={index} className="card-shadow border-border/50">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
                     <p className="mt-1 text-3xl font-bold text-foreground counter-animate">{stat.value}</p>
+                    {/* Ward Tags */}
+                    {stat.tags && stat.tags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {stat.tags.slice(0, 8).map((wardNum, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs px-2 py-0">
+                            W{wardNum}
+                          </Badge>
+                        ))}
+                        {stat.tags.length > 8 && (
+                          <Badge variant="outline" className="text-xs px-2 py-0">
+                            +{stat.tags.length - 8}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.color}`}>
                     <Icon className="h-6 w-6" />
@@ -88,7 +111,7 @@ export const DashboardSection = () => {
         })}
       </div>
 
-      {/* Empty State with Upload Option */}
+      {/* Empty State */}
       {totalVoters === 0 && (
         <Card className="card-shadow border-border/50">
           <CardContent className="flex flex-col items-center justify-center py-16">
@@ -99,181 +122,150 @@ export const DashboardSection = () => {
             <p className="mt-2 text-center text-sm text-muted-foreground max-w-md">
               {t('upload.noDataDescription')}
             </p>
-            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="mt-6 gap-2">
-                  <Upload className="h-4 w-4" />
-                  {t('upload.uploadData')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{t('upload.title')}</DialogTitle>
-                </DialogHeader>
-                <DashboardUploadWizard onComplete={() => setUploadDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Go to <span className="font-medium text-accent">Upload Data</span> tab to start
+            </p>
           </CardContent>
         </Card>
       )}
 
       {/* Charts Grid */}
       {totalVoters > 0 && (
-        <>
-          {/* Quick Upload Button */}
-          <div className="flex justify-end">
-            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  {t('upload.addMoreData')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{t('upload.title')}</DialogTitle>
-                </DialogHeader>
-                <DashboardUploadWizard onComplete={() => setUploadDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Gender Distribution */}
-            <Card className="card-shadow border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <Activity className="h-4 w-4 text-accent" />
-                  {t('segments.byGender')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={genderData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        {genderData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: 'var(--radius)'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4 flex justify-center gap-6">
-                  {genderData.map((item, index) => (
-                    <div key={item.name} className="flex items-center gap-2">
-                      <div 
-                        className="h-3 w-3 rounded-full" 
-                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                      />
-                      <span className="text-sm text-muted-foreground">{item.name}: {item.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Age Distribution */}
-            <Card className="card-shadow border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <TrendingUp className="h-4 w-4 text-accent" />
-                  {t('segments.byAge')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={ageData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis 
-                        dataKey="range" 
-                        tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                        axisLine={{ stroke: 'hsl(var(--border))' }}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                        axisLine={{ stroke: 'hsl(var(--border))' }}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: 'var(--radius)'
-                        }}
-                      />
-                      <Bar 
-                        dataKey="count" 
-                        fill="hsl(var(--chart-2))" 
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Newar vs Non-Newar */}
-            <Card className="card-shadow border-border/50 lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold">
-                  {t('segments.newar')} vs {t('segments.nonNewar')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <div className="mb-2 flex justify-between text-sm">
-                      <span className="font-medium text-foreground">{t('segments.newar')}</span>
-                      <span className="text-muted-foreground">{segments.newarVsNonNewar.newar}</span>
-                    </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-muted">
-                      <div 
-                        className="h-full rounded-full bg-chart-2 transition-all duration-500"
-                        style={{ 
-                          width: segments.total > 0 
-                            ? `${(segments.newarVsNonNewar.newar / segments.total) * 100}%` 
-                            : '0%' 
-                        }}
-                      />
-                    </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Gender Distribution */}
+          <Card className="card-shadow border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <Activity className="h-4 w-4 text-accent" />
+                {t('segments.byGender')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={genderData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {genderData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: 'var(--radius)'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 flex justify-center gap-6">
+                {genderData.map((item, index) => (
+                  <div key={item.name} className="flex items-center gap-2">
+                    <div 
+                      className="h-3 w-3 rounded-full" 
+                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                    />
+                    <span className="text-sm text-muted-foreground">{item.name}: {item.value}</span>
                   </div>
-                  <div className="flex-1">
-                    <div className="mb-2 flex justify-between text-sm">
-                      <span className="font-medium text-foreground">{t('segments.nonNewar')}</span>
-                      <span className="text-muted-foreground">{segments.newarVsNonNewar.nonNewar}</span>
-                    </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-muted">
-                      <div 
-                        className="h-full rounded-full bg-chart-1 transition-all duration-500"
-                        style={{ 
-                          width: segments.total > 0 
-                            ? `${(segments.newarVsNonNewar.nonNewar / segments.total) * 100}%` 
-                            : '0%' 
-                        }}
-                      />
-                    </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Age Distribution */}
+          <Card className="card-shadow border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <TrendingUp className="h-4 w-4 text-accent" />
+                {t('segments.byAge')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={ageData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="range" 
+                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: 'var(--radius)'
+                      }}
+                    />
+                    <Bar 
+                      dataKey="count" 
+                      fill="hsl(var(--chart-2))" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Newar vs Non-Newar */}
+          <Card className="card-shadow border-border/50 lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">
+                {t('segments.newar')} vs {t('segments.nonNewar')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="mb-2 flex justify-between text-sm">
+                    <span className="font-medium text-foreground">{t('segments.newar')}</span>
+                    <span className="text-muted-foreground">{segments.newarVsNonNewar.newar}</span>
+                  </div>
+                  <div className="h-3 overflow-hidden rounded-full bg-muted">
+                    <div 
+                      className="h-full rounded-full bg-chart-2 transition-all duration-500"
+                      style={{ 
+                        width: segments.total > 0 
+                          ? `${(segments.newarVsNonNewar.newar / segments.total) * 100}%` 
+                          : '0%' 
+                      }}
+                    />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </>
+                <div className="flex-1">
+                  <div className="mb-2 flex justify-between text-sm">
+                    <span className="font-medium text-foreground">{t('segments.nonNewar')}</span>
+                    <span className="text-muted-foreground">{segments.newarVsNonNewar.nonNewar}</span>
+                  </div>
+                  <div className="h-3 overflow-hidden rounded-full bg-muted">
+                    <div 
+                      className="h-full rounded-full bg-chart-1 transition-all duration-500"
+                      style={{ 
+                        width: segments.total > 0 
+                          ? `${(segments.newarVsNonNewar.nonNewar / segments.total) * 100}%` 
+                          : '0%' 
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

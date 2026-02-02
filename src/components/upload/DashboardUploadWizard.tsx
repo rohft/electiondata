@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useVoterData } from '@/contexts/VoterDataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Building2, Hash, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, Hash, Check, AlertCircle, ImagePlus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WardFileUploader } from './WardFileUploader';
 import { parseFile, ParsedRecord } from '@/lib/fileParser';
@@ -29,8 +29,29 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
   const { addWardData } = useVoterData();
   const [step, setStep] = useState(1);
   const [municipalityName, setMunicipalityName] = useState('');
+  const [municipalityLogo, setMunicipalityLogo] = useState<string | null>(null);
   const [wardCount, setWardCount] = useState<number | ''>('');
   const [wardsData, setWardsData] = useState<WardUploadData[]>([]);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: 'Error',
+          description: 'Logo file must be less than 2MB',
+          variant: 'destructive'
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setMunicipalityLogo(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const totalSteps = 3;
   const progress = (step / totalSteps) * 100;
@@ -135,6 +156,48 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
             <Building2 className="h-5 w-5" />
             <span className="text-sm">{t('upload.step')} 1 {t('common.of')} {totalSteps}</span>
           </div>
+          
+          {/* Municipality Logo Upload */}
+          <div className="space-y-3">
+            <Label className="text-base font-medium">Municipality Logo (Optional)</Label>
+            <div className="flex items-center gap-4">
+              {municipalityLogo ? (
+                <div className="relative">
+                  <img 
+                    src={municipalityLogo} 
+                    alt="Municipality Logo" 
+                    className="h-20 w-20 object-contain rounded-lg border border-border"
+                  />
+                  <button
+                    onClick={() => setMunicipalityLogo(null)}
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => logoInputRef.current?.click()}
+                  className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-accent transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-accent"
+                >
+                  <ImagePlus className="h-6 w-6" />
+                  <span className="text-xs">Add Logo</span>
+                </button>
+              )}
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoUpload}
+                className="hidden"
+              />
+              <div className="text-sm text-muted-foreground">
+                <p>Upload municipality logo</p>
+                <p className="text-xs">PNG, JPG up to 2MB</p>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-3">
             <Label htmlFor="municipality-name" className="text-base font-medium">
               {t('upload.municipalityName')}

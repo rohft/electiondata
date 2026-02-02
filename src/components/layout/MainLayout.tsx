@@ -7,9 +7,11 @@ import { UploadSection } from '@/components/sections/UploadSection';
 import { SegmentsSection } from '@/components/sections/SegmentsSection';
 import { ComparisonSection } from '@/components/sections/ComparisonSection';
 import { InfographicsSection } from '@/components/sections/InfographicsSection';
+import { TemplatesSection } from '@/components/sections/TemplatesSection';
 import { EditSection } from '@/components/sections/EditSection';
 import { ExportSection } from '@/components/sections/ExportSection';
 import { SettingsSection } from '@/components/sections/SettingsSection';
+import { HomePage } from '@/pages/Home';
 
 const sectionTitles: Record<string, { titleKey: string; subtitleKey?: string }> = {
   dashboard: { titleKey: 'dashboard.title', subtitleKey: 'dashboard.subtitle' },
@@ -17,14 +19,20 @@ const sectionTitles: Record<string, { titleKey: string; subtitleKey?: string }> 
   segments: { titleKey: 'segments.title' },
   comparison: { titleKey: 'comparison.title' },
   infographics: { titleKey: 'infographics.title' },
+  templates: { titleKey: 'nav.templates' },
   edit: { titleKey: 'nav.edit' },
   export: { titleKey: 'export.title' },
   settings: { titleKey: 'nav.settings' },
 };
 
 export const MainLayout = () => {
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [activeSection, setActiveSection] = useState('home');
   const { t } = useLanguage();
+
+  // Show homepage when activeSection is 'home'
+  if (activeSection === 'home') {
+    return <HomePage onEnterDashboard={() => setActiveSection('dashboard')} />;
+  }
 
   const currentSection = sectionTitles[activeSection] || sectionTitles.dashboard;
 
@@ -40,6 +48,8 @@ export const MainLayout = () => {
         return <ComparisonSection />;
       case 'infographics':
         return <InfographicsSection />;
+      case 'templates':
+        return <TemplatesSection />;
       case 'edit':
         return <EditSection />;
       case 'export':
