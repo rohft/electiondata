@@ -40,12 +40,18 @@ export const BulkSurnameReplace = ({
     });
   }, [voters, findText]);
 
+  // Safe string replacement (avoids regex injection)
+  const safeReplaceAll = (str: string, find: string, replace: string): string => {
+    if (!find) return str;
+    return str.split(find).join(replace);
+  };
+
   // Preview the replacement results
   const previewResults = useMemo(() => {
     return matchingVoters.map(voter => ({
       voter,
       oldSurname: voter.surname || '',
-      newSurname: (voter.surname || '').replace(new RegExp(findText, 'g'), replaceText)
+      newSurname: safeReplaceAll(voter.surname || '', findText, replaceText)
     }));
   }, [matchingVoters, findText, replaceText]);
 
@@ -64,7 +70,7 @@ export const BulkSurnameReplace = ({
     
     matchingVoters.forEach(voter => {
       const oldSurname = voter.surname || '';
-      const newSurname = oldSurname.replace(new RegExp(findText, 'g'), replaceText);
+      const newSurname = safeReplaceAll(oldSurname, findText, replaceText);
       
       if (oldSurname !== newSurname) {
         onReplace(municipalityId, wardId, voter.id, { surname: newSurname });
