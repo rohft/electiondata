@@ -12,7 +12,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Filter, Palette, Plus, Settings2, Edit3, Save, RotateCcw, Search, GripVertical, Check, AlertCircle } from 'lucide-react';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from '@/components/ui/context-menu';
+import { Users, Filter, Palette, Plus, Settings2, Edit3, Save, RotateCcw, Search, GripVertical, Check, AlertCircle, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CASTE_CATEGORIES, detectCasteFromName } from '@/lib/casteData';
 import { toast } from 'sonner';
@@ -66,8 +76,24 @@ interface SurnameGroup {
   voterIds: string[];
 }
 
-// Draggable Surname Item Component
-const DraggableSurname = ({ surname, count, caste, isOverlay = false }: { surname: string; count: number; caste: string; isOverlay?: boolean }) => {
+// Selectable Surname Item Component with right-click context menu
+const SelectableSurname = ({ 
+  surname, 
+  count, 
+  caste, 
+  isSelected,
+  onSelect,
+  onMoveToCaste,
+  isOverlay = false 
+}: { 
+  surname: string; 
+  count: number; 
+  caste: string; 
+  isSelected?: boolean;
+  onSelect?: () => void;
+  onMoveToCaste?: (targetCaste: string) => void;
+  isOverlay?: boolean 
+}) => {
   const {
     attributes,
     listeners,
@@ -85,9 +111,7 @@ const DraggableSurname = ({ surname, count, caste, isOverlay = false }: { surnam
 
   if (isOverlay) {
     return (
-      <div
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-background shadow-lg ring-2 ring-accent"
-      >
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-background shadow-lg ring-2 ring-accent">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
         <span className="font-medium text-sm">{surname}</span>
         <Badge variant="secondary" className="text-xs">{count}</Badge>
@@ -95,76 +119,195 @@ const DraggableSurname = ({ surname, count, caste, isOverlay = false }: { surnam
     );
   }
 
-  return (
+  const content = (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect?.();
+      }}
       className={cn(
-        "flex items-center gap-2 px-3 py-2 rounded-lg border bg-background cursor-grab active:cursor-grabbing transition-all",
-        isDragging && "opacity-50 ring-2 ring-accent"
+        "flex items-center gap-2 px-3 py-2 rounded-lg border bg-background cursor-pointer transition-all select-none",
+        isDragging && "opacity-50 ring-2 ring-accent",
+        isSelected && "ring-2 ring-primary bg-primary/10 border-primary"
       )}
     >
+      {isSelected && <Check className="h-3 w-3 text-primary" />}
       <GripVertical className="h-4 w-4 text-muted-foreground" />
       <span className="font-medium text-sm">{surname}</span>
       <Badge variant="secondary" className="text-xs">{count}</Badge>
     </div>
   );
+
+  // Wrap with context menu for right-click
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        {content}
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-56 bg-popover border">
+        <ContextMenuSub>
+          <ContextMenuSubTrigger className="flex items-center gap-2">
+            <ArrowRight className="h-4 w-4" />
+            Move to Caste
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-48 bg-popover border">
+            {CASTE_CATEGORIES.filter(cat => cat.name !== caste).map(cat => (
+              <ContextMenuItem 
+                key={cat.name}
+                onClick={() => onMoveToCaste?.(cat.name)}
+                className="cursor-pointer"
+              >
+                {cat.name} ({cat.nameNe})
+              </ContextMenuItem>
+            ))}
+            {caste !== 'Other' && (
+              <ContextMenuItem 
+                onClick={() => onMoveToCaste?.('Other')}
+                className="cursor-pointer"
+              >
+                Other (अन्य)
+              </ContextMenuItem>
+            )}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSeparator />
+        <ContextMenuItem className="text-muted-foreground text-xs" disabled>
+          {count} voters with this surname
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
 };
 
-// Caste Drop Zone Component
-const CasteDropZone = ({ 
+// Enhanced Caste Drop Zone with View All option
+const EnhancedCasteDropZone = ({ 
   casteName, 
   casteNameNe,
   surnames,
   isActive,
-  color
+  color,
+  selectedSurnames,
+  onSurnameSelect,
+  onMoveToCaste,
+  onMoveSelectedToCaste
 }: { 
   casteName: string; 
   casteNameNe: string;
   surnames: SurnameGroup[];
   isActive: boolean;
   color: string;
+  selectedSurnames: Set<string>;
+  onSurnameSelect: (key: string) => void;
+  onMoveToCaste: (surname: string, fromCaste: string, toCaste: string) => void;
+  onMoveSelectedToCaste: (toCaste: string) => void;
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: casteName,
   });
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const displayedSurnames = isExpanded ? surnames : surnames.slice(0, 8);
+  const hasMore = surnames.length > 8;
+  const selectedInThisCaste = surnames.filter(s => selectedSurnames.has(`${s.surname}__${s.caste}`)).length;
 
   return (
-    <div 
-      ref={setNodeRef}
-      className={cn(
-        "p-4 rounded-xl border-2 transition-all min-h-[120px]",
-        (isActive || isOver) ? "border-accent bg-accent/10 shadow-lg" : "border-dashed border-border"
-      )}
-      style={{ borderColor: (isActive || isOver) ? undefined : `${color}40` }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-        <h4 className="font-semibold">{casteName}</h4>
-        <span className="text-xs text-muted-foreground">({casteNameNe})</span>
-        <Badge variant="outline" className="ml-auto">{surnames.length}</Badge>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {surnames.slice(0, 8).map(s => (
-          <DraggableSurname 
-            key={`${s.surname}__${s.caste}`} 
-            surname={s.surname} 
-            count={s.count}
-            caste={s.caste}
-          />
-        ))}
-        {surnames.length > 8 && (
-          <Badge variant="secondary" className="text-xs">
-            +{surnames.length - 8} more
-          </Badge>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div 
+          ref={setNodeRef}
+          className={cn(
+            "p-4 rounded-xl border-2 transition-all min-h-[120px]",
+            (isActive || isOver) ? "border-accent bg-accent/10 shadow-lg" : "border-dashed border-border"
+          )}
+          style={{ borderColor: (isActive || isOver) ? undefined : `${color}40` }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+            <h4 className="font-semibold">{casteName}</h4>
+            <span className="text-xs text-muted-foreground">({casteNameNe})</span>
+            <Badge variant="outline" className="ml-auto">{surnames.length} surnames</Badge>
+            {selectedInThisCaste > 0 && (
+              <Badge variant="default" className="text-xs">{selectedInThisCaste} selected</Badge>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {displayedSurnames.map(s => (
+              <SelectableSurname 
+                key={`${s.surname}__${s.caste}`} 
+                surname={s.surname} 
+                count={s.count}
+                caste={s.caste}
+                isSelected={selectedSurnames.has(`${s.surname}__${s.caste}`)}
+                onSelect={() => onSurnameSelect(`${s.surname}__${s.caste}`)}
+                onMoveToCaste={(targetCaste) => onMoveToCaste(s.surname, s.caste, targetCaste)}
+              />
+            ))}
+            {surnames.length === 0 && (
+              <p className="text-sm text-muted-foreground italic">Drop surnames here</p>
+            )}
+          </div>
+          {hasMore && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-3 w-full gap-2"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="h-4 w-4" />
+                  Show Less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4" />
+                  View All ({surnames.length - 8} more)
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-56 bg-popover border">
+        {selectedInThisCaste > 0 && (
+          <>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="flex items-center gap-2">
+                <ArrowRight className="h-4 w-4" />
+                Move {selectedInThisCaste} selected to...
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-48 bg-popover border">
+                {CASTE_CATEGORIES.filter(cat => cat.name !== casteName).map(cat => (
+                  <ContextMenuItem 
+                    key={cat.name}
+                    onClick={() => onMoveSelectedToCaste(cat.name)}
+                    className="cursor-pointer"
+                  >
+                    {cat.name} ({cat.nameNe})
+                  </ContextMenuItem>
+                ))}
+                {casteName !== 'Other' && (
+                  <ContextMenuItem 
+                    onClick={() => onMoveSelectedToCaste('Other')}
+                    className="cursor-pointer"
+                  >
+                    Other (अन्य)
+                  </ContextMenuItem>
+                )}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuSeparator />
+          </>
         )}
-        {surnames.length === 0 && (
-          <p className="text-sm text-muted-foreground italic">Drop surnames here</p>
-        )}
-      </div>
-    </div>
+        <ContextMenuItem className="text-muted-foreground text-xs" disabled>
+          {surnames.reduce((acc, s) => acc + s.count, 0)} total voters in {casteName}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };
 
@@ -186,6 +329,9 @@ export const SegmentsSection = () => {
   const [editSurname, setEditSurname] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCasteEditor, setShowCasteEditor] = useState(false);
+  
+  // Multi-select state for surnames
+  const [selectedSurnames, setSelectedSurnames] = useState<Set<string>>(new Set());
   
   // Drag and drop state
   const [activeDragItem, setActiveDragItem] = useState<SurnameGroup | null>(null);
@@ -252,7 +398,6 @@ export const SegmentsSection = () => {
         count: data.count,
         surnames: Object.entries(data.surnames)
           .sort((a, b) => b[1] - a[1])
-          .slice(0, 10)
       }));
   }, [allVoters, getVoterCaste]);
 
@@ -393,6 +538,66 @@ export const SegmentsSection = () => {
     toast.success('Reset to auto-detected values');
   };
 
+  // Toggle surname selection
+  const toggleSurnameSelection = (key: string) => {
+    setSelectedSurnames(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle moving a single surname via context menu
+  const handleMoveSurnameToCaste = (surname: string, fromCaste: string, toCaste: string) => {
+    const affectedVoters = allVoters.filter(v => {
+      const { caste, surname: voterSurname } = getVoterCaste(v);
+      return voterSurname === surname && caste === fromCaste;
+    });
+    
+    if (affectedVoters.length === 0) return;
+    
+    setPendingChanges([{
+      surname,
+      fromCaste,
+      toCaste,
+      voterIds: affectedVoters.map(v => v.id)
+    }]);
+    setShowSaveDialog(true);
+  };
+
+  // Handle moving selected surnames via context menu
+  const handleMoveSelectedToCaste = (toCaste: string) => {
+    const changes: { surname: string; fromCaste: string; toCaste: string; voterIds: string[] }[] = [];
+    
+    selectedSurnames.forEach(key => {
+      const [surname, fromCaste] = key.split('__');
+      if (fromCaste === toCaste) return;
+      
+      const affectedVoters = allVoters.filter(v => {
+        const { caste, surname: voterSurname } = getVoterCaste(v);
+        return voterSurname === surname && caste === fromCaste;
+      });
+      
+      if (affectedVoters.length > 0) {
+        changes.push({
+          surname,
+          fromCaste,
+          toCaste,
+          voterIds: affectedVoters.map(v => v.id)
+        });
+      }
+    });
+    
+    if (changes.length > 0) {
+      setPendingChanges(changes);
+      setShowSaveDialog(true);
+    }
+  };
+
   // Drag and Drop handlers
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -469,6 +674,7 @@ export const SegmentsSection = () => {
     
     toast.success(`Updated ${pendingChanges.reduce((acc, c) => acc + c.voterIds.length, 0)} voter records`);
     setPendingChanges([]);
+    setSelectedSurnames(new Set());
     setShowSaveDialog(false);
   };
 
@@ -953,48 +1159,15 @@ export const SegmentsSection = () => {
                     const color = casteColors[index % casteColors.length];
                     const percentage = segments.total > 0 ? ((item.count / segments.total) * 100).toFixed(1) : 0;
                     return (
-                      <div key={item.caste} className="space-y-2">
-                        <div className="flex items-center gap-4">
-                          <span className="w-6 text-sm font-medium text-muted-foreground">{index + 1}</span>
-                          <div className="flex-1">
-                            <div className="flex justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-foreground">{item.caste}</span>
-                                <Badge 
-                                  variant="outline" 
-                                  className="text-xs"
-                                  style={{ borderColor: color, color }}
-                                >
-                                  {percentage}%
-                                </Badge>
-                              </div>
-                              <span className="text-sm text-muted-foreground">{item.count.toLocaleString()}</span>
-                            </div>
-                            <div className="h-2 overflow-hidden rounded-full bg-muted">
-                              <div 
-                                className="h-full rounded-full transition-all"
-                                style={{ 
-                                  width: casteDistribution[0] ? `${(item.count / casteDistribution[0].count) * 100}%` : '0%',
-                                  backgroundColor: color
-                                }}
-                              />
-                            </div>
-                            {/* Surnames under this caste */}
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {item.surnames.slice(0, 5).map(([surname, count]) => (
-                                <Badge key={surname} variant="secondary" className="text-xs">
-                                  {surname} ({count})
-                                </Badge>
-                              ))}
-                              {item.surnames.length > 5 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  +{item.surnames.length - 5} more
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <CasteItemWithAllSurnames
+                        key={item.caste}
+                        item={item}
+                        index={index}
+                        color={color}
+                        percentage={percentage}
+                        segments={segments}
+                        casteDistribution={casteDistribution}
+                      />
                     );
                   })}
                 </div>
@@ -1066,21 +1239,37 @@ export const SegmentsSection = () => {
           </Card>
         </TabsContent>
 
-        {/* Drag and Drop Tab */}
+        {/* Enhanced Drag and Drop Tab with Multi-select and Right-click */}
         <TabsContent value="dragDrop" className="fade-in">
           <Card className="card-shadow border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center justify-between text-base font-semibold">
                 <div className="flex items-center gap-2">
                   <GripVertical className="h-4 w-4" />
-                  Drag & Drop Surnames to Castes
+                  Organize Surnames by Caste
                   <Badge variant="secondary">Interactive</Badge>
                 </div>
-                {pendingChanges.length > 0 && (
-                  <Badge variant="default" className="gap-1">
-                    {pendingChanges.length} pending changes
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedSurnames.size > 0 && (
+                    <>
+                      <Badge variant="default" className="gap-1">
+                        {selectedSurnames.size} selected
+                      </Badge>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setSelectedSurnames(new Set())}
+                      >
+                        Clear Selection
+                      </Button>
+                    </>
+                  )}
+                  {pendingChanges.length > 0 && (
+                    <Badge variant="default" className="gap-1">
+                      {pendingChanges.length} pending changes
+                    </Badge>
+                  )}
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1088,9 +1277,12 @@ export const SegmentsSection = () => {
                 <p className="text-center text-muted-foreground py-8">Upload data to organize castes</p>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Drag surnames between caste categories to reassign them. Changes will be applied to all voters with that surname.
-                  </p>
+                  <div className="p-3 bg-muted/30 rounded-lg text-sm text-muted-foreground space-y-1">
+                    <p>• <strong>Click</strong> surnames to select/deselect multiple</p>
+                    <p>• <strong>Right-click</strong> on a surname or caste box to move selected items</p>
+                    <p>• <strong>Drag</strong> individual surnames to move them between castes</p>
+                    <p>• Click <strong>"View All"</strong> to see all surnames in each caste</p>
+                  </div>
                   
                   <DndContext
                     sensors={sensors}
@@ -1105,12 +1297,16 @@ export const SegmentsSection = () => {
                           id={cat.name}
                           data-droppable="true"
                         >
-                          <CasteDropZone
+                          <EnhancedCasteDropZone
                             casteName={cat.name}
                             casteNameNe={cat.nameNe}
                             surnames={surnamesByCaste[cat.name] || []}
                             isActive={activeDragItem !== null}
                             color={casteColors[index % casteColors.length]}
+                            selectedSurnames={selectedSurnames}
+                            onSurnameSelect={toggleSurnameSelection}
+                            onMoveToCaste={handleMoveSurnameToCaste}
+                            onMoveSelectedToCaste={handleMoveSelectedToCaste}
                           />
                         </div>
                       ))}
@@ -1118,19 +1314,23 @@ export const SegmentsSection = () => {
                         id="Other"
                         data-droppable="true"
                       >
-                        <CasteDropZone
+                        <EnhancedCasteDropZone
                           casteName="Other"
                           casteNameNe="अन्य"
                           surnames={surnamesByCaste['Other'] || []}
                           isActive={activeDragItem !== null}
                           color="#888888"
+                          selectedSurnames={selectedSurnames}
+                          onSurnameSelect={toggleSurnameSelection}
+                          onMoveToCaste={handleMoveSurnameToCaste}
+                          onMoveSelectedToCaste={handleMoveSelectedToCaste}
                         />
                       </div>
                     </div>
                     
                     <DragOverlay>
                       {activeDragItem ? (
-                        <DraggableSurname 
+                        <SelectableSurname 
                           surname={activeDragItem.surname} 
                           count={activeDragItem.count}
                           caste={activeDragItem.caste}
@@ -1246,6 +1446,90 @@ export const SegmentsSection = () => {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+};
+
+// Component to show all surnames with expand functionality
+const CasteItemWithAllSurnames = ({ 
+  item, 
+  index, 
+  color, 
+  percentage, 
+  segments,
+  casteDistribution 
+}: { 
+  item: { caste: string; count: number; surnames: [string, number][] };
+  index: number;
+  color: string;
+  percentage: string | number;
+  segments: { total: number };
+  casteDistribution: { caste: string; count: number; surnames: [string, number][] }[];
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const displayedSurnames = isExpanded ? item.surnames : item.surnames.slice(0, 5);
+  const hasMore = item.surnames.length > 5;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-4">
+        <span className="w-6 text-sm font-medium text-muted-foreground">{index + 1}</span>
+        <div className="flex-1">
+          <div className="flex justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-foreground">{item.caste}</span>
+              <Badge 
+                variant="outline" 
+                className="text-xs"
+                style={{ borderColor: color, color }}
+              >
+                {percentage}%
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {item.surnames.length} surnames
+              </Badge>
+            </div>
+            <span className="text-sm text-muted-foreground">{item.count.toLocaleString()}</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div 
+              className="h-full rounded-full transition-all"
+              style={{ 
+                width: casteDistribution[0] ? `${(item.count / casteDistribution[0].count) * 100}%` : '0%',
+                backgroundColor: color
+              }}
+            />
+          </div>
+          {/* Surnames under this caste */}
+          <div className="mt-2 flex flex-wrap gap-1">
+            {displayedSurnames.map(([surname, count]) => (
+              <Badge key={surname} variant="secondary" className="text-xs">
+                {surname} ({count})
+              </Badge>
+            ))}
+          </div>
+          {hasMore && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 gap-1 h-7 text-xs"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="h-3 w-3" />
+                  Show Less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  View All {item.surnames.length} Surnames
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
