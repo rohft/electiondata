@@ -402,6 +402,7 @@ export const SegmentsSection = () => {
   }, [allVoters, getVoterCaste]);
 
   // Surname distribution with caste grouping for drag-drop
+  // Includes pending changes to show cut-paste behavior (remove from old, show in new)
   const surnamesByCaste = useMemo(() => {
     const result: Record<string, SurnameGroup[]> = {};
     
@@ -411,11 +412,24 @@ export const SegmentsSection = () => {
     });
     result['Other'] = [];
     
-    // Group voters by surname and their caste
+    // Build a map of pending moves: surname -> target caste
+    const pendingMoves: Record<string, string> = {};
+    pendingChanges.forEach(change => {
+      pendingMoves[`${change.surname}__${change.fromCaste}`] = change.toCaste;
+    });
+    
+    // Group voters by surname and their caste (with pending changes applied)
     const surnameMap: Record<string, { count: number; caste: string; voterIds: string[] }> = {};
     
     allVoters.forEach(voter => {
-      const { caste, surname } = getVoterCaste(voter);
+      let { caste, surname } = getVoterCaste(voter);
+      
+      // Check if this surname has a pending move from its current caste
+      const pendingKey = `${surname}__${caste}`;
+      if (pendingMoves[pendingKey]) {
+        caste = pendingMoves[pendingKey]; // Apply pending change visually
+      }
+      
       const key = `${surname}__${caste}`;
       
       if (!surnameMap[key]) {
@@ -445,7 +459,7 @@ export const SegmentsSection = () => {
     });
     
     return result;
-  }, [allVoters, getVoterCaste]);
+  }, [allVoters, getVoterCaste, pendingChanges]);
 
   // Surname distribution with overrides
   const surnameDistribution = useMemo(() => {
