@@ -121,18 +121,25 @@ export const AddWardDialog = ({
         id: crypto.randomUUID(),
         name: `Ward ${ward.wardNumber}`,
         municipality: municipalityName,
-        voters: ward.records.map(record => ({
-          id: crypto.randomUUID(),
-          municipality: municipalityName,
-          ward: `Ward ${ward.wardNumber}`,
-          fullName: record.voterName,
-          age: record.age,
-          gender: record.gender,
-          caste: '',
-          surname: record.voterName.split(' ').pop() || '',
-          isNewar: isNewarName(record.voterName),
-          originalData: record.originalData
-        })),
+        voters: ward.records.map(record => {
+          // Use surname from parsed data if available, otherwise extract from name
+          const surnameFromRecord = record.surname?.trim();
+          const surnameFromName = record.voterName.split(' ').pop() || '';
+          const surname = surnameFromRecord || surnameFromName;
+          
+          return {
+            id: crypto.randomUUID(),
+            municipality: municipalityName,
+            ward: `Ward ${ward.wardNumber}`,
+            fullName: record.voterName,
+            age: record.age,
+            gender: record.gender,
+            caste: record.caste || '',
+            surname: surname,
+            isNewar: isNewarName(record.voterName),
+            originalData: record.originalData
+          };
+        }),
         uploadedAt: new Date(),
         fileName: ward.fileName || ''
       };

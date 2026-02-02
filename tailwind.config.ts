@@ -15,6 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        nepali: ["'Kohinoor Devanagari'", "'Noto Sans Devanagari'", 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
