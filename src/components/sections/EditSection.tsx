@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useVoterData, VoterRecord } from '@/contexts/VoterDataContext';
+import { useVoterData, VoterRecord, VoterStatus } from '@/contexts/VoterDataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -13,11 +13,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Edit3, Undo2, Save, Search, X, FolderOpen, ChevronRight, 
   Users, UserPlus, FileText, Building2, Plus, Filter, Trash2, Eye, EyeOff,
   ChevronLeft, ChevronRight as ChevronRightIcon, ChevronsLeft, ChevronsRight,
-  Sparkles, Wand2, MapPin
+  Sparkles, Wand2, MapPin, Check, Heart, Plane, Skull, UserCheck, Accessibility
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,23 @@ const NOTE_TAGS = [
   'Youth Leader', 'Requires Follow-up', 'Key Contact', 'Community Leader'
 ];
 
+// Voter status options with colors and icons
+const VOTER_STATUS_OPTIONS: { 
+  value: VoterStatus; 
+  label: string; 
+  labelNe: string;
+  color: string; 
+  bgColor: string;
+  icon: React.ReactNode;
+}[] = [
+  { value: 'available', label: 'Available', labelNe: 'उपलब्ध', color: 'text-emerald-600', bgColor: 'bg-emerald-500/10 border-emerald-500/30', icon: <UserCheck className="h-3 w-3" /> },
+  { value: 'dead', label: 'Deceased', labelNe: 'मृत', color: 'text-slate-500', bgColor: 'bg-slate-500/10 border-slate-500/30', icon: <Skull className="h-3 w-3" /> },
+  { value: 'out_of_country', label: 'Out of Country', labelNe: 'विदेशमा', color: 'text-blue-600', bgColor: 'bg-blue-500/10 border-blue-500/30', icon: <Plane className="h-3 w-3" /> },
+  { value: 'married', label: 'Married (Moved)', labelNe: 'विवाहित', color: 'text-pink-600', bgColor: 'bg-pink-500/10 border-pink-500/30', icon: <Heart className="h-3 w-3" /> },
+  { value: 'older_citizen', label: 'Older Citizen', labelNe: 'वृद्ध नागरिक', color: 'text-amber-600', bgColor: 'bg-amber-500/10 border-amber-500/30', icon: <Users className="h-3 w-3" /> },
+  { value: 'disabled', label: 'Disabled', labelNe: 'अपाङ्ग', color: 'text-purple-600', bgColor: 'bg-purple-500/10 border-purple-500/30', icon: <Accessibility className="h-3 w-3" /> },
+];
+
 // Default visible columns
 const ALL_COLUMNS = [
   { key: 'sn', label: 'SN', labelNe: 'क्र.सं.' },
@@ -56,8 +74,70 @@ const ALL_COLUMNS = [
   { key: 'fatherName', label: "Father's Name", labelNe: 'बाबुको नाम' },
   { key: 'tole', label: 'Tole', labelNe: 'टोल' },
   { key: 'phone', label: 'Phone', labelNe: 'फोन' },
-  { key: 'status', label: 'Status', labelNe: 'स्थिति' },
+  { key: 'voterStatus', label: 'Status', labelNe: 'स्थिति' },
 ];
+
+// Voter Status Cell Component with dropdown to change status
+const VoterStatusCell = ({ 
+  status, 
+  voter,
+  municipalityId,
+  wardId,
+  onUpdate
+}: { 
+  status: VoterStatus; 
+  voter: VoterRecord;
+  municipalityId?: string;
+  wardId: string;
+  onUpdate: (mId: string, wId: string, vId: string, updates: Partial<VoterRecord>) => void;
+}) => {
+  const statusOption = VOTER_STATUS_OPTIONS.find(s => s.value === status) || VOTER_STATUS_OPTIONS[0];
+  
+  const handleStatusChange = (newStatus: VoterStatus) => {
+    if (municipalityId && wardId) {
+      onUpdate(municipalityId, wardId, voter.id, { voterStatus: newStatus });
+      toast.success(`Status updated to ${VOTER_STATUS_OPTIONS.find(s => s.value === newStatus)?.label}`);
+    }
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={cn(
+            "h-7 px-2 gap-1 border text-xs font-medium",
+            statusOption.bgColor,
+            statusOption.color
+          )}
+        >
+          {statusOption.icon}
+          {statusOption.label}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-1 bg-popover" align="start">
+        {VOTER_STATUS_OPTIONS.map(opt => (
+          <Button
+            key={opt.value}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "w-full justify-start gap-2 text-xs",
+              status === opt.value && "bg-accent/10",
+              opt.color
+            )}
+            onClick={() => handleStatusChange(opt.value)}
+          >
+            {opt.icon}
+            <span>{opt.label}</span>
+            <span className="text-muted-foreground ml-auto">({opt.labelNe})</span>
+          </Button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 // AI Family matching function - finds potential family members based on surname, age, and tole
 const findPotentialFamilyMembers = (
@@ -171,16 +251,17 @@ export const EditSection = () => {
   const [pageSize, setPageSize] = useState(25);
   
   // Column visibility
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['sn', 'voterId', 'fullName', 'age', 'gender', 'caste', 'surname', 'status']);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['sn', 'voterId', 'fullName', 'age', 'gender', 'caste', 'surname', 'voterStatus']);
   const [showColumnManager, setShowColumnManager] = useState(false);
   
-  // Filter states
-  const [filterGender, setFilterGender] = useState<string>('all');
-  const [filterCaste, setFilterCaste] = useState<string>('all');
-  const [filterSurname, setFilterSurname] = useState<string>('all');
-  const [filterAgeRange, setFilterAgeRange] = useState<string>('all');
+  // Multi-select filter states
+  const [filterGenders, setFilterGenders] = useState<string[]>([]);
+  const [filterCastes, setFilterCastes] = useState<string[]>([]);
+  const [filterSurnames, setFilterSurnames] = useState<string[]>([]);
+  const [filterAgeRanges, setFilterAgeRanges] = useState<string[]>([]);
   const [filterAgeMin, setFilterAgeMin] = useState<string>('');
   const [filterAgeMax, setFilterAgeMax] = useState<string>('');
+  const [filterVoterStatuses, setFilterVoterStatuses] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   
   // Predefined age ranges
@@ -236,43 +317,53 @@ export const EditSection = () => {
       );
     }
     
-    // Gender filter
-    if (filterGender !== 'all') {
-      filtered = filtered.filter(v => v.gender === filterGender);
+    // Gender filter (multi-select)
+    if (filterGenders.length > 0) {
+      filtered = filtered.filter(v => filterGenders.includes(v.gender));
     }
     
-    // Caste filter
-    if (filterCaste !== 'all') {
+    // Caste filter (multi-select)
+    if (filterCastes.length > 0) {
       filtered = filtered.filter(v => {
         const detected = detectCasteFromName(v.fullName);
-        return (v.caste || detected.caste) === filterCaste;
+        return filterCastes.includes(v.caste || detected.caste);
       });
     }
     
-    // Surname filter
-    if (filterSurname !== 'all') {
+    // Surname filter (multi-select)
+    if (filterSurnames.length > 0) {
       filtered = filtered.filter(v => {
         const detected = detectCasteFromName(v.fullName);
-        return (v.surname || detected.surname) === filterSurname;
+        return filterSurnames.includes(v.surname || detected.surname);
       });
     }
     
-    // Age filter - use predefined range or custom
-    if (filterAgeRange !== 'all') {
-      if (filterAgeRange === 'custom') {
+    // Voter status filter (multi-select)
+    if (filterVoterStatuses.length > 0) {
+      filtered = filtered.filter(v => filterVoterStatuses.includes(v.voterStatus || 'available'));
+    }
+    
+    // Age filter - use predefined ranges (multi-select) or custom
+    if (filterAgeRanges.length > 0) {
+      if (filterAgeRanges.includes('custom')) {
         const minAge = parseInt(filterAgeMin) || 0;
         const maxAge = parseInt(filterAgeMax) || 200;
         filtered = filtered.filter(v => v.age >= minAge && v.age <= maxAge);
       } else {
-        const range = AGE_RANGES.find(r => r.value === filterAgeRange);
-        if (range) {
-          filtered = filtered.filter(v => v.age >= range.min && v.age <= range.max);
-        }
+        filtered = filtered.filter(v => {
+          return filterAgeRanges.some(rangeValue => {
+            const range = AGE_RANGES.find(r => r.value === rangeValue);
+            if (range) {
+              return v.age >= range.min && v.age <= range.max;
+            }
+            return false;
+          });
+        });
       }
     }
     
     return filtered;
-  }, [allWardVoters, searchTerm, filterGender, filterCaste, filterSurname, filterAgeRange, filterAgeMin, filterAgeMax]);
+  }, [allWardVoters, searchTerm, filterGenders, filterCastes, filterSurnames, filterAgeRanges, filterAgeMin, filterAgeMax, filterVoterStatuses]);
 
   const paginatedVoters = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -422,13 +513,27 @@ export const EditSection = () => {
   };
 
   const clearFilters = () => {
-    setFilterGender('all');
-    setFilterCaste('all');
-    setFilterSurname('all');
-    setFilterAgeRange('all');
+    setFilterGenders([]);
+    setFilterCastes([]);
+    setFilterSurnames([]);
+    setFilterAgeRanges([]);
     setFilterAgeMin('');
     setFilterAgeMax('');
+    setFilterVoterStatuses([]);
     setSearchTerm('');
+  };
+
+  // Toggle filter value in multi-select array
+  const toggleFilter = (
+    current: string[], 
+    setter: React.Dispatch<React.SetStateAction<string[]>>, 
+    value: string
+  ) => {
+    if (current.includes(value)) {
+      setter(current.filter(v => v !== value));
+    } else {
+      setter([...current, value]);
+    }
   };
 
   // Helper to get cell value
@@ -459,7 +564,7 @@ export const EditSection = () => {
       case 'fatherName': return fatherName;
       case 'tole': return tole;
       case 'phone': return voter.phone || '-';
-      case 'status': return voter.isEdited ? 'Edited' : 'Original';
+      case 'voterStatus': return voter.voterStatus || 'available';
       default: return '-';
     }
   };
@@ -586,134 +691,195 @@ export const EditSection = () => {
 
           {/* Filter Panel */}
           {showFilters && selectedWard && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                <div className="space-y-2">
-                  <Label>Gender</Label>
-                  <Select value={filterGender} onValueChange={setFilterGender}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Genders</SelectItem>
-                      <SelectItem value="male">Male (पुरुष)</SelectItem>
-                      <SelectItem value="female">Female (महिला)</SelectItem>
-                      <SelectItem value="other">Other (अन्य)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Caste (जात)</Label>
-                  <Select value={filterCaste} onValueChange={setFilterCaste}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Castes</SelectItem>
-                      {CASTE_CATEGORIES.map(cat => (
-                        <SelectItem key={cat.name} value={cat.name}>
-                          {cat.name} ({cat.nameNe})
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="Other">Other (अन्य)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Surname (थर)</Label>
-                  <Select value={filterSurname} onValueChange={setFilterSurname}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Surnames</SelectItem>
-                      {uniqueSurnames.map(s => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Age Range (उमेर)</Label>
-                  <Select value={filterAgeRange} onValueChange={(v) => {
-                    setFilterAgeRange(v);
-                    if (v !== 'custom') {
-                      setFilterAgeMin('');
-                      setFilterAgeMax('');
-                    }
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AGE_RANGES.map(range => (
-                        <SelectItem key={range.value} value={range.value}>
-                          {range.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {filterAgeRange === 'custom' && (
-                  <div className="space-y-2">
-                    <Label>Custom Range</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        type="number" 
-                        placeholder="Min" 
-                        value={filterAgeMin}
-                        onChange={(e) => setFilterAgeMin(e.target.value)}
-                      />
-                      <Input 
-                        type="number" 
-                        placeholder="Max" 
-                        value={filterAgeMax}
-                        onChange={(e) => setFilterAgeMax(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>&nbsp;</Label>
-                  <Button variant="outline" className="w-full gap-2" onClick={clearFilters}>
-                    <X className="h-4 w-4" />
-                    Clear Filters
-                  </Button>
+            <div className="mt-4 pt-4 border-t border-border space-y-4">
+              {/* Gender Multi-select */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Gender (लिङ्ग)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'male', label: 'Male', labelNe: 'पुरुष' },
+                    { value: 'female', label: 'Female', labelNe: 'महिला' },
+                    { value: 'other', label: 'Other', labelNe: 'अन्य' },
+                  ].map(g => (
+                    <Button
+                      key={g.value}
+                      variant={filterGenders.includes(g.value) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleFilter(filterGenders, setFilterGenders, g.value)}
+                      className="gap-1"
+                    >
+                      {filterGenders.includes(g.value) && <Check className="h-3 w-3" />}
+                      {g.label} ({g.labelNe})
+                    </Button>
+                  ))}
                 </div>
               </div>
-              {/* Active filter summary */}
-              {(filterGender !== 'all' || filterCaste !== 'all' || filterSurname !== 'all' || filterAgeRange !== 'all') && (
-                <div className="mt-3 flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-muted-foreground">Active:</span>
-                  {filterGender !== 'all' && (
-                    <Badge variant="secondary" className="gap-1">
-                      Gender: {filterGender}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterGender('all')} />
-                    </Badge>
-                  )}
-                  {filterCaste !== 'all' && (
-                    <Badge variant="secondary" className="gap-1">
-                      Caste: {filterCaste}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCaste('all')} />
-                    </Badge>
-                  )}
-                  {filterSurname !== 'all' && (
-                    <Badge variant="secondary" className="gap-1">
-                      Surname: {filterSurname}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterSurname('all')} />
-                    </Badge>
-                  )}
-                  {filterAgeRange !== 'all' && (
-                    <Badge variant="secondary" className="gap-1">
-                      Age: {filterAgeRange}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => { setFilterAgeRange('all'); setFilterAgeMin(''); setFilterAgeMax(''); }} />
-                    </Badge>
+
+              {/* Caste Multi-select */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Caste (जात)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {[...CASTE_CATEGORIES, { name: 'Other', nameNe: 'अन्य' }].map(cat => (
+                    <Button
+                      key={cat.name}
+                      variant={filterCastes.includes(cat.name) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleFilter(filterCastes, setFilterCastes, cat.name)}
+                      className="gap-1"
+                    >
+                      {filterCastes.includes(cat.name) && <Check className="h-3 w-3" />}
+                      {cat.name} ({cat.nameNe})
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Surname Multi-select */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Surname (थर)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      {filterSurnames.length === 0 
+                        ? "Select Surnames..." 
+                        : `${filterSurnames.length} surname(s) selected`}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 max-h-60 overflow-y-auto bg-popover" align="start">
+                    <div className="space-y-1">
+                      {uniqueSurnames.map(s => (
+                        <div
+                          key={s}
+                          className={cn(
+                            "flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted",
+                            filterSurnames.includes(s) && "bg-accent/10"
+                          )}
+                          onClick={() => toggleFilter(filterSurnames, setFilterSurnames, s)}
+                        >
+                          <Checkbox checked={filterSurnames.includes(s)} className="pointer-events-none" />
+                          <span className="text-sm">{s}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                {filterSurnames.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {filterSurnames.map(s => (
+                      <Badge key={s} variant="secondary" className="gap-1">
+                        {s}
+                        <X className="h-3 w-3 cursor-pointer" onClick={() => toggleFilter(filterSurnames, setFilterSurnames, s)} />
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Age Range Multi-select */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Age Range (उमेर)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {AGE_RANGES.filter(r => r.value !== 'all').map(range => (
+                    <Button
+                      key={range.value}
+                      variant={filterAgeRanges.includes(range.value) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleFilter(filterAgeRanges, setFilterAgeRanges, range.value)}
+                      className="gap-1"
+                    >
+                      {filterAgeRanges.includes(range.value) && <Check className="h-3 w-3" />}
+                      {range.label}
+                    </Button>
+                  ))}
+                </div>
+                {filterAgeRanges.includes('custom') && (
+                  <div className="flex gap-2 mt-2">
+                    <Input 
+                      type="number" 
+                      placeholder="Min Age" 
+                      value={filterAgeMin}
+                      onChange={(e) => setFilterAgeMin(e.target.value)}
+                      className="w-24"
+                    />
+                    <span className="self-center">to</span>
+                    <Input 
+                      type="number" 
+                      placeholder="Max Age" 
+                      value={filterAgeMax}
+                      onChange={(e) => setFilterAgeMax(e.target.value)}
+                      className="w-24"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Voter Status Multi-select */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Voter Status (स्थिति)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {VOTER_STATUS_OPTIONS.map(status => (
+                    <Button
+                      key={status.value}
+                      variant={filterVoterStatuses.includes(status.value) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleFilter(filterVoterStatuses, setFilterVoterStatuses, status.value)}
+                      className={cn("gap-1", filterVoterStatuses.includes(status.value) ? "" : status.color)}
+                    >
+                      {filterVoterStatuses.includes(status.value) && <Check className="h-3 w-3" />}
+                      {status.icon}
+                      {status.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Clear Filters & Summary */}
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(filterGenders.length > 0 || filterCastes.length > 0 || filterSurnames.length > 0 || filterAgeRanges.length > 0 || filterVoterStatuses.length > 0) && (
+                    <>
+                      <span className="text-sm text-muted-foreground">Active filters:</span>
+                      {filterGenders.length > 0 && (
+                        <Badge variant="secondary" className="gap-1">
+                          {filterGenders.length} gender(s)
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterGenders([])} />
+                        </Badge>
+                      )}
+                      {filterCastes.length > 0 && (
+                        <Badge variant="secondary" className="gap-1">
+                          {filterCastes.length} caste(s)
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCastes([])} />
+                        </Badge>
+                      )}
+                      {filterSurnames.length > 0 && (
+                        <Badge variant="secondary" className="gap-1">
+                          {filterSurnames.length} surname(s)
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterSurnames([])} />
+                        </Badge>
+                      )}
+                      {filterAgeRanges.length > 0 && (
+                        <Badge variant="secondary" className="gap-1">
+                          {filterAgeRanges.length} age range(s)
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => { setFilterAgeRanges([]); setFilterAgeMin(''); setFilterAgeMax(''); }} />
+                        </Badge>
+                      )}
+                      {filterVoterStatuses.length > 0 && (
+                        <Badge variant="secondary" className="gap-1">
+                          {filterVoterStatuses.length} status(es)
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterVoterStatuses([])} />
+                        </Badge>
+                      )}
+                    </>
                   )}
                   <Badge variant="outline" className="border-accent text-accent">
                     Total: {voters.length} voters
                   </Badge>
                 </div>
-              )}
+                <Button variant="outline" size="sm" className="gap-2" onClick={clearFilters}>
+                  <X className="h-4 w-4" />
+                  Clear All
+                </Button>
+              </div>
             </div>
           )}
 
@@ -749,7 +915,7 @@ export const EditSection = () => {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="secondary">{voters.length} records</Badge>
-                {(filterGender !== 'all' || filterCaste !== 'all' || filterAgeMin || filterAgeMax || searchTerm) && (
+                {(filterGenders.length > 0 || filterCastes.length > 0 || filterSurnames.length > 0 || filterAgeRanges.length > 0 || filterVoterStatuses.length > 0 || searchTerm) && (
                   <Badge variant="outline" className="border-accent text-accent">Filtered</Badge>
                 )}
                 <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setCurrentPage(1); }}>
@@ -815,12 +981,14 @@ export const EditSection = () => {
                                 >
                                   {col.key === 'caste' ? (
                                     <Badge variant="outline" className="text-xs">{value}</Badge>
-                                  ) : col.key === 'status' ? (
-                                    value === 'Edited' ? (
-                                      <Badge variant="outline" className="border-warning/50 text-warning text-xs">Edited</Badge>
-                                    ) : (
-                                      <Badge variant="secondary" className="text-xs">Original</Badge>
-                                    )
+                                  ) : col.key === 'voterStatus' ? (
+                                    <VoterStatusCell 
+                                      status={value as VoterStatus} 
+                                      voter={voter}
+                                      municipalityId={effectiveMunicipality?.id}
+                                      wardId={selectedWard}
+                                      onUpdate={updateVoterRecord}
+                                    />
                                   ) : (
                                     value
                                   )}
