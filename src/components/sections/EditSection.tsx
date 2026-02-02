@@ -14,17 +14,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import { 
   Edit3, Undo2, Save, Search, X, FolderOpen, ChevronRight, 
   Users, UserPlus, FileText, Building2, Plus, Filter, Trash2, Eye, EyeOff,
   ChevronLeft, ChevronRight as ChevronRightIcon, ChevronsLeft, ChevronsRight,
-  Sparkles, Wand2, MapPin, Check, Heart, Plane, Skull, UserCheck, Accessibility, Replace
+  Sparkles, Wand2, MapPin, Check, Heart, Plane, Skull, UserCheck, Accessibility, Replace,
+  GripVertical, Columns3, ArrowLeftRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { detectCasteFromName, CASTE_CATEGORIES } from '@/lib/casteData';
 import { BulkSurnameReplace } from '@/components/edit/BulkSurnameReplace';
-
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 // Helper to detect if text contains Nepali/Devanagari characters
 const containsNepali = (text: string): boolean => {
   if (!text || typeof text !== 'string') return false;
@@ -70,20 +74,77 @@ const VOTER_STATUS_OPTIONS: {
   { value: 'disabled', label: 'Disabled', labelNe: 'अपाङ्ग', color: 'text-purple-600', bgColor: 'bg-purple-500/10 border-purple-500/30', icon: <Accessibility className="h-3 w-3" /> },
 ];
 
-// Default visible columns
+// All available columns with bilingual labels
 const ALL_COLUMNS = [
-  { key: 'sn', label: 'SN', labelNe: 'क्र.सं.' },
-  { key: 'voterId', label: 'Voter ID', labelNe: 'मतदाता नं.' },
-  { key: 'fullName', label: 'Name', labelNe: 'नाम' },
+  { key: 'sn', label: 'SN', labelNe: 'सि.नं.' },
+  { key: 'voterId', label: 'Voter ID', labelNe: 'मतदाता नं' },
+  { key: 'fullName', label: 'Voter Name', labelNe: 'मतदाताको नाम' },
   { key: 'age', label: 'Age', labelNe: 'उमेर' },
   { key: 'gender', label: 'Gender', labelNe: 'लिङ्ग' },
+  { key: 'spouse', label: 'Spouse', labelNe: 'पति/पत्नी' },
+  { key: 'parents', label: 'Father/Mother', labelNe: 'पिता/माता' },
   { key: 'caste', label: 'Caste', labelNe: 'जात' },
   { key: 'surname', label: 'Surname', labelNe: 'थर' },
-  { key: 'fatherName', label: "Father's Name", labelNe: 'बाबुको नाम' },
+  { key: 'voterStatus', label: 'Status', labelNe: 'स्थिति' },
   { key: 'tole', label: 'Tole', labelNe: 'टोल' },
   { key: 'phone', label: 'Phone', labelNe: 'फोन' },
-  { key: 'voterStatus', label: 'Status', labelNe: 'स्थिति' },
 ];
+
+// Default column order
+const DEFAULT_COLUMN_ORDER = ['sn', 'voterId', 'fullName', 'age', 'gender', 'spouse', 'parents', 'caste', 'surname', 'voterStatus'];
+
+// Sortable Table Header Cell Component
+const SortableHeaderCell = ({ 
+  column, 
+  isVisible,
+  onToggleVisibility 
+}: { 
+  column: typeof ALL_COLUMNS[0]; 
+  isVisible: boolean;
+  onToggleVisibility: () => void;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: column.key });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableHead 
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "min-w-[80px] select-none",
+        column.key === 'sn' && "sticky left-0 bg-background z-20 w-[60px]",
+        column.key === 'fullName' && "min-w-[180px]",
+        isDragging && "bg-accent/20"
+      )}
+    >
+      <div className="flex items-center gap-1">
+        <button
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-3 w-3 text-muted-foreground" />
+        </button>
+        <div className="flex-1">
+          <div className="font-medium">{column.label}</div>
+          <div className="text-xs text-muted-foreground font-nepali">{column.labelNe}</div>
+        </div>
+      </div>
+    </TableHead>
+  );
+};
 
 // Voter Status Cell Component with dropdown to change status
 const VoterStatusCell = ({ 
@@ -258,9 +319,16 @@ export const EditSection = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   
-  // Column visibility
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['sn', 'voterId', 'fullName', 'age', 'gender', 'caste', 'surname', 'voterStatus']);
+  // Column visibility and order
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(DEFAULT_COLUMN_ORDER);
+  const [columnOrder, setColumnOrder] = useState<string[]>(DEFAULT_COLUMN_ORDER);
   const [showColumnManager, setShowColumnManager] = useState(false);
+  
+  // DnD sensors for column reordering
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   
   // Multi-select filter states
   const [filterGenders, setFilterGenders] = useState<string[]>([]);
@@ -520,6 +588,27 @@ export const EditSection = () => {
     );
   };
 
+  // Handle column drag end for reordering
+  const handleColumnDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setColumnOrder((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  // Get ordered visible columns
+  const orderedVisibleColumns = useMemo(() => {
+    return columnOrder
+      .filter(key => visibleColumns.includes(key))
+      .map(key => ALL_COLUMNS.find(c => c.key === key)!)
+      .filter(Boolean);
+  }, [columnOrder, visibleColumns]);
+
   const clearFilters = () => {
     setFilterGenders([]);
     setFilterCastes([]);
@@ -544,37 +633,73 @@ export const EditSection = () => {
     }
   };
 
-  // Helper to get cell value
-  const getCellValue = (voter: VoterRecord, columnKey: string, index: number) => {
+  // Helper to get cell value with bilingual support
+  const getCellValue = (voter: VoterRecord, columnKey: string, index: number): { en: string; ne: string } | string | number => {
     const detected = detectCasteFromName(voter.fullName);
     const voterNo = voter.originalData?.['मतदाता नं'] || 
                     voter.originalData?.['Voter No'] || 
-                    voter.originalData?.['क्र.सं.'] ||
-                    voter.originalData?.['SN'] ||
                     voter.id.slice(0, 8);
-    const fatherName = voter.originalData?.['Father Name'] || 
-                       voter.originalData?.['बाबुको नाम'] || 
-                       voter.originalData?.['बुबाको नाम'] || 
+    const spouseName = voter.originalData?.['पति/पत्नीको नाम'] || 
+                       voter.originalData?.['Spouse'] || 
                        '-';
+    const parentsName = voter.originalData?.['पिता/माताको नाम'] || 
+                        voter.originalData?.['Father Name'] || 
+                        voter.originalData?.['बाबुको नाम'] || 
+                        '-';
     const tole = voter.originalData?.['Tole'] || 
                  voter.originalData?.['टोल'] || 
-                 voter.originalData?.['ठेगाना'] || 
                  '-';
 
     switch (columnKey) {
-      case 'sn': return (currentPage - 1) * pageSize + index + 1;
-      case 'voterId': return voterNo;
-      case 'fullName': return voter.fullName;
-      case 'age': return voter.age;
-      case 'gender': return voter.gender;
-      case 'caste': return voter.caste || detected.caste;
-      case 'surname': return voter.surname || detected.surname;
-      case 'fatherName': return fatherName;
-      case 'tole': return tole;
-      case 'phone': return voter.phone || '-';
-      case 'voterStatus': return voter.voterStatus || 'available';
-      default: return '-';
+      case 'sn': 
+        return (currentPage - 1) * pageSize + index + 1;
+      case 'voterId': 
+        return voterNo;
+      case 'fullName': 
+        return voter.fullName;
+      case 'age': 
+        return voter.age;
+      case 'gender': 
+        return { 
+          en: voter.gender === 'male' ? 'Male' : voter.gender === 'female' ? 'Female' : 'Other',
+          ne: voter.gender === 'male' ? 'पुरुष' : voter.gender === 'female' ? 'महिला' : 'अन्य'
+        };
+      case 'spouse':
+        return spouseName;
+      case 'parents':
+        return parentsName;
+      case 'caste': 
+        return voter.caste || detected.caste;
+      case 'surname': 
+        return voter.surname || detected.surname;
+      case 'tole': 
+        return tole;
+      case 'phone': 
+        return voter.phone || '-';
+      case 'voterStatus': 
+        return voter.voterStatus || 'available';
+      default: 
+        return '-';
     }
+  };
+
+  // Render cell content with bilingual display
+  const renderCellContent = (value: { en: string; ne: string } | string | number, columnKey: string): React.ReactNode => {
+    if (typeof value === 'object' && 'en' in value && 'ne' in value) {
+      return (
+        <div className="flex flex-col">
+          <span className="text-sm">{value.en}</span>
+          <span className="text-xs text-muted-foreground font-nepali">{value.ne}</span>
+        </div>
+      );
+    }
+    
+    const stringValue = String(value);
+    const hasNepali = containsNepali(stringValue);
+    
+    return (
+      <span className={cn(hasNepali && "font-nepali")}>{stringValue}</span>
+    );
   };
 
   return (
@@ -894,19 +1019,69 @@ export const EditSection = () => {
           {/* Column Manager */}
           {showColumnManager && selectedWard && (
             <div className="mt-4 pt-4 border-t border-border">
-              <Label className="mb-3 block">Visible Columns</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-4 mb-3">
+                <Label className="flex items-center gap-2">
+                  <Columns3 className="h-4 w-4" />
+                  Manage Columns (स्तम्भ प्रबन्धन)
+                </Label>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <GripVertical className="h-3 w-3" />
+                  <span>Drag column headers to reorder</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {ALL_COLUMNS.map(col => (
-                  <Button
+                  <div
                     key={col.key}
-                    variant={visibleColumns.includes(col.key) ? "default" : "outline"}
-                    size="sm"
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors",
+                      visibleColumns.includes(col.key) 
+                        ? "bg-primary/10 border-primary/30" 
+                        : "bg-muted/30 border-border hover:bg-muted/50"
+                    )}
                     onClick={() => toggleColumn(col.key)}
-                    className="text-xs"
                   >
-                    {col.label}
-                  </Button>
+                    <Checkbox
+                      checked={visibleColumns.includes(col.key)}
+                      onCheckedChange={() => toggleColumn(col.key)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{col.label}</div>
+                      <div className="text-xs text-muted-foreground font-nepali truncate">{col.labelNe}</div>
+                    </div>
+                    {visibleColumns.includes(col.key) ? (
+                      <Eye className="h-3 w-3 text-primary shrink-0" />
+                    ) : (
+                      <EyeOff className="h-3 w-3 text-muted-foreground shrink-0" />
+                    )}
+                  </div>
                 ))}
+              </div>
+              <div className="flex items-center gap-2 mt-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setVisibleColumns(DEFAULT_COLUMN_ORDER)}
+                  className="text-xs"
+                >
+                  Reset to Default
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setVisibleColumns(ALL_COLUMNS.map(c => c.key))}
+                  className="text-xs"
+                >
+                  Show All
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setColumnOrder(DEFAULT_COLUMN_ORDER)}
+                  className="text-xs"
+                >
+                  Reset Order
+                </Button>
               </div>
             </div>
           )}
@@ -959,63 +1134,69 @@ export const EditSection = () => {
                 </Button>
               </div>
             ) : (
-              <>
+                <>
                 <ScrollArea className="w-full">
                   <div className="min-w-[800px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => (
-                            <TableHead 
-                              key={col.key} 
-                              className={cn(
-                                "min-w-[80px]",
-                                col.key === 'sn' && "sticky left-0 bg-background z-10 w-[50px]",
-                                col.key === 'fullName' && "min-w-[180px]"
-                              )}
-                            >
-                              <div>{col.label}</div>
-                              <div className="text-xs text-muted-foreground">{col.labelNe}</div>
-                            </TableHead>
-                          ))}
-                          <TableHead className="text-right sticky right-0 bg-background z-10 w-[80px]">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paginatedVoters.map((voter, index) => (
-                          <TableRow key={voter.id} className={voter.isEdited ? 'bg-warning/5' : ''}>
-                            {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => {
-                              const value = getCellValue(voter, col.key, index);
-                              return (
-                                <TableCell 
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleColumnDragEnd}
+                    >
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <SortableContext items={orderedVisibleColumns.map(c => c.key)} strategy={horizontalListSortingStrategy}>
+                              {orderedVisibleColumns.map(col => (
+                                <SortableHeaderCell
                                   key={col.key}
-                                  className={cn(
-                                    col.key === 'sn' && "font-mono text-sm text-muted-foreground sticky left-0 bg-background z-10",
-                                    col.key === 'voterId' && "font-mono text-xs font-medium",
-                                    col.key === 'fullName' && "font-medium",
-                                    col.key === 'gender' && "capitalize",
-                                    // Apply Nepali font to cells with Devanagari text
-                                    typeof value === 'string' && containsNepali(value) && "font-nepali"
-                                  )}
-                                >
-                                  {col.key === 'caste' ? (
-                                    <Badge variant="outline" className={cn("text-xs", containsNepali(String(value)) && "font-nepali")}>{value}</Badge>
-                                  ) : col.key === 'surname' ? (
-                                    <span className={cn("text-sm", containsNepali(String(value)) && "font-nepali")}>{value}</span>
-                                  ) : col.key === 'voterStatus' ? (
-                                    <VoterStatusCell 
-                                      status={value as VoterStatus} 
-                                      voter={voter}
-                                      municipalityId={effectiveMunicipality?.id}
-                                      wardId={selectedWard}
-                                      onUpdate={updateVoterRecord}
-                                    />
-                                  ) : (
-                                    value
-                                  )}
-                                </TableCell>
-                              );
-                            })}
+                                  column={col}
+                                  isVisible={visibleColumns.includes(col.key)}
+                                  onToggleVisibility={() => toggleColumn(col.key)}
+                                />
+                              ))}
+                            </SortableContext>
+                            <TableHead className="text-right sticky right-0 bg-background z-10 w-[80px]">
+                              <div>Actions</div>
+                              <div className="text-xs text-muted-foreground font-nepali">कार्य</div>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedVoters.map((voter, index) => (
+                            <TableRow key={voter.id} className={voter.isEdited ? 'bg-warning/5' : ''}>
+                              {orderedVisibleColumns.map(col => {
+                                const value = getCellValue(voter, col.key, index);
+                                return (
+                                  <TableCell 
+                                    key={col.key}
+                                    className={cn(
+                                      col.key === 'sn' && "font-mono text-sm text-muted-foreground sticky left-0 bg-background z-10",
+                                      col.key === 'voterId' && "font-mono text-xs font-medium",
+                                      col.key === 'fullName' && "font-medium"
+                                    )}
+                                  >
+                                    {col.key === 'caste' ? (
+                                      <Badge variant="outline" className="text-xs font-nepali">
+                                        {renderCellContent(value, col.key)}
+                                      </Badge>
+                                    ) : col.key === 'surname' ? (
+                                      <span className="text-sm font-nepali">
+                                        {renderCellContent(value, col.key)}
+                                      </span>
+                                    ) : col.key === 'voterStatus' ? (
+                                      <VoterStatusCell 
+                                        status={(typeof value === 'string' ? value : 'available') as VoterStatus} 
+                                        voter={voter}
+                                        municipalityId={effectiveMunicipality?.id}
+                                        wardId={selectedWard}
+                                        onUpdate={updateVoterRecord}
+                                      />
+                                    ) : (
+                                      renderCellContent(value, col.key)
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
                             <TableCell className="text-right sticky right-0 bg-background z-10">
                               <div className="flex justify-end gap-1">
                                 <Dialog>
@@ -1425,6 +1606,7 @@ export const EditSection = () => {
                         ))}
                       </TableBody>
                     </Table>
+                    </DndContext>
                   </div>
                 </ScrollArea>
 
