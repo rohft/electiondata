@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
+export type VoterStatus = 'available' | 'dead' | 'out_of_country' | 'married' | 'older_citizen' | 'disabled';
+
 export interface VoterRecord {
   id: string;
   municipality: string;
@@ -17,6 +19,7 @@ export interface VoterRecord {
   socialHandles?: string;
   partyName?: string;
   partyLogo?: string;
+  voterStatus?: VoterStatus;
   originalData: Record<string, string>;
   isEdited?: boolean;
   editHistory?: Array<{ field: string; oldValue: string; newValue: string; timestamp: Date }>;
