@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { z } from 'zod';
 
 export interface ParsedRecord {
   sn?: string;
@@ -210,14 +211,76 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
   return records;
 };
 
+// Zod schema for validating JSON voter records
+const VoterRecordSchema = z.object({
+  wardNo: z.union([z.string(), z.number()]).optional(),
+  ward_no: z.union([z.string(), z.number()]).optional(),
+  'WARD NO': z.union([z.string(), z.number()]).optional(),
+  centerName: z.string().optional(),
+  center_name: z.string().optional(),
+  'CENTER NAME': z.string().optional(),
+  voterId: z.union([z.string(), z.number()]).optional(),
+  voter_id: z.union([z.string(), z.number()]).optional(),
+  'VOTER ID': z.union([z.string(), z.number()]).optional(),
+  voterName: z.string().optional(),
+  voter_name: z.string().optional(),
+  name: z.string().optional(),
+  'VOTER NAME': z.string().optional(),
+  age: z.union([z.string(), z.number()]).optional(),
+  AGE: z.union([z.string(), z.number()]).optional(),
+  gender: z.string().optional(),
+  GENDER: z.string().optional(),
+  spouse: z.string().optional(),
+  SPOUSE: z.string().optional(),
+  parents: z.string().optional(),
+  PARENTS: z.string().optional(),
+  caste: z.string().optional(),
+  surname: z.string().optional(),
+  green: z.string().optional(),
+  GREEN: z.string().optional(),
+  yellow: z.string().optional(),
+  YELLOW: z.string().optional(),
+  red: z.string().optional(),
+  RED: z.string().optional(),
+}).passthrough(); // Allow additional fields
+
+const JSONDataSchema = z.union([
+  z.array(VoterRecordSchema),
+  z.object({
+    data: z.array(VoterRecordSchema).optional(),
+    records: z.array(VoterRecordSchema).optional(),
+    voters: z.array(VoterRecordSchema).optional(),
+  }).passthrough(),
+]);
+
 export const parseJSON = async (file: File): Promise<ParsedRecord[]> => {
   const text = await file.text();
-  const data = JSON.parse(text);
+  
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('Invalid JSON format: Unable to parse file content');
+  }
+  
+  // Validate the parsed JSON structure
+  const validationResult = JSONDataSchema.safeParse(data);
+  if (!validationResult.success) {
+    throw new Error(`Invalid JSON structure: ${validationResult.error.errors.map(e => e.message).join(', ')}`);
+  }
+  
+  const validatedData = validationResult.data;
   
   // Handle both array and object with data property
-  const rows = Array.isArray(data) ? data : (data.data || data.records || data.voters || []);
+  const rows = Array.isArray(validatedData) 
+    ? validatedData 
+    : (validatedData.data || validatedData.records || validatedData.voters || []);
   
-  return rows.map((row: Record<string, unknown>) => {
+  if (!Array.isArray(rows)) {
+    throw new Error('Invalid JSON structure: Expected an array of records');
+  }
+  
+  return rows.map((row) => {
     const originalData: Record<string, string> = {};
     Object.entries(row).forEach(([key, value]) => {
       originalData[key] = String(value || '');
@@ -232,6 +295,8 @@ export const parseJSON = async (file: File): Promise<ParsedRecord[]> => {
       gender: normalizeGender(String(row.gender || row.GENDER || '')),
       spouse: String(row.spouse || row.SPOUSE || ''),
       parents: String(row.parents || row.PARENTS || ''),
+      caste: String(row.caste || ''),
+      surname: String(row.surname || ''),
       green: String(row.green || row.GREEN || ''),
       yellow: String(row.yellow || row.YELLOW || ''),
       red: String(row.red || row.RED || ''),
