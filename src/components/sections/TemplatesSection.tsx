@@ -294,7 +294,7 @@ export const TemplatesSection = () => {
                       </DialogHeader>
                       <ScrollArea className="h-[70vh]">
                         <div className="p-6 bg-white text-black space-y-6">
-                          {/* Preview Header */}
+                          {/* Preview Header with Total Count */}
                           <div className="text-center border-b pb-4">
                             <h1 className="text-2xl font-bold">
                               {language === 'ne' ? selectedTemplate.nameNe : selectedTemplate.name}
@@ -303,41 +303,91 @@ export const TemplatesSection = () => {
                               {currentMunicipality?.name || 'All Municipalities'}
                               {selectedWard !== 'all' && ` - Ward ${selectedWard}`}
                             </p>
+                            <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full">
+                              <Users className="h-5 w-5 text-blue-600" />
+                              <span className="text-lg font-bold text-blue-600">
+                                Total Voters: {segments.total.toLocaleString()}
+                              </span>
+                            </div>
                           </div>
 
-                          {/* Preview Stats */}
-                          <div className="grid grid-cols-3 gap-4">
-                            <div className="text-center p-4 bg-gray-50 rounded-lg">
+                          {/* Preview Stats - Summary Cards with Totals */}
+                          <div className="grid grid-cols-4 gap-4">
+                            <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                               <p className="text-3xl font-bold text-blue-600">{segments.total.toLocaleString()}</p>
                               <p className="text-sm text-gray-600">Total Voters</p>
+                              <p className="text-xs text-gray-500">कुल मतदाता</p>
                             </div>
-                            <div className="text-center p-4 bg-gray-50 rounded-lg">
-                              <p className="text-3xl font-bold text-pink-600">{segments.byGender.female?.toLocaleString() || 0}</p>
-                              <p className="text-sm text-gray-600">Female Voters</p>
-                            </div>
-                            <div className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
                               <p className="text-3xl font-bold text-green-600">{segments.byGender.male?.toLocaleString() || 0}</p>
                               <p className="text-sm text-gray-600">Male Voters</p>
+                              <p className="text-xs text-gray-500">पुरुष</p>
+                            </div>
+                            <div className="text-center p-4 bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg border border-pink-200">
+                              <p className="text-3xl font-bold text-pink-600">{segments.byGender.female?.toLocaleString() || 0}</p>
+                              <p className="text-sm text-gray-600">Female Voters</p>
+                              <p className="text-xs text-gray-500">महिला</p>
+                            </div>
+                            <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                              <p className="text-3xl font-bold text-purple-600">{segments.byGender.other?.toLocaleString() || 0}</p>
+                              <p className="text-sm text-gray-600">Other</p>
+                              <p className="text-xs text-gray-500">अन्य</p>
                             </div>
                           </div>
 
-                          {/* Age Distribution */}
-                          <div>
-                            <h3 className="text-lg font-semibold mb-3">Age Distribution</h3>
+                          {/* Age Distribution with Totals */}
+                          <div className="border rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold">Age Distribution (उमेर वितरण)</h3>
+                              <span className="text-sm text-gray-500">Total: {segments.total.toLocaleString()}</span>
+                            </div>
                             <div className="space-y-2">
                               {Object.entries(segments.byAge).map(([range, count]) => (
                                 <div key={range} className="flex items-center gap-3">
-                                  <span className="w-16 text-sm">{range}</span>
+                                  <span className="w-16 text-sm font-medium">{range}</span>
                                   <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
                                     <div 
-                                      className="h-full bg-blue-500 transition-all"
-                                      style={{ width: segments.total > 0 ? `${(count / segments.total) * 100}%` : '0%' }}
-                                    />
+                                      className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
+                                      style={{ width: segments.total > 0 ? `${Math.max((count / segments.total) * 100, 10)}%` : '10%' }}
+                                    >
+                                      {segments.total > 0 && (count / segments.total) * 100 > 15 && (
+                                        <span className="text-xs text-white font-medium">
+                                          {((count / segments.total) * 100).toFixed(1)}%
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                  <span className="w-16 text-sm text-right">{count}</span>
+                                  <span className="w-20 text-sm text-right font-medium">{count.toLocaleString()}</span>
                                 </div>
                               ))}
                             </div>
+                          </div>
+
+                          {/* Caste Distribution with Totals */}
+                          <div className="border rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold">Caste Distribution (जात वितरण)</h3>
+                              <span className="text-sm text-gray-500">
+                                {Object.keys(segments.byCaste).length} castes | Total: {segments.total.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              {Object.entries(segments.byCaste)
+                                .sort((a, b) => b[1] - a[1])
+                                .slice(0, 10)
+                                .map(([caste, count]) => (
+                                  <div key={caste} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                    <span className="text-sm">{caste}</span>
+                                    <span className="text-sm font-medium">{count.toLocaleString()}</span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+
+                          {/* Footer with Generation Info */}
+                          <div className="border-t pt-4 mt-6 text-center text-xs text-gray-500">
+                            <p>Report Generated: {new Date().toLocaleDateString()} | Total Records: {segments.total.toLocaleString()}</p>
+                            <p className="mt-1">VoterPulse Analytics Dashboard</p>
                           </div>
                         </div>
                       </ScrollArea>

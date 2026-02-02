@@ -177,9 +177,22 @@ export const EditSection = () => {
   // Filter states
   const [filterGender, setFilterGender] = useState<string>('all');
   const [filterCaste, setFilterCaste] = useState<string>('all');
+  const [filterSurname, setFilterSurname] = useState<string>('all');
+  const [filterAgeRange, setFilterAgeRange] = useState<string>('all');
   const [filterAgeMin, setFilterAgeMin] = useState<string>('');
   const [filterAgeMax, setFilterAgeMax] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Predefined age ranges
+  const AGE_RANGES = [
+    { label: 'All Ages', value: 'all', min: 0, max: 200 },
+    { label: '16-28 (Youth)', value: '16-28', min: 16, max: 28 },
+    { label: '29-40 (Young Adult)', value: '29-40', min: 29, max: 40 },
+    { label: '41-55 (Middle Age)', value: '41-55', min: 41, max: 55 },
+    { label: '56-68 (Senior)', value: '56-68', min: 56, max: 68 },
+    { label: '68+ (Elder)', value: '68+', min: 68, max: 200 },
+    { label: 'Custom Range', value: 'custom', min: 0, max: 200 },
+  ];
   
   // AI Family suggestions
   const [showAISuggestions, setShowAISuggestions] = useState(false);
@@ -236,15 +249,30 @@ export const EditSection = () => {
       });
     }
     
-    // Age filter
-    const minAge = parseInt(filterAgeMin) || 0;
-    const maxAge = parseInt(filterAgeMax) || 200;
-    if (filterAgeMin || filterAgeMax) {
-      filtered = filtered.filter(v => v.age >= minAge && v.age <= maxAge);
+    // Surname filter
+    if (filterSurname !== 'all') {
+      filtered = filtered.filter(v => {
+        const detected = detectCasteFromName(v.fullName);
+        return (v.surname || detected.surname) === filterSurname;
+      });
+    }
+    
+    // Age filter - use predefined range or custom
+    if (filterAgeRange !== 'all') {
+      if (filterAgeRange === 'custom') {
+        const minAge = parseInt(filterAgeMin) || 0;
+        const maxAge = parseInt(filterAgeMax) || 200;
+        filtered = filtered.filter(v => v.age >= minAge && v.age <= maxAge);
+      } else {
+        const range = AGE_RANGES.find(r => r.value === filterAgeRange);
+        if (range) {
+          filtered = filtered.filter(v => v.age >= range.min && v.age <= range.max);
+        }
+      }
     }
     
     return filtered;
-  }, [allWardVoters, searchTerm, filterGender, filterCaste, filterAgeMin, filterAgeMax]);
+  }, [allWardVoters, searchTerm, filterGender, filterCaste, filterSurname, filterAgeRange, filterAgeMin, filterAgeMax]);
 
   const paginatedVoters = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -264,14 +292,28 @@ export const EditSection = () => {
     return Array.from(toles).sort();
   }, [allWardVoters]);
 
-  // Get unique castes for filter
+  // Get unique castes for filter (linked to CASTE_CATEGORIES from segment)
   const uniqueCastes = useMemo(() => {
     const castes = new Set<string>();
     allWardVoters.forEach(v => {
       const detected = detectCasteFromName(v.fullName);
       castes.add(v.caste || detected.caste);
     });
-    return Array.from(castes).sort();
+    // Sort by CASTE_CATEGORIES order
+    const orderedCastes = CASTE_CATEGORIES.map(c => c.name).filter(name => castes.has(name));
+    const remaining = Array.from(castes).filter(c => !orderedCastes.includes(c)).sort();
+    return [...orderedCastes, ...remaining];
+  }, [allWardVoters]);
+
+  // Get unique surnames for filter
+  const uniqueSurnames = useMemo(() => {
+    const surnames = new Set<string>();
+    allWardVoters.forEach(v => {
+      const detected = detectCasteFromName(v.fullName);
+      const surname = v.surname || detected.surname;
+      if (surname) surnames.add(surname);
+    });
+    return Array.from(surnames).sort();
   }, [allWardVoters]);
 
   // Filter family search results
@@ -382,6 +424,8 @@ export const EditSection = () => {
   const clearFilters = () => {
     setFilterGender('all');
     setFilterCaste('all');
+    setFilterSurname('all');
+    setFilterAgeRange('all');
     setFilterAgeMin('');
     setFilterAgeMax('');
     setSearchTerm('');
@@ -543,7 +587,7 @@ export const EditSection = () => {
           {/* Filter Panel */}
           {showFilters && selectedWard && (
             <div className="mt-4 pt-4 border-t border-border">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <div className="space-y-2">
                   <Label>Gender</Label>
                   <Select value={filterGender} onValueChange={setFilterGender}>
@@ -552,43 +596,83 @@ export const EditSection = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Genders</SelectItem>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="male">Male (पुरुष)</SelectItem>
+                      <SelectItem value="female">Female (महिला)</SelectItem>
+                      <SelectItem value="other">Other (अन्य)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Caste</Label>
+                  <Label>Caste (जात)</Label>
                   <Select value={filterCaste} onValueChange={setFilterCaste}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Castes</SelectItem>
-                      {uniqueCastes.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      {CASTE_CATEGORIES.map(cat => (
+                        <SelectItem key={cat.name} value={cat.name}>
+                          {cat.name} ({cat.nameNe})
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="Other">Other (अन्य)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Surname (थर)</Label>
+                  <Select value={filterSurname} onValueChange={setFilterSurname}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Surnames</SelectItem>
+                      {uniqueSurnames.map(s => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Age Range</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      type="number" 
-                      placeholder="Min" 
-                      value={filterAgeMin}
-                      onChange={(e) => setFilterAgeMin(e.target.value)}
-                    />
-                    <Input 
-                      type="number" 
-                      placeholder="Max" 
-                      value={filterAgeMax}
-                      onChange={(e) => setFilterAgeMax(e.target.value)}
-                    />
-                  </div>
+                  <Label>Age Range (उमेर)</Label>
+                  <Select value={filterAgeRange} onValueChange={(v) => {
+                    setFilterAgeRange(v);
+                    if (v !== 'custom') {
+                      setFilterAgeMin('');
+                      setFilterAgeMax('');
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AGE_RANGES.map(range => (
+                        <SelectItem key={range.value} value={range.value}>
+                          {range.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+                {filterAgeRange === 'custom' && (
+                  <div className="space-y-2">
+                    <Label>Custom Range</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="number" 
+                        placeholder="Min" 
+                        value={filterAgeMin}
+                        onChange={(e) => setFilterAgeMin(e.target.value)}
+                      />
+                      <Input 
+                        type="number" 
+                        placeholder="Max" 
+                        value={filterAgeMax}
+                        onChange={(e) => setFilterAgeMax(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>&nbsp;</Label>
                   <Button variant="outline" className="w-full gap-2" onClick={clearFilters}>
@@ -597,6 +681,39 @@ export const EditSection = () => {
                   </Button>
                 </div>
               </div>
+              {/* Active filter summary */}
+              {(filterGender !== 'all' || filterCaste !== 'all' || filterSurname !== 'all' || filterAgeRange !== 'all') && (
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  <span className="text-sm text-muted-foreground">Active:</span>
+                  {filterGender !== 'all' && (
+                    <Badge variant="secondary" className="gap-1">
+                      Gender: {filterGender}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterGender('all')} />
+                    </Badge>
+                  )}
+                  {filterCaste !== 'all' && (
+                    <Badge variant="secondary" className="gap-1">
+                      Caste: {filterCaste}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCaste('all')} />
+                    </Badge>
+                  )}
+                  {filterSurname !== 'all' && (
+                    <Badge variant="secondary" className="gap-1">
+                      Surname: {filterSurname}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterSurname('all')} />
+                    </Badge>
+                  )}
+                  {filterAgeRange !== 'all' && (
+                    <Badge variant="secondary" className="gap-1">
+                      Age: {filterAgeRange}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => { setFilterAgeRange('all'); setFilterAgeMin(''); setFilterAgeMax(''); }} />
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="border-accent text-accent">
+                    Total: {voters.length} voters
+                  </Badge>
+                </div>
+              )}
             </div>
           )}
 
