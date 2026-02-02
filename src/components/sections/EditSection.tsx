@@ -16,7 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Edit3, Undo2, Save, Search, X, FolderOpen, ChevronRight, 
   Users, UserPlus, FileText, Building2, Plus, Filter, Trash2, Eye, EyeOff,
-  ChevronLeft, ChevronRight as ChevronRightIcon, ChevronsLeft, ChevronsRight
+  ChevronLeft, ChevronRight as ChevronRightIcon, ChevronsLeft, ChevronsRight,
+  Sparkles, Wand2, MapPin
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -58,6 +59,97 @@ const ALL_COLUMNS = [
   { key: 'status', label: 'Status', labelNe: 'स्थिति' },
 ];
 
+// AI Family matching function - finds potential family members based on surname, age, and tole
+const findPotentialFamilyMembers = (
+  currentVoter: VoterRecord,
+  allVoters: VoterRecord[],
+  existingFamilyIds: string[]
+): { voter: VoterRecord; score: number; reasons: string[] }[] => {
+  const currentSurname = currentVoter.surname || detectCasteFromName(currentVoter.fullName).surname;
+  const currentTole = currentVoter.originalData?.['Tole'] || currentVoter.originalData?.['टोल'] || '';
+  const currentFatherName = currentVoter.originalData?.['Father Name'] || 
+                            currentVoter.originalData?.['बाबुको नाम'] || 
+                            currentVoter.originalData?.['बुबाको नाम'] || '';
+  
+  const potentialMembers: { voter: VoterRecord; score: number; reasons: string[] }[] = [];
+  
+  allVoters.forEach(voter => {
+    // Skip self and already added family members
+    if (voter.id === currentVoter.id || existingFamilyIds.includes(voter.id)) return;
+    
+    const voterSurname = voter.surname || detectCasteFromName(voter.fullName).surname;
+    const voterTole = voter.originalData?.['Tole'] || voter.originalData?.['टोल'] || '';
+    const voterFatherName = voter.originalData?.['Father Name'] || 
+                           voter.originalData?.['बाबुको नाम'] || 
+                           voter.originalData?.['बुबाको नाम'] || '';
+    
+    let score = 0;
+    const reasons: string[] = [];
+    
+    // Same surname (strong indicator)
+    if (currentSurname && voterSurname && 
+        currentSurname.toLowerCase() === voterSurname.toLowerCase()) {
+      score += 40;
+      reasons.push('Same surname');
+    }
+    
+    // Same tole (moderate indicator)
+    if (currentTole && voterTole && 
+        currentTole.toLowerCase() === voterTole.toLowerCase()) {
+      score += 30;
+      reasons.push('Same tole/location');
+    }
+    
+    // Same father's name (strong indicator)
+    if (currentFatherName && voterFatherName && 
+        currentFatherName.toLowerCase() === voterFatherName.toLowerCase()) {
+      score += 50;
+      reasons.push('Same father name');
+    }
+    
+    // Age difference suggests parent/child/sibling relationship
+    const ageDiff = Math.abs(currentVoter.age - voter.age);
+    if (ageDiff <= 5) {
+      score += 15;
+      reasons.push('Similar age (sibling?)');
+    } else if (ageDiff >= 18 && ageDiff <= 35) {
+      score += 20;
+      reasons.push('Parent/child age gap');
+    } else if (ageDiff >= 36 && ageDiff <= 55) {
+      score += 10;
+      reasons.push('Grandparent/grandchild age gap');
+    }
+    
+    // Check if voter's name appears in current voter's father name field
+    if (currentFatherName) {
+      const fatherNameParts = currentFatherName.toLowerCase().split(/\s+/);
+      const voterNameParts = voter.fullName.toLowerCase().split(/\s+/);
+      if (voterNameParts.some(part => fatherNameParts.includes(part) && part.length > 2)) {
+        score += 25;
+        reasons.push('Name matches father field');
+      }
+    }
+    
+    // Check if current voter's name appears in other's father name
+    if (voterFatherName) {
+      const fatherNameParts = voterFatherName.toLowerCase().split(/\s+/);
+      const currentNameParts = currentVoter.fullName.toLowerCase().split(/\s+/);
+      if (currentNameParts.some(part => fatherNameParts.includes(part) && part.length > 2)) {
+        score += 25;
+        reasons.push('Appears as their father');
+      }
+    }
+    
+    // Only include if there's some match
+    if (score >= 30) {
+      potentialMembers.push({ voter, score, reasons });
+    }
+  });
+  
+  // Sort by score descending
+  return potentialMembers.sort((a, b) => b.score - a.score).slice(0, 20);
+};
+
 export const EditSection = () => {
   const { t, getBilingual } = useLanguage();
   const { municipalities, updateVoterRecord, revertVoterRecord } = useVoterData();
@@ -88,6 +180,13 @@ export const EditSection = () => {
   const [filterAgeMin, setFilterAgeMin] = useState<string>('');
   const [filterAgeMax, setFilterAgeMax] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // AI Family suggestions
+  const [showAISuggestions, setShowAISuggestions] = useState(false);
+  const [familySearchTerm, setFamilySearchTerm] = useState('');
+  
+  // Custom tole input
+  const [customTole, setCustomTole] = useState('');
 
   // Auto-select municipality if only one exists
   const autoSelectedMunicipality = municipalities.length === 1 ? municipalities[0] : null;
@@ -97,6 +196,16 @@ export const EditSection = () => {
   
   // Get all voters in the current ward for family member selection
   const allWardVoters = currentWard?.voters || [];
+  
+  // AI-suggested family members
+  const aiSuggestedFamily = useMemo(() => {
+    if (!editingVoter || !showAISuggestions) return [];
+    return findPotentialFamilyMembers(
+      editingVoter, 
+      allWardVoters, 
+      editForm.familyMemberIds || []
+    );
+  }, [editingVoter, allWardVoters, editForm.familyMemberIds, showAISuggestions]);
   
   // Apply filters
   const voters = useMemo(() => {
@@ -165,6 +274,23 @@ export const EditSection = () => {
     return Array.from(castes).sort();
   }, [allWardVoters]);
 
+  // Filter family search results
+  const filteredFamilyMembers = useMemo(() => {
+    let available = allWardVoters.filter(v => 
+      v.id !== editingVoter?.id && 
+      !editForm.familyMemberIds?.includes(v.id)
+    );
+    
+    if (familySearchTerm) {
+      available = available.filter(v =>
+        v.fullName.toLowerCase().includes(familySearchTerm.toLowerCase()) ||
+        v.surname.toLowerCase().includes(familySearchTerm.toLowerCase())
+      );
+    }
+    
+    return available.slice(0, 50);
+  }, [allWardVoters, editingVoter, editForm.familyMemberIds, familySearchTerm]);
+
   const handleEditClick = (voter: VoterRecord) => {
     setEditingVoter(voter);
     const detected = detectCasteFromName(voter.fullName);
@@ -185,15 +311,23 @@ export const EditSection = () => {
       isMainFamilyMember: false,
     });
     setShowOriginalData(false);
+    setShowAISuggestions(false);
+    setCustomTole('');
+    setFamilySearchTerm('');
   };
 
   const handleSaveEdit = () => {
     if (!editingVoter || !effectiveMunicipality || !selectedWard) return;
 
-    updateVoterRecord(effectiveMunicipality.id, selectedWard, editingVoter.id, editForm);
+    // Include custom tole if provided
+    const finalTole = customTole || editForm.tole;
+    const updatedForm = { ...editForm, tole: finalTole };
+
+    updateVoterRecord(effectiveMunicipality.id, selectedWard, editingVoter.id, updatedForm);
     toast.success('Record updated successfully');
     setEditingVoter(null);
     setEditForm({});
+    setCustomTole('');
   };
 
   const handleRevert = (voterId: string) => {
@@ -229,6 +363,14 @@ export const EditSection = () => {
     }));
   };
 
+  const addAISuggestedFamily = (voterId: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      familyMemberIds: [...(prev.familyMemberIds || []), voterId]
+    }));
+    toast.success('Family member added');
+  };
+
   const toggleColumn = (columnKey: string) => {
     setVisibleColumns(prev => 
       prev.includes(columnKey)
@@ -244,12 +386,6 @@ export const EditSection = () => {
     setFilterAgeMax('');
     setSearchTerm('');
   };
-
-  // Available family members (exclude already selected and current voter)
-  const availableFamilyMembers = allWardVoters.filter(v => 
-    v.id !== editingVoter?.id && 
-    !editForm.familyMemberIds?.includes(v.id)
-  );
 
   // Helper to get cell value
   const getCellValue = (voter: VoterRecord, columnKey: string, index: number) => {
@@ -693,22 +829,51 @@ export const EditSection = () => {
                                                 onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
                                               />
                                             </div>
+                                            
+                                            {/* Enhanced Tole Input */}
                                             <div className="space-y-2">
-                                              <Label>{t('edit.tole')}</Label>
+                                              <Label className="flex items-center gap-2">
+                                                <MapPin className="h-4 w-4" />
+                                                {t('edit.tole')} / टोल
+                                              </Label>
                                               <Select 
                                                 value={editForm.tole} 
-                                                onValueChange={(v) => setEditForm({ ...editForm, tole: v })}
+                                                onValueChange={(v) => {
+                                                  if (v === '__custom__') {
+                                                    // Keep select empty, use custom input
+                                                    setEditForm({ ...editForm, tole: '' });
+                                                  } else {
+                                                    setEditForm({ ...editForm, tole: v });
+                                                    setCustomTole('');
+                                                  }
+                                                }}
                                               >
                                                 <SelectTrigger>
-                                                  <SelectValue placeholder="Select Tole" />
+                                                  <SelectValue placeholder="Select or add Tole" />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                   {uniqueToles.map(tole => (
                                                     <SelectItem key={tole} value={tole}>{tole}</SelectItem>
                                                   ))}
+                                                  <SelectItem value="__custom__">
+                                                    <span className="flex items-center gap-2">
+                                                      <Plus className="h-3 w-3" />
+                                                      Add New Tole
+                                                    </span>
+                                                  </SelectItem>
                                                 </SelectContent>
                                               </Select>
+                                              {/* Custom Tole Input */}
+                                              {(!editForm.tole || editForm.tole === '__custom__') && (
+                                                <Input
+                                                  placeholder="Enter new tole name..."
+                                                  value={customTole}
+                                                  onChange={(e) => setCustomTole(e.target.value)}
+                                                  className="mt-2"
+                                                />
+                                              )}
                                             </div>
+                                            
                                             <div className="space-y-2">
                                               <Label>Occupation</Label>
                                               <Select 
@@ -746,6 +911,74 @@ export const EditSection = () => {
                                             <Label>This person is the main family member</Label>
                                           </div>
 
+                                          {/* AI Family Suggestions */}
+                                          <div className="p-4 rounded-lg border border-accent/30 bg-accent/5">
+                                            <div className="flex items-center justify-between mb-3">
+                                              <div className="flex items-center gap-2">
+                                                <Sparkles className="h-4 w-4 text-accent" />
+                                                <span className="font-medium text-sm">AI Family Detection</span>
+                                              </div>
+                                              <Button
+                                                variant={showAISuggestions ? "default" : "outline"}
+                                                size="sm"
+                                                className="gap-2"
+                                                onClick={() => setShowAISuggestions(!showAISuggestions)}
+                                              >
+                                                <Wand2 className="h-4 w-4" />
+                                                {showAISuggestions ? 'Hide Suggestions' : 'Find Family Members'}
+                                              </Button>
+                                            </div>
+                                            
+                                            {showAISuggestions && (
+                                              <div className="space-y-2">
+                                                <p className="text-xs text-muted-foreground">
+                                                  AI suggestions based on surname, location, and age patterns
+                                                </p>
+                                                <ScrollArea className="h-[200px] border rounded-lg bg-background p-2">
+                                                  {aiSuggestedFamily.length === 0 ? (
+                                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                                      No potential family members found
+                                                    </p>
+                                                  ) : (
+                                                    aiSuggestedFamily.map(({ voter, score, reasons }) => (
+                                                      <div 
+                                                        key={voter.id}
+                                                        className="flex items-center justify-between p-3 mb-2 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors"
+                                                      >
+                                                        <div className="flex-1">
+                                                          <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-medium">{voter.fullName}</p>
+                                                            <Badge variant="outline" className="text-xs">
+                                                              {score}% match
+                                                            </Badge>
+                                                          </div>
+                                                          <p className="text-xs text-muted-foreground">
+                                                            {voter.age} years, {voter.gender}
+                                                          </p>
+                                                          <div className="flex flex-wrap gap-1 mt-1">
+                                                            {reasons.map((reason, i) => (
+                                                              <Badge key={i} variant="secondary" className="text-[10px]">
+                                                                {reason}
+                                                              </Badge>
+                                                            ))}
+                                                          </div>
+                                                        </div>
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="icon"
+                                                          className="h-8 w-8"
+                                                          onClick={() => addAISuggestedFamily(voter.id)}
+                                                        >
+                                                          <UserPlus className="h-4 w-4" />
+                                                        </Button>
+                                                      </div>
+                                                    ))
+                                                  )}
+                                                </ScrollArea>
+                                              </div>
+                                            )}
+                                          </div>
+
                                           <div className="space-y-2">
                                             <Label className="flex items-center gap-2">
                                               <Users className="h-4 w-4" />
@@ -770,9 +1003,20 @@ export const EditSection = () => {
                                               </div>
                                             )}
 
+                                            {/* Search family members */}
+                                            <div className="relative mb-2">
+                                              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                              <Input
+                                                placeholder="Search by name or surname..."
+                                                value={familySearchTerm}
+                                                onChange={(e) => setFamilySearchTerm(e.target.value)}
+                                                className="pl-9"
+                                              />
+                                            </div>
+
                                             {/* Add family member */}
                                             <ScrollArea className="h-[200px] border rounded-lg p-2">
-                                              {availableFamilyMembers.slice(0, 50).map(v => (
+                                              {filteredFamilyMembers.map(v => (
                                                 <div 
                                                   key={v.id}
                                                   className="flex items-center justify-between p-2 hover:bg-muted/50 rounded cursor-pointer"
