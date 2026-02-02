@@ -272,7 +272,7 @@ export const EditSection = () => {
       {selectedWard && currentWard ? (
         <Card className="card-shadow border-border/50">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between text-base font-semibold">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-base font-semibold">
               <div className="flex items-center gap-2">
                 <span>{currentWard.name} - {effectiveMunicipality?.name}</span>
               </div>
@@ -285,78 +285,109 @@ export const EditSection = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[500px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[60px]">
-                      <div>{t('table.sn')}</div>
-                      <div className="text-xs text-muted-foreground">क्र.सं.</div>
-                    </TableHead>
-                    <TableHead>
-                      <div>{t('table.voterId')}</div>
-                      <div className="text-xs text-muted-foreground">मतदाता आईडी</div>
-                    </TableHead>
-                    <TableHead>
-                      <div>{nameLabels.en}</div>
-                      <div className="text-xs text-muted-foreground">{nameLabels.ne}</div>
-                    </TableHead>
-                    <TableHead>
-                      <div>{ageLabels.en}</div>
-                      <div className="text-xs text-muted-foreground">{ageLabels.ne}</div>
-                    </TableHead>
-                    <TableHead>
-                      <div>{genderLabels.en}</div>
-                      <div className="text-xs text-muted-foreground">{genderLabels.ne}</div>
-                    </TableHead>
-                    <TableHead>Caste / जात</TableHead>
-                    <TableHead>Surname / थर</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedVoters.map((voter, index) => {
-                    const detected = detectCasteFromName(voter.fullName);
-                    return (
-                      <TableRow key={voter.id}>
-                        <TableCell className="font-mono text-sm text-muted-foreground">
-                          {(currentPage - 1) * pageSize + index + 1}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {voter.originalData?.['मतदाता नं'] || voter.originalData?.['Voter No'] || voter.id.slice(0, 8)}
-                        </TableCell>
-                        <TableCell className="font-medium">{voter.fullName}</TableCell>
-                        <TableCell>{voter.age}</TableCell>
-                        <TableCell className="capitalize">{voter.gender}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {voter.caste || detected.caste}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{voter.surname || detected.surname}</TableCell>
-                        <TableCell>
-                          {voter.isEdited ? (
-                            <Badge variant="outline" className="border-warning/50 text-warning">
-                              Edited
+            <ScrollArea className="w-full">
+              <div className="min-w-[900px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px] sticky left-0 bg-background z-10">
+                        <div>{t('table.sn')}</div>
+                        <div className="text-xs text-muted-foreground">क्र.सं.</div>
+                      </TableHead>
+                      <TableHead className="min-w-[100px]">
+                        <div>{t('table.voterId')}</div>
+                        <div className="text-xs text-muted-foreground">मतदाता नं.</div>
+                      </TableHead>
+                      <TableHead className="min-w-[180px]">
+                        <div>{nameLabels.en}</div>
+                        <div className="text-xs text-muted-foreground">{nameLabels.ne}</div>
+                      </TableHead>
+                      <TableHead className="w-[60px]">
+                        <div>{ageLabels.en}</div>
+                        <div className="text-xs text-muted-foreground">{ageLabels.ne}</div>
+                      </TableHead>
+                      <TableHead className="w-[80px]">
+                        <div>{genderLabels.en}</div>
+                        <div className="text-xs text-muted-foreground">{genderLabels.ne}</div>
+                      </TableHead>
+                      <TableHead className="min-w-[100px]">
+                        <div>Caste</div>
+                        <div className="text-xs text-muted-foreground">जात</div>
+                      </TableHead>
+                      <TableHead className="min-w-[100px]">
+                        <div>Surname</div>
+                        <div className="text-xs text-muted-foreground">थर</div>
+                      </TableHead>
+                      <TableHead className="min-w-[120px]">
+                        <div>Father's Name</div>
+                        <div className="text-xs text-muted-foreground">बाबुको नाम</div>
+                      </TableHead>
+                      <TableHead className="min-w-[100px]">
+                        <div>Tole</div>
+                        <div className="text-xs text-muted-foreground">टोल</div>
+                      </TableHead>
+                      <TableHead className="w-[80px]">Status</TableHead>
+                      <TableHead className="text-right sticky right-0 bg-background z-10 w-[80px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedVoters.map((voter, index) => {
+                      const detected = detectCasteFromName(voter.fullName);
+                      const fatherName = voter.originalData?.['Father Name'] || 
+                                        voter.originalData?.['बाबुको नाम'] || 
+                                        voter.originalData?.['बुबाको नाम'] || 
+                                        '-';
+                      const tole = voter.originalData?.['Tole'] || 
+                                   voter.originalData?.['टोल'] || 
+                                   voter.originalData?.['ठेगाना'] || 
+                                   '-';
+                      const voterNo = voter.originalData?.['मतदाता नं'] || 
+                                      voter.originalData?.['Voter No'] || 
+                                      voter.originalData?.['क्र.सं.'] ||
+                                      voter.originalData?.['SN'] ||
+                                      voter.id.slice(0, 8);
+                      
+                      return (
+                        <TableRow key={voter.id} className={voter.isEdited ? 'bg-warning/5' : ''}>
+                          <TableCell className="font-mono text-sm text-muted-foreground sticky left-0 bg-background z-10">
+                            {(currentPage - 1) * pageSize + index + 1}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-medium">
+                            {voterNo}
+                          </TableCell>
+                          <TableCell className="font-medium">{voter.fullName}</TableCell>
+                          <TableCell>{voter.age}</TableCell>
+                          <TableCell className="capitalize">{voter.gender}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {voter.caste || detected.caste}
                             </Badge>
-                          ) : (
-                            <Badge variant="secondary">Original</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={() => handleEditClick(voter)}
-                                >
-                                  <Edit3 className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
+                          </TableCell>
+                          <TableCell className="text-sm">{voter.surname || detected.surname}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{fatherName}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{tole}</TableCell>
+                          <TableCell>
+                            {voter.isEdited ? (
+                              <Badge variant="outline" className="border-warning/50 text-warning text-xs">
+                                Edited
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">Original</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right sticky right-0 bg-background z-10">
+                            <div className="flex justify-end gap-1">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-7 w-7"
+                                    onClick={() => handleEditClick(voter)}
+                                  >
+                                    <Edit3 className="h-3 w-3" />
+                                  </Button>
+                                </DialogTrigger>
                               <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
                                 <DialogHeader>
                                   <DialogTitle className="flex items-center gap-2">
@@ -632,6 +663,7 @@ export const EditSection = () => {
                   })}
                 </TableBody>
               </Table>
+              </div>
             </ScrollArea>
 
             {/* Pagination */}
