@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useVoterData, VoterRecord } from '@/contexts/VoterDataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,13 +9,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Filter, Palette, Plus, Settings2, Edit3, Save, RotateCcw, Search } from 'lucide-react';
+import { Users, Filter, Palette, Plus, Settings2, Edit3, Save, RotateCcw, Search, GripVertical, Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CASTE_CATEGORIES, detectCasteFromName } from '@/lib/casteData';
 import { toast } from 'sonner';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  useDroppable,
+} from '@dnd-kit/core';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 
 const DEFAULT_COLORS = {
   male: '#3b82f6',
@@ -45,6 +59,115 @@ interface CasteOverride {
   surname: string;
 }
 
+interface SurnameGroup {
+  surname: string;
+  count: number;
+  caste: string;
+  voterIds: string[];
+}
+
+// Draggable Surname Item Component
+const DraggableSurname = ({ surname, count, caste, isOverlay = false }: { surname: string; count: number; caste: string; isOverlay?: boolean }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({ 
+    id: `${surname}__${caste}`, 
+    data: { surname, count, caste } 
+  });
+
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+  };
+
+  if (isOverlay) {
+    return (
+      <div
+        className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-background shadow-lg ring-2 ring-accent"
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <span className="font-medium text-sm">{surname}</span>
+        <Badge variant="secondary" className="text-xs">{count}</Badge>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "flex items-center gap-2 px-3 py-2 rounded-lg border bg-background cursor-grab active:cursor-grabbing transition-all",
+        isDragging && "opacity-50 ring-2 ring-accent"
+      )}
+    >
+      <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <span className="font-medium text-sm">{surname}</span>
+      <Badge variant="secondary" className="text-xs">{count}</Badge>
+    </div>
+  );
+};
+
+// Caste Drop Zone Component
+const CasteDropZone = ({ 
+  casteName, 
+  casteNameNe,
+  surnames,
+  isActive,
+  color
+}: { 
+  casteName: string; 
+  casteNameNe: string;
+  surnames: SurnameGroup[];
+  isActive: boolean;
+  color: string;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: casteName,
+  });
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={cn(
+        "p-4 rounded-xl border-2 transition-all min-h-[120px]",
+        (isActive || isOver) ? "border-accent bg-accent/10 shadow-lg" : "border-dashed border-border"
+      )}
+      style={{ borderColor: (isActive || isOver) ? undefined : `${color}40` }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+        <h4 className="font-semibold">{casteName}</h4>
+        <span className="text-xs text-muted-foreground">({casteNameNe})</span>
+        <Badge variant="outline" className="ml-auto">{surnames.length}</Badge>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {surnames.slice(0, 8).map(s => (
+          <DraggableSurname 
+            key={`${s.surname}__${s.caste}`} 
+            surname={s.surname} 
+            count={s.count}
+            caste={s.caste}
+          />
+        ))}
+        {surnames.length > 8 && (
+          <Badge variant="secondary" className="text-xs">
+            +{surnames.length - 8} more
+          </Badge>
+        )}
+        {surnames.length === 0 && (
+          <p className="text-sm text-muted-foreground italic">Drop surnames here</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const SegmentsSection = () => {
   const { t, getBilingual, language } = useLanguage();
   const { municipalities, getSegmentCounts, updateVoterRecord } = useVoterData();
@@ -63,6 +186,16 @@ export const SegmentsSection = () => {
   const [editSurname, setEditSurname] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCasteEditor, setShowCasteEditor] = useState(false);
+  
+  // Drag and drop state
+  const [activeDragItem, setActiveDragItem] = useState<SurnameGroup | null>(null);
+  const [pendingChanges, setPendingChanges] = useState<{ surname: string; fromCaste: string; toCaste: string; voterIds: string[] }[]>([]);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor)
+  );
 
   const currentMunicipality = municipalities.find(m => m.id === selectedMunicipality);
   const segments = getSegmentCounts(
@@ -84,7 +217,7 @@ export const SegmentsSection = () => {
   }, [municipalities, selectedMunicipality, selectedWard]);
 
   // Get caste/surname with override support
-  const getVoterCaste = (voter: VoterRecord) => {
+  const getVoterCaste = useCallback((voter: VoterRecord) => {
     if (casteOverrides[voter.id]) {
       return { caste: casteOverrides[voter.id].caste, surname: casteOverrides[voter.id].surname };
     }
@@ -93,7 +226,7 @@ export const SegmentsSection = () => {
     }
     const detected = detectCasteFromName(voter.fullName);
     return { caste: detected.caste, surname: detected.surname };
-  };
+  }, [casteOverrides]);
 
   // Compute caste distribution using AI detection with overrides
   const casteDistribution = useMemo(() => {
@@ -121,7 +254,53 @@ export const SegmentsSection = () => {
           .sort((a, b) => b[1] - a[1])
           .slice(0, 10)
       }));
-  }, [allVoters, casteOverrides]);
+  }, [allVoters, getVoterCaste]);
+
+  // Surname distribution with caste grouping for drag-drop
+  const surnamesByCaste = useMemo(() => {
+    const result: Record<string, SurnameGroup[]> = {};
+    
+    // Initialize all categories
+    CASTE_CATEGORIES.forEach(cat => {
+      result[cat.name] = [];
+    });
+    result['Other'] = [];
+    
+    // Group voters by surname and their caste
+    const surnameMap: Record<string, { count: number; caste: string; voterIds: string[] }> = {};
+    
+    allVoters.forEach(voter => {
+      const { caste, surname } = getVoterCaste(voter);
+      const key = `${surname}__${caste}`;
+      
+      if (!surnameMap[key]) {
+        surnameMap[key] = { count: 0, caste, voterIds: [] };
+      }
+      surnameMap[key].count++;
+      surnameMap[key].voterIds.push(voter.id);
+    });
+    
+    // Distribute to caste buckets
+    Object.entries(surnameMap).forEach(([key, data]) => {
+      const surname = key.split('__')[0];
+      if (!result[data.caste]) {
+        result[data.caste] = [];
+      }
+      result[data.caste].push({
+        surname,
+        count: data.count,
+        caste: data.caste,
+        voterIds: data.voterIds
+      });
+    });
+    
+    // Sort each caste's surnames by count
+    Object.keys(result).forEach(caste => {
+      result[caste].sort((a, b) => b.count - a.count);
+    });
+    
+    return result;
+  }, [allVoters, getVoterCaste]);
 
   // Surname distribution with overrides
   const surnameDistribution = useMemo(() => {
@@ -139,7 +318,7 @@ export const SegmentsSection = () => {
     
     return Object.entries(surnameCounts)
       .sort((a, b) => b[1].count - a[1].count);
-  }, [allVoters, casteOverrides]);
+  }, [allVoters, getVoterCaste]);
 
   // Filtered voters by selected castes
   const filteredByCaste = useMemo(() => {
@@ -148,7 +327,7 @@ export const SegmentsSection = () => {
       const { caste } = getVoterCaste(voter);
       return selectedCastes.includes(caste);
     });
-  }, [allVoters, selectedCastes, casteOverrides]);
+  }, [allVoters, selectedCastes, getVoterCaste]);
 
   // Filtered voters for editing
   const filteredVotersForEdit = useMemo(() => {
@@ -214,6 +393,90 @@ export const SegmentsSection = () => {
     toast.success('Reset to auto-detected values');
   };
 
+  // Drag and Drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const data = active.data.current as SurnameGroup | undefined;
+    if (data) {
+      setActiveDragItem({ surname: data.surname, count: data.count, caste: data.caste, voterIds: [] });
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragItem(null);
+    
+    if (!over || !active.data.current) return;
+    
+    const sourceSurname = (active.data.current as SurnameGroup).surname;
+    const sourceCaste = (active.data.current as SurnameGroup).caste;
+    const targetCaste = over.id as string;
+    
+    if (sourceCaste === targetCaste) return;
+    
+    // Find all voters with this surname in the source caste
+    const affectedVoters = allVoters.filter(v => {
+      const { caste, surname } = getVoterCaste(v);
+      return surname === sourceSurname && caste === sourceCaste;
+    });
+    
+    if (affectedVoters.length === 0) return;
+    
+    // Add to pending changes
+    setPendingChanges(prev => {
+      // Remove any existing change for this surname
+      const filtered = prev.filter(p => p.surname !== sourceSurname);
+      return [...filtered, {
+        surname: sourceSurname,
+        fromCaste: sourceCaste,
+        toCaste: targetCaste,
+        voterIds: affectedVoters.map(v => v.id)
+      }];
+    });
+    
+    // Show save dialog
+    setShowSaveDialog(true);
+  };
+
+  const handleSaveChanges = () => {
+    pendingChanges.forEach(change => {
+      change.voterIds.forEach(voterId => {
+        setCasteOverrides(prev => ({
+          ...prev,
+          [voterId]: {
+            voterId,
+            caste: change.toCaste,
+            surname: change.surname
+          }
+        }));
+        
+        // Update in context
+        const municipality = municipalities.find(m => 
+          m.wards.some(w => w.voters.some(v => v.id === voterId))
+        );
+        const ward = municipality?.wards.find(w => 
+          w.voters.some(v => v.id === voterId)
+        );
+        
+        if (municipality && ward) {
+          updateVoterRecord(municipality.id, ward.id, voterId, {
+            caste: change.toCaste,
+            surname: change.surname
+          });
+        }
+      });
+    });
+    
+    toast.success(`Updated ${pendingChanges.reduce((acc, c) => acc + c.voterIds.length, 0)} voter records`);
+    setPendingChanges([]);
+    setShowSaveDialog(false);
+  };
+
+  const handleDiscardChanges = () => {
+    setPendingChanges([]);
+    setShowSaveDialog(false);
+  };
+
   const genderLabels = getBilingual('segments.male');
   const femaleLabels = getBilingual('segments.female');
   const otherLabels = getBilingual('segments.other');
@@ -226,7 +489,7 @@ export const SegmentsSection = () => {
 
   const ageColors = [colors.age1, colors.age2, colors.age3, colors.age4, colors.age5, colors.age6];
 
-  const casteColors = ['#2d5a7b', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51', '#9b5de5', '#ff6b6b', '#4ecdc4'];
+  const casteColors = ['#2d5a7b', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51', '#9b5de5', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
 
   const updateAgeRange = (index: number, field: 'min' | 'max' | 'label', value: string | number) => {
     setAgeRanges(prev => {
@@ -238,6 +501,48 @@ export const SegmentsSection = () => {
 
   return (
     <div className="space-y-6">
+      {/* Save Changes Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-warning" />
+              Save Caste Changes?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You have made the following changes to caste assignments:
+            </p>
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {pendingChanges.map(change => (
+                <div key={change.surname} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                  <Badge variant="outline">{change.surname}</Badge>
+                  <span className="text-sm text-muted-foreground">{change.fromCaste}</span>
+                  <span className="text-sm">→</span>
+                  <Badge>{change.toCaste}</Badge>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    ({change.voterIds.length} voters)
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This will update all voters with these surnames to the new caste category.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDiscardChanges}>
+              Discard
+            </Button>
+            <Button onClick={handleSaveChanges} className="gap-2">
+              <Check className="h-4 w-4" />
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Filters */}
       <Card className="card-shadow border-border/50">
         <CardHeader>
@@ -336,6 +641,7 @@ export const SegmentsSection = () => {
           <TabsTrigger value="age" className="text-xs sm:text-sm">{t('segments.byAge')}</TabsTrigger>
           <TabsTrigger value="caste" className="text-xs sm:text-sm">{t('segments.byCaste')}</TabsTrigger>
           <TabsTrigger value="surname" className="text-xs sm:text-sm">{t('segments.bySurname')}</TabsTrigger>
+          <TabsTrigger value="dragDrop" className="text-xs sm:text-sm">Organize Castes</TabsTrigger>
           <TabsTrigger value="casteFilter" className="text-xs sm:text-sm">Filter by Caste</TabsTrigger>
         </TabsList>
 
@@ -749,6 +1055,90 @@ export const SegmentsSection = () => {
                       </div>
                     );
                   })}
+                  {surnameDistribution.length > 50 && (
+                    <p className="text-center text-sm text-muted-foreground py-2">
+                      Showing top 50 of {surnameDistribution.length} surnames
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Drag and Drop Tab */}
+        <TabsContent value="dragDrop" className="fade-in">
+          <Card className="card-shadow border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-base font-semibold">
+                <div className="flex items-center gap-2">
+                  <GripVertical className="h-4 w-4" />
+                  Drag & Drop Surnames to Castes
+                  <Badge variant="secondary">Interactive</Badge>
+                </div>
+                {pendingChanges.length > 0 && (
+                  <Badge variant="default" className="gap-1">
+                    {pendingChanges.length} pending changes
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {allVoters.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Upload data to organize castes</p>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Drag surnames between caste categories to reassign them. Changes will be applied to all voters with that surname.
+                  </p>
+                  
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {CASTE_CATEGORIES.map((cat, index) => (
+                        <div 
+                          key={cat.name}
+                          id={cat.name}
+                          data-droppable="true"
+                        >
+                          <CasteDropZone
+                            casteName={cat.name}
+                            casteNameNe={cat.nameNe}
+                            surnames={surnamesByCaste[cat.name] || []}
+                            isActive={activeDragItem !== null}
+                            color={casteColors[index % casteColors.length]}
+                          />
+                        </div>
+                      ))}
+                      <div 
+                        id="Other"
+                        data-droppable="true"
+                      >
+                        <CasteDropZone
+                          casteName="Other"
+                          casteNameNe="अन्य"
+                          surnames={surnamesByCaste['Other'] || []}
+                          isActive={activeDragItem !== null}
+                          color="#888888"
+                        />
+                      </div>
+                    </div>
+                    
+                    <DragOverlay>
+                      {activeDragItem ? (
+                        <DraggableSurname 
+                          surname={activeDragItem.surname} 
+                          count={activeDragItem.count}
+                          caste={activeDragItem.caste}
+                          isOverlay
+                        />
+                      ) : null}
+                    </DragOverlay>
+                  </DndContext>
                 </div>
               )}
             </CardContent>
@@ -758,87 +1148,104 @@ export const SegmentsSection = () => {
         <TabsContent value="casteFilter" className="fade-in">
           <Card className="card-shadow border-border/50">
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Filter by Caste Category</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filter by Caste
+                  {selectedCastes.length > 0 && (
+                    <Badge variant="default">{selectedCastes.length} selected</Badge>
+                  )}
+                </div>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Caste Selection */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {CASTE_CATEGORIES.map((category) => {
-                  const isSelected = selectedCastes.includes(category.name);
-                  const count = casteDistribution.find(c => c.caste === category.name)?.count || 0;
-                  return (
-                    <div
-                      key={category.name}
-                      className={cn(
-                        "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                        isSelected ? "border-accent bg-accent/10" : "border-border hover:border-muted-foreground/50"
-                      )}
-                      onClick={() => toggleCasteFilter(category.name)}
+            <CardContent>
+              <div className="space-y-4">
+                {/* Caste Selection */}
+                <div className="flex flex-wrap gap-2">
+                  {CASTE_CATEGORIES.map(cat => (
+                    <Button
+                      key={cat.name}
+                      variant={selectedCastes.includes(cat.name) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleCasteFilter(cat.name)}
+                      className="gap-2"
                     >
-                      <Checkbox checked={isSelected} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{category.name}</p>
-                        <p className="text-xs text-muted-foreground">{category.nameNe}</p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs shrink-0">{count}</Badge>
-                    </div>
-                  );
-                })}
-              </div>
+                      {cat.name}
+                      <span className="text-xs opacity-70">({cat.nameNe})</span>
+                    </Button>
+                  ))}
+                  <Button
+                    variant={selectedCastes.includes('Other') ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleCasteFilter('Other')}
+                  >
+                    Other (अन्य)
+                  </Button>
+                </div>
 
-              {/* Filtered Results */}
-              {selectedCastes.length > 0 && (
-                <div className="pt-4 border-t border-border">
+                {selectedCastes.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setSelectedCastes([])}
+                    className="gap-2"
+                  >
+                    Clear Selection
+                  </Button>
+                )}
+
+                {/* Filtered Results */}
+                <div className="pt-4 border-t">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium">Filtered Results</h4>
+                    <p className="text-sm font-medium">
+                      {selectedCastes.length === 0 ? 'All Voters' : `Filtered: ${selectedCastes.join(', ')}`}
+                    </p>
                     <Badge variant="secondary">{filteredByCaste.length} voters</Badge>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {selectedCastes.map(caste => {
-                      const data = casteDistribution.find(c => c.caste === caste);
-                      return (
-                        <Card key={caste} className="p-4 text-center">
-                          <p className="text-sm font-medium">{caste}</p>
-                          <p className="text-2xl font-bold text-accent mt-1">{data?.count || 0}</p>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                  
+                  <ScrollArea className="h-[400px] border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>SN</TableHead>
+                          <TableHead>Name / नाम</TableHead>
+                          <TableHead>Age</TableHead>
+                          <TableHead>Gender</TableHead>
+                          <TableHead>Caste</TableHead>
+                          <TableHead>Surname</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredByCaste.slice(0, 100).map((voter, index) => {
+                          const { caste, surname } = getVoterCaste(voter);
+                          return (
+                            <TableRow key={voter.id}>
+                              <TableCell className="text-muted-foreground">{index + 1}</TableCell>
+                              <TableCell className="font-medium">{voter.fullName}</TableCell>
+                              <TableCell>{voter.age}</TableCell>
+                              <TableCell className="capitalize">{voter.gender}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{caste}</Badge>
+                              </TableCell>
+                              <TableCell>{surname}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                  
+                  {filteredByCaste.length > 100 && (
+                    <p className="text-center text-sm text-muted-foreground mt-2">
+                      Showing first 100 of {filteredByCaste.length} voters
+                    </p>
+                  )}
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Newar vs Non-Newar */}
-      <Card className="card-shadow border-border/50">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            {t('segments.newar')} vs {t('segments.nonNewar')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
-            <div className="rounded-xl border border-chart-2/30 bg-chart-2/5 p-4 sm:p-6 text-center">
-              <p className="text-sm font-medium text-muted-foreground">{t('segments.newar')}</p>
-              <p className="text-xs text-muted-foreground">नेवार</p>
-              <p className="mt-2 text-3xl sm:text-4xl font-bold text-chart-2">{segments.newarVsNonNewar.newar.toLocaleString()}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {segments.total > 0 ? ((segments.newarVsNonNewar.newar / segments.total) * 100).toFixed(1) : 0}%
-              </p>
-            </div>
-            <div className="rounded-xl border border-chart-1/30 bg-chart-1/5 p-4 sm:p-6 text-center">
-              <p className="text-sm font-medium text-muted-foreground">{t('segments.nonNewar')}</p>
-              <p className="text-xs text-muted-foreground">गैर-नेवार</p>
-              <p className="mt-2 text-3xl sm:text-4xl font-bold text-chart-1">{segments.newarVsNonNewar.nonNewar.toLocaleString()}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {segments.total > 0 ? ((segments.newarVsNonNewar.nonNewar / segments.total) * 100).toFixed(1) : 0}%
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

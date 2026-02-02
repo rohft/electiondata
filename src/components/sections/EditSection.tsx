@@ -15,11 +15,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Edit3, Undo2, Save, Search, X, FolderOpen, ChevronRight, 
-  Users, UserPlus, FileText, Building2, Plus, Filter 
+  Users, UserPlus, FileText, Building2, Plus, Filter, Trash2, Eye, EyeOff,
+  ChevronLeft, ChevronRight as ChevronRightIcon, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { detectCasteFromName } from '@/lib/casteData';
+import { detectCasteFromName, CASTE_CATEGORIES } from '@/lib/casteData';
 
 const OCCUPATIONS = [
   'Agriculture', 'Business', 'Government Service', 'Private Job', 'Teacher',
@@ -42,6 +43,21 @@ const NOTE_TAGS = [
   'Youth Leader', 'Requires Follow-up', 'Key Contact', 'Community Leader'
 ];
 
+// Default visible columns
+const ALL_COLUMNS = [
+  { key: 'sn', label: 'SN', labelNe: 'क्र.सं.' },
+  { key: 'voterId', label: 'Voter ID', labelNe: 'मतदाता नं.' },
+  { key: 'fullName', label: 'Name', labelNe: 'नाम' },
+  { key: 'age', label: 'Age', labelNe: 'उमेर' },
+  { key: 'gender', label: 'Gender', labelNe: 'लिङ्ग' },
+  { key: 'caste', label: 'Caste', labelNe: 'जात' },
+  { key: 'surname', label: 'Surname', labelNe: 'थर' },
+  { key: 'fatherName', label: "Father's Name", labelNe: 'बाबुको नाम' },
+  { key: 'tole', label: 'Tole', labelNe: 'टोल' },
+  { key: 'phone', label: 'Phone', labelNe: 'फोन' },
+  { key: 'status', label: 'Status', labelNe: 'स्थिति' },
+];
+
 export const EditSection = () => {
   const { t, getBilingual } = useLanguage();
   const { municipalities, updateVoterRecord, revertVoterRecord } = useVoterData();
@@ -60,27 +76,71 @@ export const EditSection = () => {
   }>({});
   const [showOriginalData, setShowOriginalData] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 50;
+  const [pageSize, setPageSize] = useState(25);
+  
+  // Column visibility
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['sn', 'voterId', 'fullName', 'age', 'gender', 'caste', 'surname', 'status']);
+  const [showColumnManager, setShowColumnManager] = useState(false);
+  
+  // Filter states
+  const [filterGender, setFilterGender] = useState<string>('all');
+  const [filterCaste, setFilterCaste] = useState<string>('all');
+  const [filterAgeMin, setFilterAgeMin] = useState<string>('');
+  const [filterAgeMax, setFilterAgeMax] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
 
-  const currentMunicipality = municipalities.find(m => m.id === selectedMunicipality);
-  const currentWard = currentMunicipality?.wards.find(w => w.id === selectedWard);
+  // Auto-select municipality if only one exists
+  const autoSelectedMunicipality = municipalities.length === 1 ? municipalities[0] : null;
+  const effectiveMunicipalityId = selectedMunicipality || (autoSelectedMunicipality?.id || '');
+  const effectiveMunicipality = municipalities.find(m => m.id === effectiveMunicipalityId);
+  const currentWard = effectiveMunicipality?.wards.find(w => w.id === selectedWard);
   
   // Get all voters in the current ward for family member selection
   const allWardVoters = currentWard?.voters || [];
   
+  // Apply filters
   const voters = useMemo(() => {
-    return allWardVoters.filter(v => 
-      v.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.surname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.caste.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [allWardVoters, searchTerm]);
+    let filtered = allWardVoters;
+    
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(v => 
+        v.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.surname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.caste.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.originalData?.['मतदाता नं'] || '').includes(searchTerm) ||
+        (v.originalData?.['Voter No'] || '').includes(searchTerm)
+      );
+    }
+    
+    // Gender filter
+    if (filterGender !== 'all') {
+      filtered = filtered.filter(v => v.gender === filterGender);
+    }
+    
+    // Caste filter
+    if (filterCaste !== 'all') {
+      filtered = filtered.filter(v => {
+        const detected = detectCasteFromName(v.fullName);
+        return (v.caste || detected.caste) === filterCaste;
+      });
+    }
+    
+    // Age filter
+    const minAge = parseInt(filterAgeMin) || 0;
+    const maxAge = parseInt(filterAgeMax) || 200;
+    if (filterAgeMin || filterAgeMax) {
+      filtered = filtered.filter(v => v.age >= minAge && v.age <= maxAge);
+    }
+    
+    return filtered;
+  }, [allWardVoters, searchTerm, filterGender, filterCaste, filterAgeMin, filterAgeMax]);
 
   const paginatedVoters = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return voters.slice(start, start + pageSize);
-  }, [voters, currentPage]);
+  }, [voters, currentPage, pageSize]);
 
   const totalPages = Math.ceil(voters.length / pageSize);
 
@@ -95,11 +155,15 @@ export const EditSection = () => {
     return Array.from(toles).sort();
   }, [allWardVoters]);
 
-  // Auto-select municipality if only one exists
-  const autoSelectedMunicipality = municipalities.length === 1 ? municipalities[0] : null;
-  const effectiveMunicipality = selectedMunicipality 
-    ? currentMunicipality 
-    : autoSelectedMunicipality;
+  // Get unique castes for filter
+  const uniqueCastes = useMemo(() => {
+    const castes = new Set<string>();
+    allWardVoters.forEach(v => {
+      const detected = detectCasteFromName(v.fullName);
+      castes.add(v.caste || detected.caste);
+    });
+    return Array.from(castes).sort();
+  }, [allWardVoters]);
 
   const handleEditClick = (voter: VoterRecord) => {
     setEditingVoter(voter);
@@ -165,16 +229,60 @@ export const EditSection = () => {
     }));
   };
 
+  const toggleColumn = (columnKey: string) => {
+    setVisibleColumns(prev => 
+      prev.includes(columnKey)
+        ? prev.filter(k => k !== columnKey)
+        : [...prev, columnKey]
+    );
+  };
+
+  const clearFilters = () => {
+    setFilterGender('all');
+    setFilterCaste('all');
+    setFilterAgeMin('');
+    setFilterAgeMax('');
+    setSearchTerm('');
+  };
+
   // Available family members (exclude already selected and current voter)
   const availableFamilyMembers = allWardVoters.filter(v => 
     v.id !== editingVoter?.id && 
     !editForm.familyMemberIds?.includes(v.id)
   );
 
-  // Get bilingual labels
-  const nameLabels = getBilingual('table.name');
-  const ageLabels = getBilingual('table.age');
-  const genderLabels = getBilingual('table.gender');
+  // Helper to get cell value
+  const getCellValue = (voter: VoterRecord, columnKey: string, index: number) => {
+    const detected = detectCasteFromName(voter.fullName);
+    const voterNo = voter.originalData?.['मतदाता नं'] || 
+                    voter.originalData?.['Voter No'] || 
+                    voter.originalData?.['क्र.सं.'] ||
+                    voter.originalData?.['SN'] ||
+                    voter.id.slice(0, 8);
+    const fatherName = voter.originalData?.['Father Name'] || 
+                       voter.originalData?.['बाबुको नाम'] || 
+                       voter.originalData?.['बुबाको नाम'] || 
+                       '-';
+    const tole = voter.originalData?.['Tole'] || 
+                 voter.originalData?.['टोल'] || 
+                 voter.originalData?.['ठेगाना'] || 
+                 '-';
+
+    switch (columnKey) {
+      case 'sn': return (currentPage - 1) * pageSize + index + 1;
+      case 'voterId': return voterNo;
+      case 'fullName': return voter.fullName;
+      case 'age': return voter.age;
+      case 'gender': return voter.gender;
+      case 'caste': return voter.caste || detected.caste;
+      case 'surname': return voter.surname || detected.surname;
+      case 'fatherName': return fatherName;
+      case 'tole': return tole;
+      case 'phone': return voter.phone || '-';
+      case 'status': return voter.isEdited ? 'Edited' : 'Original';
+      default: return '-';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -199,11 +307,14 @@ export const EditSection = () => {
                 <span className="font-medium text-foreground">
                   {currentWard?.name}
                 </span>
+                <Badge variant="secondary" className="ml-2">
+                  {allWardVoters.length} voters
+                </Badge>
               </>
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Municipality Selection - Only show if multiple exist */}
             {municipalities.length > 1 && (
               <div className="space-y-2">
@@ -228,7 +339,7 @@ export const EditSection = () => {
             {effectiveMunicipality && (
               <div className="space-y-2">
                 <Label>{t('common.ward')}</Label>
-                <Select value={selectedWard} onValueChange={(v) => { setSelectedWard(v); setCurrentPage(1); }}>
+                <Select value={selectedWard} onValueChange={(v) => { setSelectedWard(v); setCurrentPage(1); clearFilters(); }}>
                   <SelectTrigger>
                     <SelectValue placeholder={t('edit.selectWard')} />
                   </SelectTrigger>
@@ -264,7 +375,114 @@ export const EditSection = () => {
                 </div>
               </div>
             )}
+
+            {/* Toggle Filters */}
+            {selectedWard && (
+              <div className="space-y-2">
+                <Label>Options</Label>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={showFilters ? "default" : "outline"} 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => setShowFilters(!showFilters)}
+                  >
+                    <Filter className="h-4 w-4" />
+                    Filters
+                  </Button>
+                  <Button 
+                    variant={showColumnManager ? "default" : "outline"} 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => setShowColumnManager(!showColumnManager)}
+                  >
+                    {showColumnManager ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    Columns
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Filter Panel */}
+          {showFilters && selectedWard && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <Label>Gender</Label>
+                  <Select value={filterGender} onValueChange={setFilterGender}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Genders</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Caste</Label>
+                  <Select value={filterCaste} onValueChange={setFilterCaste}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Castes</SelectItem>
+                      {uniqueCastes.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Age Range</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="number" 
+                      placeholder="Min" 
+                      value={filterAgeMin}
+                      onChange={(e) => setFilterAgeMin(e.target.value)}
+                    />
+                    <Input 
+                      type="number" 
+                      placeholder="Max" 
+                      value={filterAgeMax}
+                      onChange={(e) => setFilterAgeMax(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>&nbsp;</Label>
+                  <Button variant="outline" className="w-full gap-2" onClick={clearFilters}>
+                    <X className="h-4 w-4" />
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Column Manager */}
+          {showColumnManager && selectedWard && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <Label className="mb-3 block">Visible Columns</Label>
+              <div className="flex flex-wrap gap-2">
+                {ALL_COLUMNS.map(col => (
+                  <Button
+                    key={col.key}
+                    variant={visibleColumns.includes(col.key) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleColumn(col.key)}
+                    className="text-xs"
+                  >
+                    {col.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -276,431 +494,450 @@ export const EditSection = () => {
               <div className="flex items-center gap-2">
                 <span>{currentWard.name} - {effectiveMunicipality?.name}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="secondary">{voters.length} records</Badge>
-                {searchTerm && (
-                  <Badge variant="outline">Filtered</Badge>
+                {(filterGender !== 'all' || filterCaste !== 'all' || filterAgeMin || filterAgeMax || searchTerm) && (
+                  <Badge variant="outline" className="border-accent text-accent">Filtered</Badge>
                 )}
+                <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[100px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 / page</SelectItem>
+                    <SelectItem value="25">25 / page</SelectItem>
+                    <SelectItem value="50">50 / page</SelectItem>
+                    <SelectItem value="100">100 / page</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="w-full">
-              <div className="min-w-[900px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px] sticky left-0 bg-background z-10">
-                        <div>{t('table.sn')}</div>
-                        <div className="text-xs text-muted-foreground">क्र.सं.</div>
-                      </TableHead>
-                      <TableHead className="min-w-[100px]">
-                        <div>{t('table.voterId')}</div>
-                        <div className="text-xs text-muted-foreground">मतदाता नं.</div>
-                      </TableHead>
-                      <TableHead className="min-w-[180px]">
-                        <div>{nameLabels.en}</div>
-                        <div className="text-xs text-muted-foreground">{nameLabels.ne}</div>
-                      </TableHead>
-                      <TableHead className="w-[60px]">
-                        <div>{ageLabels.en}</div>
-                        <div className="text-xs text-muted-foreground">{ageLabels.ne}</div>
-                      </TableHead>
-                      <TableHead className="w-[80px]">
-                        <div>{genderLabels.en}</div>
-                        <div className="text-xs text-muted-foreground">{genderLabels.ne}</div>
-                      </TableHead>
-                      <TableHead className="min-w-[100px]">
-                        <div>Caste</div>
-                        <div className="text-xs text-muted-foreground">जात</div>
-                      </TableHead>
-                      <TableHead className="min-w-[100px]">
-                        <div>Surname</div>
-                        <div className="text-xs text-muted-foreground">थर</div>
-                      </TableHead>
-                      <TableHead className="min-w-[120px]">
-                        <div>Father's Name</div>
-                        <div className="text-xs text-muted-foreground">बाबुको नाम</div>
-                      </TableHead>
-                      <TableHead className="min-w-[100px]">
-                        <div>Tole</div>
-                        <div className="text-xs text-muted-foreground">टोल</div>
-                      </TableHead>
-                      <TableHead className="w-[80px]">Status</TableHead>
-                      <TableHead className="text-right sticky right-0 bg-background z-10 w-[80px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedVoters.map((voter, index) => {
-                      const detected = detectCasteFromName(voter.fullName);
-                      const fatherName = voter.originalData?.['Father Name'] || 
-                                        voter.originalData?.['बाबुको नाम'] || 
-                                        voter.originalData?.['बुबाको नाम'] || 
-                                        '-';
-                      const tole = voter.originalData?.['Tole'] || 
-                                   voter.originalData?.['टोल'] || 
-                                   voter.originalData?.['ठेगाना'] || 
-                                   '-';
-                      const voterNo = voter.originalData?.['मतदाता नं'] || 
-                                      voter.originalData?.['Voter No'] || 
-                                      voter.originalData?.['क्र.सं.'] ||
-                                      voter.originalData?.['SN'] ||
-                                      voter.id.slice(0, 8);
-                      
-                      return (
-                        <TableRow key={voter.id} className={voter.isEdited ? 'bg-warning/5' : ''}>
-                          <TableCell className="font-mono text-sm text-muted-foreground sticky left-0 bg-background z-10">
-                            {(currentPage - 1) * pageSize + index + 1}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs font-medium">
-                            {voterNo}
-                          </TableCell>
-                          <TableCell className="font-medium">{voter.fullName}</TableCell>
-                          <TableCell>{voter.age}</TableCell>
-                          <TableCell className="capitalize">{voter.gender}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {voter.caste || detected.caste}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm">{voter.surname || detected.surname}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{fatherName}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{tole}</TableCell>
-                          <TableCell>
-                            {voter.isEdited ? (
-                              <Badge variant="outline" className="border-warning/50 text-warning text-xs">
-                                Edited
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">Original</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right sticky right-0 bg-background z-10">
-                            <div className="flex justify-end gap-1">
-                              <Dialog>
-                                <DialogTrigger asChild>
+            {voters.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No voters found matching your criteria</p>
+                <Button variant="link" onClick={clearFilters} className="mt-2">
+                  Clear all filters
+                </Button>
+              </div>
+            ) : (
+              <>
+                <ScrollArea className="w-full">
+                  <div className="min-w-[800px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => (
+                            <TableHead 
+                              key={col.key} 
+                              className={cn(
+                                "min-w-[80px]",
+                                col.key === 'sn' && "sticky left-0 bg-background z-10 w-[50px]",
+                                col.key === 'fullName' && "min-w-[180px]"
+                              )}
+                            >
+                              <div>{col.label}</div>
+                              <div className="text-xs text-muted-foreground">{col.labelNe}</div>
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-right sticky right-0 bg-background z-10 w-[80px]">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedVoters.map((voter, index) => (
+                          <TableRow key={voter.id} className={voter.isEdited ? 'bg-warning/5' : ''}>
+                            {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => {
+                              const value = getCellValue(voter, col.key, index);
+                              return (
+                                <TableCell 
+                                  key={col.key}
+                                  className={cn(
+                                    col.key === 'sn' && "font-mono text-sm text-muted-foreground sticky left-0 bg-background z-10",
+                                    col.key === 'voterId' && "font-mono text-xs font-medium",
+                                    col.key === 'fullName' && "font-medium",
+                                    col.key === 'gender' && "capitalize"
+                                  )}
+                                >
+                                  {col.key === 'caste' ? (
+                                    <Badge variant="outline" className="text-xs">{value}</Badge>
+                                  ) : col.key === 'status' ? (
+                                    value === 'Edited' ? (
+                                      <Badge variant="outline" className="border-warning/50 text-warning text-xs">Edited</Badge>
+                                    ) : (
+                                      <Badge variant="secondary" className="text-xs">Original</Badge>
+                                    )
+                                  ) : (
+                                    value
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell className="text-right sticky right-0 bg-background z-10">
+                              <div className="flex justify-end gap-1">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-7 w-7"
+                                      onClick={() => handleEditClick(voter)}
+                                    >
+                                      <Edit3 className="h-3 w-3" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+                                    <DialogHeader>
+                                      <DialogTitle className="flex items-center gap-2">
+                                        <Edit3 className="h-5 w-5" />
+                                        {t('edit.voterRecord')}
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    
+                                    <ScrollArea className="flex-1 pr-4">
+                                      <Tabs defaultValue="basic" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-4 mb-4">
+                                          <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                                          <TabsTrigger value="family">Family</TabsTrigger>
+                                          <TabsTrigger value="party">Party</TabsTrigger>
+                                          <TabsTrigger value="notes">Notes</TabsTrigger>
+                                        </TabsList>
+
+                                        <TabsContent value="basic" className="space-y-4">
+                                          {/* Show Original Data Toggle */}
+                                          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                                            <div className="flex items-center gap-2">
+                                              <FileText className="h-4 w-4 text-muted-foreground" />
+                                              <span className="text-sm">{t('edit.originalData')}</span>
+                                            </div>
+                                            <Button 
+                                              variant="outline" 
+                                              size="sm"
+                                              onClick={() => setShowOriginalData(!showOriginalData)}
+                                            >
+                                              {showOriginalData ? 'Hide' : 'Show'}
+                                            </Button>
+                                          </div>
+
+                                          {showOriginalData && editingVoter && (
+                                            <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                                              <p className="text-sm font-medium mb-2">Original File Data:</p>
+                                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                                {Object.entries(editingVoter.originalData).map(([key, value]) => (
+                                                  <div key={key} className="flex justify-between gap-2">
+                                                    <span className="text-muted-foreground">{key}:</span>
+                                                    <span className="font-medium truncate">{value}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* Basic Fields */}
+                                          <div className="grid gap-4 sm:grid-cols-2">
+                                            <div className="space-y-2">
+                                              <Label>Full Name</Label>
+                                              <Input
+                                                value={editForm.fullName || ''}
+                                                onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                                              />
+                                            </div>
+                                            <div className="space-y-2">
+                                              <Label>Age</Label>
+                                              <Input
+                                                type="number"
+                                                value={editForm.age || ''}
+                                                onChange={(e) => setEditForm({ ...editForm, age: parseInt(e.target.value) })}
+                                              />
+                                            </div>
+                                            <div className="space-y-2">
+                                              <Label>Gender</Label>
+                                              <Select 
+                                                value={editForm.gender} 
+                                                onValueChange={(v) => setEditForm({ ...editForm, gender: v as any })}
+                                              >
+                                                <SelectTrigger>
+                                                  <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="male">Male</SelectItem>
+                                                  <SelectItem value="female">Female</SelectItem>
+                                                  <SelectItem value="other">Other</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                              <Label>Caste</Label>
+                                              <Select 
+                                                value={editForm.caste} 
+                                                onValueChange={(v) => setEditForm({ ...editForm, caste: v })}
+                                              >
+                                                <SelectTrigger>
+                                                  <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {CASTE_CATEGORIES.map(cat => (
+                                                    <SelectItem key={cat.name} value={cat.name}>
+                                                      {cat.name} ({cat.nameNe})
+                                                    </SelectItem>
+                                                  ))}
+                                                  <SelectItem value="Other">Other (अन्य)</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                              <Label>Surname</Label>
+                                              <Input
+                                                value={editForm.surname || ''}
+                                                onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
+                                              />
+                                            </div>
+                                            <div className="space-y-2">
+                                              <Label>{t('edit.tole')}</Label>
+                                              <Select 
+                                                value={editForm.tole} 
+                                                onValueChange={(v) => setEditForm({ ...editForm, tole: v })}
+                                              >
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Select Tole" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {uniqueToles.map(tole => (
+                                                    <SelectItem key={tole} value={tole}>{tole}</SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                              <Label>Occupation</Label>
+                                              <Select 
+                                                value={editForm.occupation} 
+                                                onValueChange={(v) => setEditForm({ ...editForm, occupation: v })}
+                                              >
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Select Occupation" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {OCCUPATIONS.map(occ => (
+                                                    <SelectItem key={occ} value={occ}>{occ}</SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                              <Label>Phone</Label>
+                                              <Input
+                                                value={editForm.phone || ''}
+                                                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                                              />
+                                            </div>
+                                          </div>
+                                        </TabsContent>
+
+                                        <TabsContent value="family" className="space-y-4">
+                                          <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50">
+                                            <Checkbox
+                                              checked={editForm.isMainFamilyMember}
+                                              onCheckedChange={(checked) => 
+                                                setEditForm({ ...editForm, isMainFamilyMember: !!checked })
+                                              }
+                                            />
+                                            <Label>This person is the main family member</Label>
+                                          </div>
+
+                                          <div className="space-y-2">
+                                            <Label className="flex items-center gap-2">
+                                              <Users className="h-4 w-4" />
+                                              Family Members ({editForm.familyMemberIds?.length || 0})
+                                            </Label>
+                                            
+                                            {/* Selected family members */}
+                                            {editForm.familyMemberIds && editForm.familyMemberIds.length > 0 && (
+                                              <div className="flex flex-wrap gap-2 mb-3">
+                                                {editForm.familyMemberIds.map(id => {
+                                                  const member = allWardVoters.find(v => v.id === id);
+                                                  return member ? (
+                                                    <Badge key={id} variant="secondary" className="gap-1">
+                                                      {member.fullName}
+                                                      <X 
+                                                        className="h-3 w-3 cursor-pointer" 
+                                                        onClick={() => toggleFamilyMember(id)}
+                                                      />
+                                                    </Badge>
+                                                  ) : null;
+                                                })}
+                                              </div>
+                                            )}
+
+                                            {/* Add family member */}
+                                            <ScrollArea className="h-[200px] border rounded-lg p-2">
+                                              {availableFamilyMembers.slice(0, 50).map(v => (
+                                                <div 
+                                                  key={v.id}
+                                                  className="flex items-center justify-between p-2 hover:bg-muted/50 rounded cursor-pointer"
+                                                  onClick={() => toggleFamilyMember(v.id)}
+                                                >
+                                                  <div>
+                                                    <p className="text-sm font-medium">{v.fullName}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                      {v.age} years, {v.gender}
+                                                    </p>
+                                                  </div>
+                                                  <UserPlus className="h-4 w-4 text-muted-foreground" />
+                                                </div>
+                                              ))}
+                                            </ScrollArea>
+                                          </div>
+                                        </TabsContent>
+
+                                        <TabsContent value="party" className="space-y-4">
+                                          <Label>Political Party Affiliation (Multi-select)</Label>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            {POLITICAL_PARTIES.map(party => (
+                                              <div 
+                                                key={party.name}
+                                                className={cn(
+                                                  "flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors",
+                                                  editForm.partyAffiliations?.includes(party.name)
+                                                    ? "border-accent bg-accent/10"
+                                                    : "border-border hover:bg-muted/50"
+                                                )}
+                                                onClick={() => togglePartyAffiliation(party.name)}
+                                              >
+                                                <Checkbox 
+                                                  checked={editForm.partyAffiliations?.includes(party.name)}
+                                                  className="pointer-events-none"
+                                                />
+                                                <div>
+                                                  <p className="text-sm font-medium">{party.name}</p>
+                                                  <p className="text-xs text-muted-foreground">{party.short}</p>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </TabsContent>
+
+                                        <TabsContent value="notes" className="space-y-4">
+                                          <Label>Note Tags (Multi-select)</Label>
+                                          <div className="flex flex-wrap gap-2">
+                                            {NOTE_TAGS.map(tag => (
+                                              <Badge
+                                                key={tag}
+                                                variant={editForm.notes?.includes(tag) ? "default" : "outline"}
+                                                className="cursor-pointer"
+                                                onClick={() => toggleNote(tag)}
+                                              >
+                                                {tag}
+                                              </Badge>
+                                            ))}
+                                          </div>
+
+                                          <div className="space-y-2">
+                                            <Label>Custom Note</Label>
+                                            <Textarea
+                                              value={editForm.customNote || ''}
+                                              onChange={(e) => setEditForm({ ...editForm, customNote: e.target.value })}
+                                              placeholder="Add any additional notes..."
+                                              rows={4}
+                                            />
+                                          </div>
+                                        </TabsContent>
+                                      </Tabs>
+                                    </ScrollArea>
+
+                                    <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                                      <DialogClose asChild>
+                                        <Button variant="outline">Cancel</Button>
+                                      </DialogClose>
+                                      <DialogClose asChild>
+                                        <Button onClick={handleSaveEdit} className="gap-2">
+                                          <Save className="h-4 w-4" />
+                                          Save Changes
+                                        </Button>
+                                      </DialogClose>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                {voter.isEdited && (
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
                                     className="h-7 w-7"
-                                    onClick={() => handleEditClick(voter)}
+                                    onClick={() => handleRevert(voter.id)}
                                   >
-                                    <Edit3 className="h-3 w-3" />
+                                    <Undo2 className="h-3 w-3" />
                                   </Button>
-                                </DialogTrigger>
-                              <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-                                <DialogHeader>
-                                  <DialogTitle className="flex items-center gap-2">
-                                    <Edit3 className="h-5 w-5" />
-                                    {t('edit.voterRecord')}
-                                  </DialogTitle>
-                                </DialogHeader>
-                                
-                                <ScrollArea className="flex-1 pr-4">
-                                  <Tabs defaultValue="basic" className="w-full">
-                                    <TabsList className="grid w-full grid-cols-4 mb-4">
-                                      <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                                      <TabsTrigger value="family">Family</TabsTrigger>
-                                      <TabsTrigger value="party">Party</TabsTrigger>
-                                      <TabsTrigger value="notes">Notes</TabsTrigger>
-                                    </TabsList>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </ScrollArea>
 
-                                    <TabsContent value="basic" className="space-y-4">
-                                      {/* Show Original Data Toggle */}
-                                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                                        <div className="flex items-center gap-2">
-                                          <FileText className="h-4 w-4 text-muted-foreground" />
-                                          <span className="text-sm">{t('edit.originalData')}</span>
-                                        </div>
-                                        <Button 
-                                          variant="outline" 
-                                          size="sm"
-                                          onClick={() => setShowOriginalData(!showOriginalData)}
-                                        >
-                                          {showOriginalData ? 'Hide' : 'Show'}
-                                        </Button>
-                                      </div>
-
-                                      {showOriginalData && editingVoter && (
-                                        <div className="p-4 rounded-lg bg-muted/30 border border-border">
-                                          <p className="text-sm font-medium mb-2">Original File Data:</p>
-                                          <div className="grid grid-cols-2 gap-2 text-xs">
-                                            {Object.entries(editingVoter.originalData).map(([key, value]) => (
-                                              <div key={key} className="flex justify-between gap-2">
-                                                <span className="text-muted-foreground">{key}:</span>
-                                                <span className="font-medium truncate">{value}</span>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {/* Basic Fields */}
-                                      <div className="grid gap-4 sm:grid-cols-2">
-                                        <div className="space-y-2">
-                                          <Label>Full Name</Label>
-                                          <Input
-                                            value={editForm.fullName || ''}
-                                            onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label>Age</Label>
-                                          <Input
-                                            type="number"
-                                            value={editForm.age || ''}
-                                            onChange={(e) => setEditForm({ ...editForm, age: parseInt(e.target.value) })}
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label>Gender</Label>
-                                          <Select 
-                                            value={editForm.gender} 
-                                            onValueChange={(v) => setEditForm({ ...editForm, gender: v as any })}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="male">Male</SelectItem>
-                                              <SelectItem value="female">Female</SelectItem>
-                                              <SelectItem value="other">Other</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label>Caste</Label>
-                                          <Input
-                                            value={editForm.caste || ''}
-                                            onChange={(e) => setEditForm({ ...editForm, caste: e.target.value })}
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label>Surname</Label>
-                                          <Input
-                                            value={editForm.surname || ''}
-                                            onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label>{t('edit.tole')}</Label>
-                                          <Select 
-                                            value={editForm.tole} 
-                                            onValueChange={(v) => setEditForm({ ...editForm, tole: v })}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select Tole" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {uniqueToles.map(tole => (
-                                                <SelectItem key={tole} value={tole}>{tole}</SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label>{t('edit.occupation')}</Label>
-                                          <Select 
-                                            value={editForm.occupation} 
-                                            onValueChange={(v) => setEditForm({ ...editForm, occupation: v })}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select Occupation" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {OCCUPATIONS.map(occ => (
-                                                <SelectItem key={occ} value={occ}>{occ}</SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label>Phone</Label>
-                                          <Input
-                                            value={editForm.phone || ''}
-                                            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                                          />
-                                        </div>
-                                      </div>
-                                    </TabsContent>
-
-                                    <TabsContent value="family" className="space-y-4">
-                                      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-                                        <Checkbox 
-                                          checked={editForm.isMainFamilyMember}
-                                          onCheckedChange={(checked) => setEditForm({ ...editForm, isMainFamilyMember: !!checked })}
-                                        />
-                                        <Label>{t('edit.mainMember')}</Label>
-                                      </div>
-
-                                      {/* Selected Family Members */}
-                                      {(editForm.familyMemberIds?.length || 0) > 0 && (
-                                        <div className="space-y-2">
-                                          <Label>{t('edit.familyMembers')} ({editForm.familyMemberIds?.length})</Label>
-                                          <div className="flex flex-wrap gap-2">
-                                            {editForm.familyMemberIds?.map(id => {
-                                              const member = allWardVoters.find(v => v.id === id);
-                                              return member ? (
-                                                <Badge key={id} variant="secondary" className="gap-1">
-                                                  {member.fullName}
-                                                  <X 
-                                                    className="h-3 w-3 cursor-pointer" 
-                                                    onClick={() => toggleFamilyMember(id)}
-                                                  />
-                                                </Badge>
-                                              ) : null;
-                                            })}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {/* Add Family Members */}
-                                      <div className="space-y-2">
-                                        <Label>{t('edit.addFamilyMember')}</Label>
-                                        <ScrollArea className="h-[200px] border rounded-lg p-2">
-                                          {availableFamilyMembers.slice(0, 50).map(member => (
-                                            <div 
-                                              key={member.id}
-                                              className={cn(
-                                                "flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted/50",
-                                                editForm.familyMemberIds?.includes(member.id) && "bg-accent/10"
-                                              )}
-                                              onClick={() => toggleFamilyMember(member.id)}
-                                            >
-                                              <Checkbox checked={editForm.familyMemberIds?.includes(member.id)} />
-                                              <span className="text-sm">{member.fullName}</span>
-                                              <span className="text-xs text-muted-foreground">({member.age})</span>
-                                            </div>
-                                          ))}
-                                        </ScrollArea>
-                                      </div>
-                                    </TabsContent>
-
-                                    <TabsContent value="party" className="space-y-4">
-                                      <div className="space-y-2">
-                                        <Label>{t('edit.partyAffiliation')} (Multi-select)</Label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                          {POLITICAL_PARTIES.map(party => (
-                                            <div
-                                              key={party.name}
-                                              className={cn(
-                                                "flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors",
-                                                editForm.partyAffiliations?.includes(party.name)
-                                                  ? "border-accent bg-accent/10"
-                                                  : "border-border hover:border-muted-foreground/50"
-                                              )}
-                                              onClick={() => togglePartyAffiliation(party.name)}
-                                            >
-                                              <Checkbox checked={editForm.partyAffiliations?.includes(party.name)} />
-                                              <div>
-                                                <p className="text-sm font-medium">{party.name}</p>
-                                                <p className="text-xs text-muted-foreground">{party.short}</p>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </TabsContent>
-
-                                    <TabsContent value="notes" className="space-y-4">
-                                      <div className="space-y-2">
-                                        <Label>{t('edit.notes')} (Multi-select)</Label>
-                                        <div className="flex flex-wrap gap-2">
-                                          {NOTE_TAGS.map(note => (
-                                            <Badge
-                                              key={note}
-                                              variant={editForm.notes?.includes(note) ? "default" : "outline"}
-                                              className="cursor-pointer"
-                                              onClick={() => toggleNote(note)}
-                                            >
-                                              {note}
-                                            </Badge>
-                                          ))}
-                                        </div>
-                                      </div>
-
-                                      <div className="space-y-2">
-                                        <Label>Custom Note</Label>
-                                        <Textarea
-                                          value={editForm.customNote || ''}
-                                          onChange={(e) => setEditForm({ ...editForm, customNote: e.target.value })}
-                                          placeholder="Add a custom note..."
-                                          rows={4}
-                                        />
-                                      </div>
-                                    </TabsContent>
-                                  </Tabs>
-                                </ScrollArea>
-
-                                <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-                                  <DialogClose asChild>
-                                    <Button variant="outline">{t('common.cancel')}</Button>
-                                  </DialogClose>
-                                  <DialogClose asChild>
-                                    <Button onClick={handleSaveEdit} className="gap-2">
-                                      <Save className="h-4 w-4" />
-                                      {t('common.save')}
-                                    </Button>
-                                  </DialogClose>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-
-                            {voter.isEdited && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8"
-                                onClick={() => handleRevert(voter.id)}
-                              >
-                                <Undo2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              </div>
-            </ScrollArea>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 border-t mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, voters.length)} of {voters.length}
-                </p>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => p - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => p + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-4 border-t mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, voters.length)} of {voters.length}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(1)}
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="px-3 text-sm">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      >
+                        <ChevronRightIcon className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(totalPages)}
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
       ) : (
         <Card className="card-shadow border-border/50">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <FolderOpen className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold">Select a Ward to Edit</h3>
+          <CardContent className="py-12 text-center">
+            <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground opacity-50 mb-4" />
+            <h3 className="text-lg font-semibold">{t('edit.selectWardPrompt')}</h3>
             <p className="text-sm text-muted-foreground mt-2">
-              Choose a municipality and ward from above to view and edit voter records
+              {t('edit.selectWardDescription')}
             </p>
           </CardContent>
         </Card>
