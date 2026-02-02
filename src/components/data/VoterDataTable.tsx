@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { 
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -25,11 +28,15 @@ import {
   Columns3,
   Settings2,
   RefreshCw,
-  History
+  History,
+  Filter,
+  Check,
+  GripVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParsedRecord } from '@/lib/fileParser';
 import { extractSurname, isNewarName, AGE_RANGES } from '@/lib/surnameUtils';
+import { detectCasteFromName, CASTE_CATEGORIES } from '@/lib/casteData';
 import {
   Table,
   TableBody,
@@ -45,6 +52,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Helper to detect if text contains Nepali/Devanagari characters
+const containsNepali = (text: string): boolean => {
+  if (!text || typeof text !== 'string') return false;
+  return /[\u0900-\u097F]/.test(text);
+};
 
 interface WardUploadData {
   wardNumber: number;
@@ -127,29 +143,40 @@ export const VoterDataTable = ({
   const enrichedRecords = useMemo(() => {
     return records.map((record, idx) => {
       const { surname, subCaste } = extractSurname(record.voterName);
+      const detected = detectCasteFromName(record.voterName);
       return {
         ...record,
         sn: idx + 1,
-        surname,
-        subCaste,
+        surname: record.surname || surname,
+        subCaste: record.caste || detected.caste || subCaste,
         isNewar: isNewarName(record.voterName)
       };
     });
   }, [records]);
 
-  // Get unique castes for filter
+  // Get unique castes for filter (from CASTE_CATEGORIES)
   const uniqueCastes = useMemo(() => {
-    const castes = new Set(enrichedRecords.map(r => r.subCaste).filter(Boolean));
-    return Array.from(castes).sort();
+    const castesInData = new Set(enrichedRecords.map(r => r.subCaste).filter(Boolean));
+    // Return castes from CASTE_CATEGORIES that exist in data, plus any others
+    const orderedCastes = CASTE_CATEGORIES.map(c => c.name).filter(name => castesInData.has(name));
+    const remaining = Array.from(castesInData).filter(c => !orderedCastes.includes(c)).sort();
+    return [...orderedCastes, ...remaining];
   }, [enrichedRecords]);
 
-  // Calculate stats
+  // Calculate stats by caste
   const stats = useMemo(() => {
     const total = records.length;
     const male = records.filter(r => r.gender === 'male').length;
     const female = records.filter(r => r.gender === 'female').length;
-    const newar = enrichedRecords.filter(r => r.isNewar).length;
-    return { total, male, female, newar };
+    
+    // Count by caste
+    const byCaste: Record<string, number> = {};
+    enrichedRecords.forEach(r => {
+      const caste = r.subCaste || 'Other';
+      byCaste[caste] = (byCaste[caste] || 0) + 1;
+    });
+    
+    return { total, male, female, byCaste };
   }, [records, enrichedRecords]);
 
   // Filter records
@@ -295,10 +322,16 @@ export const VoterDataTable = ({
             <User className="h-3 w-3" />
             {stats.female.toLocaleString()} {t('segments.female')}
           </Badge>
-          <Badge variant="outline" className="gap-1 border-cyan-500/50 text-cyan-500">
-            <UserCheck className="h-3 w-3" />
-            {stats.newar.toLocaleString()} {t('segments.newar')}
-          </Badge>
+          {/* Show top 3 castes */}
+          {Object.entries(stats.byCaste)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([caste, count]) => (
+              <Badge key={caste} variant="outline" className="gap-1">
+                <UserCheck className="h-3 w-3" />
+                {count.toLocaleString()} {caste}
+              </Badge>
+            ))}
         </div>
 
         {/* Version & Update Options */}
@@ -424,22 +457,28 @@ export const VoterDataTable = ({
               </SelectContent>
             </Select>
 
-            {/* Caste Filter */}
+            {/* Caste Filter - All castes */}
             {uniqueCastes.length > 0 && (
               <Select value={casteFilter} onValueChange={(v) => {
                 setCasteFilter(v);
                 setCurrentPage(1);
               }}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[170px]">
                   <SelectValue placeholder={t('table.caste')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('common.all')}</SelectItem>
-                  {uniqueCastes.map(caste => (
-                    <SelectItem key={caste} value={caste}>
-                      {caste}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">{t('common.all')} ({t('table.caste')})</SelectItem>
+                  {uniqueCastes.map(caste => {
+                    const category = CASTE_CATEGORIES.find(c => c.name === caste);
+                    return (
+                      <SelectItem key={caste} value={caste}>
+                        <span className="flex items-center gap-2">
+                          {caste}
+                          {category?.nameNe && <span className="text-xs text-muted-foreground font-nepali">({category.nameNe})</span>}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             )}
@@ -548,28 +587,40 @@ export const VoterDataTable = ({
                         </span>
                       )}
                       {column.id === 'voterId' && (
-                        <div className="font-mono text-sm">
-                          <span className="block text-foreground">{record.voterId || '-'}</span>
-                          {record.originalData?.['मतदाता नम्बर'] && (
-                            <span className="block text-xs text-muted-foreground">
-                              {record.originalData['मतदाता नम्बर']}
+                        <div className="text-sm">
+                          <span className={cn(
+                            "block text-foreground",
+                            containsNepali(record.voterId) ? "font-nepali" : "font-mono"
+                          )}>
+                            {record.voterId || '-'}
+                          </span>
+                          {record.originalData?.['मतदाता नं'] && record.originalData['मतदाता नं'] !== record.voterId && (
+                            <span className="block text-xs text-muted-foreground font-nepali">
+                              {record.originalData['मतदाता नं']}
                             </span>
                           )}
                         </div>
                       )}
                       {column.id === 'voterName' && (
                         <div className="font-medium">
-                          <span className="block">{record.voterName}</span>
-                          {record.originalData?.['नाम'] && record.originalData['नाम'] !== record.voterName && (
-                            <span className="block text-xs text-muted-foreground">
-                              {record.originalData['नाम']}
+                          <span className={cn(
+                            "block",
+                            containsNepali(record.voterName) && "font-nepali"
+                          )}>
+                            {record.voterName}
+                          </span>
+                          {record.originalData?.['मतदाताको नाम'] && record.originalData['मतदाताको नाम'] !== record.voterName && (
+                            <span className="block text-xs text-muted-foreground font-nepali">
+                              {record.originalData['मतदाताको नाम']}
                             </span>
                           )}
                         </div>
                       )}
                       {column.id === 'surname' && (
                         <div className="flex flex-col">
-                          <span className="text-sm">{record.surname}</span>
+                          <span className={cn("text-sm", containsNepali(record.surname) && "font-nepali")}>
+                            {record.surname}
+                          </span>
                           {record.subCaste && (
                             <span className="text-xs text-muted-foreground">{record.subCaste}</span>
                           )}
@@ -579,7 +630,7 @@ export const VoterDataTable = ({
                         <div>
                           <span className="block">{record.age || '-'}</span>
                           {record.age && (
-                            <span className="block text-xs text-muted-foreground">वर्ष</span>
+                            <span className="block text-xs text-muted-foreground font-nepali">वर्ष</span>
                           )}
                         </div>
                       )}
@@ -593,35 +644,44 @@ export const VoterDataTable = ({
                           )}
                         >
                           <span>{genderLabels[record.gender]?.en || record.gender}</span>
-                          <span className="text-[10px] opacity-70">{genderLabels[record.gender]?.ne}</span>
+                          <span className="text-[10px] opacity-70 font-nepali">{genderLabels[record.gender]?.ne}</span>
                         </Badge>
                       )}
                       {column.id === 'caste' && (
-                        record.isNewar ? (
-                          <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-0 flex flex-col items-center py-1 h-auto">
-                            <span>Newar</span>
-                            <span className="text-[10px] opacity-70">नेवार</span>
-                          </Badge>
-                        ) : record.subCaste ? (
-                          <Badge variant="secondary" className="text-xs">
-                            {record.subCaste}
+                        record.subCaste ? (
+                          <Badge variant="secondary" className="text-xs flex flex-col items-center py-1 h-auto">
+                            <span>{record.subCaste}</span>
+                            {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe && (
+                              <span className="text-[10px] opacity-70 font-nepali">
+                                {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe}
+                              </span>
+                            )}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground text-xs">-</span>
                         )
                       )}
                       {column.id === 'centerName' && (
-                        <span className="text-sm text-muted-foreground truncate max-w-[200px] block">
+                        <span className={cn(
+                          "text-sm text-muted-foreground truncate max-w-[200px] block",
+                          containsNepali(record.centerName || '') && "font-nepali"
+                        )}>
                           {record.centerName || '-'}
                         </span>
                       )}
                       {column.id === 'spouse' && (
-                        <span className="text-sm text-muted-foreground">
+                        <span className={cn(
+                          "text-sm text-muted-foreground",
+                          containsNepali(record.spouse || '') && "font-nepali"
+                        )}>
                           {record.spouse || '-'}
                         </span>
                       )}
                       {column.id === 'parents' && (
-                        <span className="text-sm text-muted-foreground truncate max-w-[200px] block">
+                        <span className={cn(
+                          "text-sm text-muted-foreground truncate max-w-[200px] block",
+                          containsNepali(record.parents || '') && "font-nepali"
+                        )}>
                           {record.parents || '-'}
                         </span>
                       )}

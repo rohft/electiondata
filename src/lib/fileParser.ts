@@ -50,11 +50,12 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
     
     // Map common variations to standard keys (English and Nepali)
     // Serial Number - MUST check before other patterns
-    if (original === 'सि.नं.' || original === 'सि.नं' || original === 'क्र.सं.' || lower === 'sn' || lower === 's.n' || lower === 's.n.') {
+    if (original === 'सि.नं.' || original === 'सि.नं' || original === 'क्र.सं.' || lower === 'sn' || lower === 's.n' || lower === 's.n.' || lower === 'sn.') {
       headerMap['sn'] = idx;
     }
-    // Voter ID
-    else if (original === 'मतदाता नं' || original === 'मतदाता नं.' || lower.includes('voter id') || lower.includes('voter no') || lower === 'id') {
+    // Voter ID - check for various Nepali and English patterns
+    else if (original === 'मतदाता नं' || original === 'मतदाता नं.' || original === 'मतदाता आईडी' || original === 'मतदाता नम्बर' || 
+             lower.includes('voter id') || lower.includes('voter no') || lower === 'id' || lower === 'voterid') {
       headerMap['voterId'] = idx;
     }
     // Voter Name

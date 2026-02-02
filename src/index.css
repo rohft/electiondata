@@ -4,7 +4,15 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Nepali Devanagari Font */
+/* Nepali Devanagari Fonts */
+@font-face {
+  font-family: 'Kalimati';
+  src: url('/fonts/Kalimati.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @font-face {
   font-family: 'Kohinoor Devanagari';
   src: url('/fonts/Kohinoor_Devanagari_Book.woff') format('woff');
@@ -160,14 +168,14 @@
     @apply bg-background text-foreground antialiased;
   }
 
-  /* Nepali text styling */
+  /* Nepali text styling - Kalimati as primary */
   .font-nepali, .nepali-text {
-    font-family: 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
+    font-family: 'Kalimati', 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
   }
 
   /* Apply Nepali font to cells containing Devanagari */
   [data-nepali="true"], .font-devanagari {
-    font-family: 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
+    font-family: 'Kalimati', 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
   }
 
   /* Smooth scrolling */
