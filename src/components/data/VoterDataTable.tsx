@@ -1,12 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
 import { 
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -22,11 +21,11 @@ import {
   UserCheck,
   ChevronLeft,
   ChevronRight,
-  Filter,
   X,
   Columns3,
   Settings2,
-  SlidersHorizontal
+  RefreshCw,
+  History
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParsedRecord } from '@/lib/fileParser';
@@ -39,6 +38,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface WardUploadData {
   wardNumber: number;
@@ -46,6 +52,13 @@ interface WardUploadData {
   records: ParsedRecord[];
   status: 'pending' | 'uploaded' | 'error';
   fileName?: string;
+  versions?: Array<{
+    id: string;
+    fileName: string;
+    records: ParsedRecord[];
+    uploadedAt: Date;
+  }>;
+  currentVersionIndex?: number;
 }
 
 interface VoterDataTableProps {
@@ -54,26 +67,27 @@ interface VoterDataTableProps {
   selectedWardIndex: number;
   onWardSelect: (index: number) => void;
   onUploadMore?: () => void;
+  onUpdateWard?: (wardIndex: number, file: File) => void;
 }
 
 interface ColumnConfig {
   id: string;
-  label: string;
+  labelKey: string;
   visible: boolean;
   width?: string;
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
-  { id: 'sn', label: 'S.N.', visible: true, width: 'w-[60px]' },
-  { id: 'voterId', label: 'Voter ID', visible: true, width: 'w-[100px]' },
-  { id: 'voterName', label: 'Name', visible: true },
-  { id: 'surname', label: 'Surname/Sub-caste', visible: true, width: 'w-[150px]' },
-  { id: 'age', label: 'Age', visible: true, width: 'w-[60px]' },
-  { id: 'gender', label: 'Gender', visible: true, width: 'w-[80px]' },
-  { id: 'caste', label: 'Caste Category', visible: true, width: 'w-[120px]' },
-  { id: 'centerName', label: 'Center', visible: false },
-  { id: 'spouse', label: 'Spouse', visible: false },
-  { id: 'parents', label: 'Parents', visible: true },
+  { id: 'sn', labelKey: 'table.sn', visible: true, width: 'w-[60px]' },
+  { id: 'voterId', labelKey: 'table.voterId', visible: true, width: 'w-[140px]' },
+  { id: 'voterName', labelKey: 'table.name', visible: true },
+  { id: 'surname', labelKey: 'table.surname', visible: true, width: 'w-[150px]' },
+  { id: 'age', labelKey: 'table.age', visible: true, width: 'w-[80px]' },
+  { id: 'gender', labelKey: 'table.gender', visible: true, width: 'w-[100px]' },
+  { id: 'caste', labelKey: 'table.caste', visible: true, width: 'w-[120px]' },
+  { id: 'centerName', labelKey: 'table.center', visible: false },
+  { id: 'spouse', labelKey: 'table.spouse', visible: false },
+  { id: 'parents', labelKey: 'table.parents', visible: true },
 ];
 
 export const VoterDataTable = ({ 
@@ -81,9 +95,10 @@ export const VoterDataTable = ({
   municipalityName, 
   selectedWardIndex, 
   onWardSelect,
-  onUploadMore
+  onUploadMore,
+  onUpdateWard
 }: VoterDataTableProps) => {
-  const { t } = useLanguage();
+  const { t, getBilingual } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState<string>('all');
   const [ageRangeFilter, setAgeRangeFilter] = useState<string>('all');
@@ -91,6 +106,7 @@ export const VoterDataTable = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [compactMode, setCompactMode] = useState(false);
+  const [versionDialogOpen, setVersionDialogOpen] = useState(false);
   const itemsPerPage = 25;
 
   // Get only wards with data
@@ -189,6 +205,21 @@ export const VoterDataTable = ({
   const visibleColumns = columns.filter(col => col.visible);
   const hasActiveFilters = searchQuery || genderFilter !== 'all' || ageRangeFilter !== 'all' || casteFilter !== 'all';
 
+  // Render bilingual text helper
+  const renderBilingual = (enText: string, neText: string) => (
+    <div className="flex flex-col leading-tight">
+      <span className="text-sm">{enText}</span>
+      <span className="text-xs text-muted-foreground">{neText}</span>
+    </div>
+  );
+
+  // Get bilingual labels
+  const genderLabels = {
+    male: getBilingual('segments.male'),
+    female: getBilingual('segments.female'),
+    other: getBilingual('segments.other')
+  };
+
   if (uploadedWards.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -228,13 +259,13 @@ export const VoterDataTable = ({
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {uploadedWards.map((ward, idx) => (
                 <SelectItem key={ward.wardNumber} value={idx.toString()}>
-                  {municipalityName} - Ward {ward.wardNumber}
+                  {municipalityName} - {t('common.ward')} {ward.wardNumber}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -254,35 +285,92 @@ export const VoterDataTable = ({
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary" className="gap-1">
             <Users className="h-3 w-3" />
-            {stats.total.toLocaleString()} Total
+            {stats.total.toLocaleString()} {t('common.total')}
           </Badge>
           <Badge variant="outline" className="gap-1 border-blue-500/50 text-blue-500">
             <User className="h-3 w-3" />
-            {stats.male.toLocaleString()} Male
+            {stats.male.toLocaleString()} {t('segments.male')}
           </Badge>
           <Badge variant="outline" className="gap-1 border-pink-500/50 text-pink-500">
             <User className="h-3 w-3" />
-            {stats.female.toLocaleString()} Female
+            {stats.female.toLocaleString()} {t('segments.female')}
           </Badge>
           <Badge variant="outline" className="gap-1 border-cyan-500/50 text-cyan-500">
             <UserCheck className="h-3 w-3" />
-            {stats.newar.toLocaleString()} Newar
+            {stats.newar.toLocaleString()} {t('segments.newar')}
           </Badge>
         </div>
 
-        {/* Upload More & Pending Indicator */}
-        {pendingWards.length > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-sm text-muted-foreground">
-              {pendingWards.length} ward(s) pending
-            </span>
-            {onUploadMore && (
-              <Button variant="outline" size="sm" onClick={onUploadMore}>
-                Upload More
-              </Button>
-            )}
-          </div>
-        )}
+        {/* Version & Update Options */}
+        <div className="flex items-center gap-2 ml-auto">
+          {currentWard?.versions && currentWard.versions.length > 1 && (
+            <Dialog open={versionDialogOpen} onOpenChange={setVersionDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <History className="h-4 w-4" />
+                  {t('upload.switchVersion')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t('upload.switchVersion')}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2 py-4">
+                  {currentWard.versions.map((version, idx) => (
+                    <div
+                      key={version.id}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors",
+                        idx === currentWard.currentVersionIndex 
+                          ? "border-accent bg-accent/10" 
+                          : "border-border hover:bg-muted/50"
+                      )}
+                    >
+                      <div>
+                        <p className="font-medium">{version.fileName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {version.uploadedAt.toLocaleDateString()} - {version.records.length} records
+                        </p>
+                      </div>
+                      {idx === currentWard.currentVersionIndex && (
+                        <Badge>{t('common.current')}</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+          
+          {onUpdateWard && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2"
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.csv,.xlsx,.xls,.json';
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) {
+                    onUpdateWard(selectedWardIndex, file);
+                  }
+                };
+                input.click();
+              }}
+            >
+              <RefreshCw className="h-4 w-4" />
+              {t('upload.updateData')}
+            </Button>
+          )}
+          
+          {pendingWards.length > 0 && onUploadMore && (
+            <Button variant="outline" size="sm" onClick={onUploadMore}>
+              {pendingWards.length} pending
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters Card */}
@@ -293,7 +381,7 @@ export const VoterDataTable = ({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, ID, or surname..."
+                placeholder={`${t('common.search')}`}
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -309,13 +397,13 @@ export const VoterDataTable = ({
               setCurrentPage(1);
             }}>
               <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Gender" />
+                <SelectValue placeholder={t('table.gender')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Genders</SelectItem>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                <SelectItem value="all">{t('common.all')}</SelectItem>
+                <SelectItem value="male">{t('segments.male')}</SelectItem>
+                <SelectItem value="female">{t('segments.female')}</SelectItem>
+                <SelectItem value="other">{t('segments.other')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -325,7 +413,7 @@ export const VoterDataTable = ({
               setCurrentPage(1);
             }}>
               <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Age Range" />
+                <SelectValue placeholder={t('table.age')} />
               </SelectTrigger>
               <SelectContent>
                 {AGE_RANGES.map(range => (
@@ -343,10 +431,10 @@ export const VoterDataTable = ({
                 setCurrentPage(1);
               }}>
                 <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Caste/Category" />
+                  <SelectValue placeholder={t('table.caste')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
                   {uniqueCastes.map(caste => (
                     <SelectItem key={caste} value={caste}>
                       {caste}
@@ -372,7 +460,7 @@ export const VoterDataTable = ({
                     checked={column.visible}
                     onCheckedChange={() => toggleColumn(column.id)}
                   >
-                    {column.label}
+                    {t(column.labelKey)}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
@@ -423,18 +511,24 @@ export const VoterDataTable = ({
           <Table>
             <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
               <TableRow className="hover:bg-transparent">
-                {visibleColumns.map(column => (
-                  <TableHead 
-                    key={column.id} 
-                    className={cn(
-                      "font-semibold text-foreground",
-                      column.width,
-                      compactMode && "py-2"
-                    )}
-                  >
-                    {column.label}
-                  </TableHead>
-                ))}
+                {visibleColumns.map(column => {
+                  const labels = getBilingual(column.labelKey);
+                  return (
+                    <TableHead 
+                      key={column.id} 
+                      className={cn(
+                        "font-semibold text-foreground",
+                        column.width,
+                        compactMode && "py-2"
+                      )}
+                    >
+                      <div className="flex flex-col leading-tight">
+                        <span>{labels.en}</span>
+                        <span className="text-xs font-normal text-muted-foreground">{labels.ne}</span>
+                      </div>
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -449,15 +543,29 @@ export const VoterDataTable = ({
                   {visibleColumns.map(column => (
                     <TableCell key={column.id} className={cn(column.width)}>
                       {column.id === 'sn' && (
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <span className="font-mono text-sm text-muted-foreground">
                           {record.sn}
                         </span>
                       )}
                       {column.id === 'voterId' && (
-                        <span className="font-mono text-xs">{record.voterId || '-'}</span>
+                        <div className="font-mono text-sm">
+                          <span className="block text-foreground">{record.voterId || '-'}</span>
+                          {record.originalData?.['मतदाता नम्बर'] && (
+                            <span className="block text-xs text-muted-foreground">
+                              {record.originalData['मतदाता नम्बर']}
+                            </span>
+                          )}
+                        </div>
                       )}
                       {column.id === 'voterName' && (
-                        <span className="font-medium">{record.voterName}</span>
+                        <div className="font-medium">
+                          <span className="block">{record.voterName}</span>
+                          {record.originalData?.['नाम'] && record.originalData['नाम'] !== record.voterName && (
+                            <span className="block text-xs text-muted-foreground">
+                              {record.originalData['नाम']}
+                            </span>
+                          )}
+                        </div>
                       )}
                       {column.id === 'surname' && (
                         <div className="flex flex-col">
@@ -468,24 +576,31 @@ export const VoterDataTable = ({
                         </div>
                       )}
                       {column.id === 'age' && (
-                        <span>{record.age || '-'}</span>
+                        <div>
+                          <span className="block">{record.age || '-'}</span>
+                          {record.age && (
+                            <span className="block text-xs text-muted-foreground">वर्ष</span>
+                          )}
+                        </div>
                       )}
                       {column.id === 'gender' && (
                         <Badge 
                           variant="outline" 
                           className={cn(
-                            'text-xs',
+                            'text-xs flex flex-col items-center py-1 h-auto',
                             record.gender === 'male' && 'border-blue-500/50 text-blue-500 bg-blue-500/5',
                             record.gender === 'female' && 'border-pink-500/50 text-pink-500 bg-pink-500/5'
                           )}
                         >
-                          {record.gender === 'male' ? 'M' : record.gender === 'female' ? 'F' : 'O'}
+                          <span>{genderLabels[record.gender]?.en || record.gender}</span>
+                          <span className="text-[10px] opacity-70">{genderLabels[record.gender]?.ne}</span>
                         </Badge>
                       )}
                       {column.id === 'caste' && (
                         record.isNewar ? (
-                          <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-0">
-                            Newar
+                          <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-0 flex flex-col items-center py-1 h-auto">
+                            <span>Newar</span>
+                            <span className="text-[10px] opacity-70">नेवार</span>
                           </Badge>
                         ) : record.subCaste ? (
                           <Badge variant="secondary" className="text-xs">
