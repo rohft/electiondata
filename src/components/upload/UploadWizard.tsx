@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Database, Building2 } from 'lucide-react';
+import { Plus, Database, Building2, FolderPlus } from 'lucide-react';
 import { VoterDataTable } from '@/components/data/VoterDataTable';
 import { DashboardUploadWizard } from './DashboardUploadWizard';
+import { AddWardDialog } from './AddWardDialog';
 import { ParsedRecord } from '@/lib/fileParser';
 import { isNewarName } from '@/lib/surnameUtils';
 
@@ -24,8 +25,17 @@ export const UploadWizard = () => {
   const { t } = useLanguage();
   const { municipalities } = useVoterData();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [addWardDialogOpen, setAddWardDialogOpen] = useState(false);
   const [selectedMunicipality, setSelectedMunicipality] = useState<string | null>(null);
   const [selectedWardIndex, setSelectedWardIndex] = useState(0);
+
+  // Get current municipality for "Add Ward" dialog
+  const currentMunicipalityId = selectedMunicipality || municipalities[0]?.id;
+  const currentMunicipalityData = municipalities.find(m => m.id === currentMunicipalityId);
+  const existingWardNumbers = currentMunicipalityData?.wards.map(w => {
+    const match = w.name.match(/\d+/);
+    return match ? parseInt(match[0]) : 0;
+  }).filter(n => n > 0) || [];
 
   // Convert municipality data to WardUploadData format for VoterDataTable
   const getWardDataForMunicipality = (municipalityId: string): WardUploadData[] => {
@@ -113,20 +123,46 @@ export const UploadWizard = () => {
               ))}
             </TabsList>
 
-            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2 shrink-0">
-                  <Plus className="h-4 w-4" />
-                  {t('upload.addMunicipality')}
+            <div className="flex items-center gap-2">
+              {/* Add Ward to existing municipality */}
+              {currentMunicipalityData && (
+                <Button 
+                  variant="outline" 
+                  className="gap-2 shrink-0"
+                  onClick={() => setAddWardDialogOpen(true)}
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  {t('upload.addWardData')}
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{t('upload.title')}</DialogTitle>
-                </DialogHeader>
-                <DashboardUploadWizard onComplete={() => setUploadDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
+              )}
+              
+              {/* Add new municipality */}
+              <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2 shrink-0">
+                    <Plus className="h-4 w-4" />
+                    {t('upload.addMunicipality')}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{t('upload.title')}</DialogTitle>
+                  </DialogHeader>
+                  <DashboardUploadWizard onComplete={() => setUploadDialogOpen(false)} />
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Add Ward Dialog */}
+            {currentMunicipalityData && (
+              <AddWardDialog
+                open={addWardDialogOpen}
+                onOpenChange={setAddWardDialogOpen}
+                municipalityId={currentMunicipalityData.id}
+                municipalityName={currentMunicipalityData.name}
+                existingWardNumbers={existingWardNumbers}
+              />
+            )}
           </div>
 
           {municipalities.map(m => (
