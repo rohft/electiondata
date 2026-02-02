@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 
 export interface ParsedRecord {
+  sn?: string;
   wardNo: string;
   centerName: string;
   voterId: string;
@@ -9,6 +10,9 @@ export interface ParsedRecord {
   gender: 'male' | 'female' | 'other';
   spouse?: string;
   parents?: string;
+  caste?: string;
+  surname?: string;
+  status?: string;
   green?: string;
   yellow?: string;
   red?: string;
@@ -42,16 +46,33 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
   
   headers.forEach((h, idx) => {
     const lower = h.toLowerCase().trim();
+    const original = h.trim();
     
-    // Map common variations to standard keys
+    // Map common variations to standard keys (English and Nepali)
+    // Serial Number
     if (lower.includes('ward') || lower === 'ward no') headerMap['wardNo'] = idx;
+    else if (original === 'सि.नं.' || lower.includes('sn') || lower.includes('s.n')) headerMap['sn'] = idx;
+    // Voter ID
+    else if (original === 'मतदाता नं' || lower.includes('voter id') || lower.includes('voter no') || lower === 'id') headerMap['voterId'] = idx;
+    // Voter Name
+    else if (original === 'मतदाताको नाम' || lower.includes('voter name') || lower === 'name' || lower.includes('नाम')) headerMap['voterName'] = idx;
+    // Age
+    else if (original === 'उमेर(वर्ष)' || original === 'उमेर' || lower === 'age' || lower.includes('उमेर')) headerMap['age'] = idx;
+    // Gender
+    else if (original === 'लिङ्ग' || lower === 'gender' || lower === 'sex' || lower.includes('लिंग')) headerMap['gender'] = idx;
+    // Spouse
+    else if (original === 'पति/पत्नीको नाम' || lower.includes('spouse') || lower.includes('पति') || lower.includes('पत्नी')) headerMap['spouse'] = idx;
+    // Parents
+    else if (original === 'पिता/माताको नाम' || lower.includes('parent') || lower.includes('father') || lower.includes('बुबा') || lower.includes('आमा') || lower.includes('पिता') || lower.includes('माता')) headerMap['parents'] = idx;
+    // Caste
+    else if (original === 'जात' || lower === 'caste' || lower.includes('जात')) headerMap['caste'] = idx;
+    // Surname
+    else if (original === 'थर' || lower === 'surname' || lower.includes('थर')) headerMap['surname'] = idx;
+    // Status
+    else if (original === 'स्थिति' || lower === 'status' || lower.includes('स्थिति')) headerMap['status'] = idx;
+    // Center
     else if (lower.includes('center') || lower.includes('centre')) headerMap['centerName'] = idx;
-    else if (lower.includes('voter id') || lower === 'id') headerMap['voterId'] = idx;
-    else if (lower.includes('voter name') || lower === 'name' || lower.includes('नाम')) headerMap['voterName'] = idx;
-    else if (lower === 'age' || lower.includes('उमेर')) headerMap['age'] = idx;
-    else if (lower === 'gender' || lower === 'sex' || lower.includes('लिंग')) headerMap['gender'] = idx;
-    else if (lower.includes('spouse') || lower.includes('पति') || lower.includes('पत्नी')) headerMap['spouse'] = idx;
-    else if (lower.includes('parent') || lower.includes('बुबा') || lower.includes('आमा')) headerMap['parents'] = idx;
+    // Color codes
     else if (lower === 'green') headerMap['green'] = idx;
     else if (lower === 'yellow') headerMap['yellow'] = idx;
     else if (lower === 'red') headerMap['red'] = idx;
@@ -139,17 +160,21 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
     });
 
     const record: ParsedRecord = {
-      wardNo: String(row[headerMap['wardNo'] ?? 0] || ''),
-      centerName: String(row[headerMap['centerName'] ?? 1] || ''),
-      voterId: String(row[headerMap['voterId'] ?? 2] || ''),
-      voterName: String(row[headerMap['voterName'] ?? 3] || ''),
-      age: parseInt(String(row[headerMap['age'] ?? 4])) || 0,
-      gender: normalizeGender(String(row[headerMap['gender'] ?? 5] || '')),
-      spouse: String(row[headerMap['spouse'] ?? 6] || ''),
-      parents: String(row[headerMap['parents'] ?? 7] || ''),
-      green: String(row[headerMap['green'] ?? 8] || ''),
-      yellow: String(row[headerMap['yellow'] ?? 9] || ''),
-      red: String(row[headerMap['red'] ?? 10] || ''),
+      sn: String(row[headerMap['sn'] ?? -1] || ''),
+      wardNo: String(row[headerMap['wardNo'] ?? -1] || ''),
+      centerName: String(row[headerMap['centerName'] ?? -1] || ''),
+      voterId: String(row[headerMap['voterId'] ?? 1] || ''),
+      voterName: String(row[headerMap['voterName'] ?? 2] || ''),
+      age: parseInt(String(row[headerMap['age'] ?? 3])) || 0,
+      gender: normalizeGender(String(row[headerMap['gender'] ?? 4] || '')),
+      spouse: String(row[headerMap['spouse'] ?? -1] || ''),
+      parents: String(row[headerMap['parents'] ?? -1] || ''),
+      caste: String(row[headerMap['caste'] ?? -1] || ''),
+      surname: String(row[headerMap['surname'] ?? -1] || ''),
+      status: String(row[headerMap['status'] ?? -1] || ''),
+      green: String(row[headerMap['green'] ?? -1] || ''),
+      yellow: String(row[headerMap['yellow'] ?? -1] || ''),
+      red: String(row[headerMap['red'] ?? -1] || ''),
       originalData,
     };
 

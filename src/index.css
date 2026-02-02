@@ -4,6 +4,15 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* Nepali Devanagari Font */
+@font-face {
+  font-family: 'Kohinoor Devanagari';
+  src: url('/fonts/Kohinoor_Devanagari_Book.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     /* Professional Analytics Theme - Light Mode */
@@ -149,6 +158,16 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+  }
+
+  /* Nepali text styling */
+  .font-nepali, .nepali-text {
+    font-family: 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
+  }
+
+  /* Apply Nepali font to cells containing Devanagari */
+  [data-nepali="true"], .font-devanagari {
+    font-family: 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
   }
 
   /* Smooth scrolling */

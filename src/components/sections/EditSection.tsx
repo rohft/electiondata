@@ -18,11 +18,19 @@ import {
   Edit3, Undo2, Save, Search, X, FolderOpen, ChevronRight, 
   Users, UserPlus, FileText, Building2, Plus, Filter, Trash2, Eye, EyeOff,
   ChevronLeft, ChevronRight as ChevronRightIcon, ChevronsLeft, ChevronsRight,
-  Sparkles, Wand2, MapPin, Check, Heart, Plane, Skull, UserCheck, Accessibility
+  Sparkles, Wand2, MapPin, Check, Heart, Plane, Skull, UserCheck, Accessibility, Replace
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { detectCasteFromName, CASTE_CATEGORIES } from '@/lib/casteData';
+import { BulkSurnameReplace } from '@/components/edit/BulkSurnameReplace';
+
+// Helper to detect if text contains Nepali/Devanagari characters
+const containsNepali = (text: string): boolean => {
+  if (!text || typeof text !== 'string') return false;
+  // Devanagari Unicode range: \u0900-\u097F
+  return /[\u0900-\u097F]/.test(text);
+};
 
 const OCCUPATIONS = [
   'Agriculture', 'Business', 'Government Service', 'Private Job', 'Teacher',
@@ -918,6 +926,15 @@ export const EditSection = () => {
                 {(filterGenders.length > 0 || filterCastes.length > 0 || filterSurnames.length > 0 || filterAgeRanges.length > 0 || filterVoterStatuses.length > 0 || searchTerm) && (
                   <Badge variant="outline" className="border-accent text-accent">Filtered</Badge>
                 )}
+                {/* Bulk Surname Replace */}
+                {effectiveMunicipality && (
+                  <BulkSurnameReplace
+                    municipalityId={effectiveMunicipality.id}
+                    wardId={selectedWard}
+                    voters={allWardVoters}
+                    onReplace={updateVoterRecord}
+                  />
+                )}
                 <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setCurrentPage(1); }}>
                   <SelectTrigger className="w-[100px] h-8">
                     <SelectValue />
@@ -976,11 +993,15 @@ export const EditSection = () => {
                                     col.key === 'sn' && "font-mono text-sm text-muted-foreground sticky left-0 bg-background z-10",
                                     col.key === 'voterId' && "font-mono text-xs font-medium",
                                     col.key === 'fullName' && "font-medium",
-                                    col.key === 'gender' && "capitalize"
+                                    col.key === 'gender' && "capitalize",
+                                    // Apply Nepali font to cells with Devanagari text
+                                    typeof value === 'string' && containsNepali(value) && "font-nepali"
                                   )}
                                 >
                                   {col.key === 'caste' ? (
-                                    <Badge variant="outline" className="text-xs">{value}</Badge>
+                                    <Badge variant="outline" className={cn("text-xs", containsNepali(String(value)) && "font-nepali")}>{value}</Badge>
+                                  ) : col.key === 'surname' ? (
+                                    <span className={cn("text-sm", containsNepali(String(value)) && "font-nepali")}>{value}</span>
                                   ) : col.key === 'voterStatus' ? (
                                     <VoterStatusCell 
                                       status={value as VoterStatus} 
