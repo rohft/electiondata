@@ -328,6 +328,7 @@ export const SegmentsSection = () => {
   const [editCaste, setEditCaste] = useState('');
   const [editSurname, setEditSurname] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [showCasteEditor, setShowCasteEditor] = useState(false);
   
   // Multi-select state for surnames
@@ -510,6 +511,7 @@ export const SegmentsSection = () => {
     const current = getVoterCaste(voter);
     setEditCaste(current.caste);
     setEditSurname(current.surname);
+    setEditDialogOpen(true);
   };
 
   const handleSaveCasteEdit = () => {
@@ -540,6 +542,7 @@ export const SegmentsSection = () => {
     }
     
     toast.success('Caste/Surname updated');
+    setEditDialogOpen(false);
     setEditingVoter(null);
   };
 
@@ -1069,7 +1072,12 @@ export const SegmentsSection = () => {
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-1">
-                                    <Dialog>
+                                    <Dialog open={editDialogOpen && editingVoter?.id === voter.id} onOpenChange={(open) => {
+                                      if (!open) {
+                                        setEditDialogOpen(false);
+                                        setEditingVoter(null);
+                                      }
+                                    }}>
                                       <DialogTrigger asChild>
                                         <Button 
                                           variant="ghost" 
@@ -1119,15 +1127,11 @@ export const SegmentsSection = () => {
                                           </div>
                                           
                                           <div className="flex justify-end gap-2">
-                                            <DialogClose asChild>
-                                              <Button variant="outline">Cancel</Button>
-                                            </DialogClose>
-                                            <DialogClose asChild>
-                                              <Button onClick={handleSaveCasteEdit} className="gap-2">
-                                                <Save className="h-4 w-4" />
-                                                Save
-                                              </Button>
-                                            </DialogClose>
+                                            <Button variant="outline" onClick={() => { setEditDialogOpen(false); setEditingVoter(null); }}>Cancel</Button>
+                                            <Button onClick={handleSaveCasteEdit} className="gap-2">
+                                              <Save className="h-4 w-4" />
+                                              Save
+                                            </Button>
                                           </div>
                                         </div>
                                       </DialogContent>

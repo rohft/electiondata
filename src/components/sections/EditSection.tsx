@@ -92,7 +92,7 @@ const ALL_COLUMNS = [
 ];
 
 // Default column order
-const DEFAULT_COLUMN_ORDER = ['sn', 'voterId', 'fullName', 'age', 'gender', 'spouse', 'parents', 'caste', 'surname', 'voterStatus'];
+const DEFAULT_COLUMN_ORDER = ['sn', 'voterId', 'fullName', 'age', 'gender', 'spouse', 'parents', 'caste', 'surname', 'tole', 'voterStatus'];
 
 // Sortable Table Header Cell Component
 const SortableHeaderCell = ({ 
@@ -665,7 +665,8 @@ export const EditSection = () => {
                         voter.originalData?.['Father Name'] || 
                         voter.originalData?.['बाबुको नाम'] || 
                         '-';
-    const tole = voter.originalData?.['Tole'] || 
+    const tole = voter.tole || 
+                 voter.originalData?.['Tole'] || 
                  voter.originalData?.['टोल'] || 
                  '-';
 
