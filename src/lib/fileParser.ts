@@ -305,7 +305,55 @@ export const parseJSON = async (file: File): Promise<ParsedRecord[]> => {
   });
 };
 
+// File validation constants
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+const ALLOWED_MIME_TYPES: Record<string, string[]> = {
+  csv: ['text/csv', 'text/plain', 'application/csv'],
+  xlsx: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+  xls: ['application/vnd.ms-excel'],
+  json: ['application/json', 'text/plain'],
+};
+
+export class FileValidationError extends Error {
+  constructor(message: string, public code: 'SIZE_EXCEEDED' | 'INVALID_TYPE' | 'INVALID_MIME' | 'UNSUPPORTED_FORMAT') {
+    super(message);
+    this.name = 'FileValidationError';
+  }
+}
+
+export const validateFile = (file: File): void => {
+  // Check file size
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    throw new FileValidationError(
+      `File size (${(file.size / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed size of ${MAX_FILE_SIZE_MB} MB`,
+      'SIZE_EXCEEDED'
+    );
+  }
+
+  // Check file extension
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  if (!extension || !['csv', 'xlsx', 'xls', 'json'].includes(extension)) {
+    throw new FileValidationError(
+      `Unsupported file extension: .${extension || 'unknown'}. Allowed: .csv, .xlsx, .xls, .json`,
+      'UNSUPPORTED_FORMAT'
+    );
+  }
+
+  // Check MIME type
+  const allowedMimes = ALLOWED_MIME_TYPES[extension];
+  // Allow empty MIME type as some browsers don't set it correctly
+  if (file.type && !allowedMimes.includes(file.type)) {
+    console.warn(`MIME type mismatch: expected ${allowedMimes.join(' or ')}, got ${file.type}`);
+    // Don't throw - some browsers report incorrect MIME types, especially for CSV
+  }
+};
+
 export const parseFile = async (file: File): Promise<ParsedRecord[]> => {
+  // Validate file before processing
+  validateFile(file);
+  
   const extension = file.name.split('.').pop()?.toLowerCase();
   
   switch (extension) {
@@ -318,9 +366,10 @@ export const parseFile = async (file: File): Promise<ParsedRecord[]> => {
     case 'json':
       return parseJSON(file);
     default:
-      throw new Error(`Unsupported file format: ${extension}`);
+      throw new FileValidationError(`Unsupported file format: ${extension}`, 'UNSUPPORTED_FORMAT');
   }
 };
 
 export const getSupportedFormats = () => '.csv,.xlsx,.xls,.json';
 export const getSupportedFormatsText = () => 'CSV, Excel (.xlsx, .xls), JSON';
+export const getMaxFileSizeMB = () => MAX_FILE_SIZE_MB;

@@ -51,118 +51,150 @@ export const ExportSection = () => {
   };
 
   const exportSummaryPDF = () => {
-    // Create a simple HTML-based report that can be printed as PDF
-    const reportWindow = window.open('', '_blank');
-    if (!reportWindow) {
-      toast.error('Please allow popups to export PDF');
+    // Show data sensitivity warning
+    const confirmed = window.confirm(
+      '⚠️ Data Sensitivity Warning\n\n' +
+      'This report contains voter data which may be sensitive.\n\n' +
+      '• The report will be downloaded as an HTML file\n' +
+      '• You can open it in your browser and print to PDF\n' +
+      '• Please handle the exported data responsibly\n' +
+      '• Delete the file when no longer needed\n\n' +
+      'Do you want to proceed with the export?'
+    );
+
+    if (!confirmed) {
+      toast.info('Export cancelled');
       return;
     }
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Voter Analysis Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
-            h1 { color: #2d5a7b; border-bottom: 2px solid #2a9d8f; padding-bottom: 10px; }
-            h2 { color: #2d5a7b; margin-top: 30px; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #2d5a7b; color: white; }
-            tr:nth-child(even) { background-color: #f9f9f9; }
-            .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0; }
-            .stat-card { background: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center; }
-            .stat-value { font-size: 2em; font-weight: bold; color: #2d5a7b; }
-            .stat-label { color: #666; margin-top: 5px; }
-            @media print { body { padding: 20px; } }
-          </style>
-        </head>
-        <body>
-          <h1>Voter Analysis Report</h1>
-          <p>Generated on ${new Date().toLocaleDateString()}</p>
-          
-          <div class="stat-grid">
-            <div class="stat-card">
-              <div class="stat-value">${segments.total.toLocaleString()}</div>
-              <div class="stat-label">Total Voters</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${municipalities.length}</div>
-              <div class="stat-label">Municipalities</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${municipalities.reduce((acc, m) => acc + m.wards.length, 0)}</div>
-              <div class="stat-label">Wards</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${Object.keys(segments.byCaste).length}</div>
-              <div class="stat-label">Unique Castes</div>
-            </div>
-          </div>
+    // Generate HTML content with escaped data to prevent XSS
+    const escapeHtml = (str: string): string => {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    };
 
-          <h2>Gender Distribution</h2>
-          <table>
-            <tr><th>Gender</th><th>Count</th><th>Percentage</th></tr>
-            ${Object.entries(segments.byGender).map(([gender, count]) => `
-              <tr>
-                <td>${gender.charAt(0).toUpperCase() + gender.slice(1)}</td>
-                <td>${count.toLocaleString()}</td>
-                <td>${segments.total > 0 ? ((count / segments.total) * 100).toFixed(1) : 0}%</td>
-              </tr>
-            `).join('')}
-          </table>
+    const html = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Voter Analysis Report</title>
+    <meta charset="UTF-8">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 40px; color: #333; max-width: 1200px; margin: 0 auto; }
+      h1 { color: #2d5a7b; border-bottom: 2px solid #2a9d8f; padding-bottom: 10px; }
+      h2 { color: #2d5a7b; margin-top: 30px; }
+      table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+      th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+      th { background-color: #2d5a7b; color: white; }
+      tr:nth-child(even) { background-color: #f9f9f9; }
+      .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0; }
+      .stat-card { background: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center; }
+      .stat-value { font-size: 2em; font-weight: bold; color: #2d5a7b; }
+      .stat-label { color: #666; margin-top: 5px; }
+      .warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px; margin-bottom: 20px; }
+      @media print { body { padding: 20px; } .warning { display: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="warning">
+      ⚠️ This document contains sensitive voter data. Handle responsibly and delete when no longer needed.
+    </div>
+    <h1>Voter Analysis Report</h1>
+    <p>Generated on ${escapeHtml(new Date().toLocaleDateString())}</p>
+    
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-value">${segments.total.toLocaleString()}</div>
+        <div class="stat-label">Total Voters</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${municipalities.length}</div>
+        <div class="stat-label">Municipalities</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${municipalities.reduce((acc, m) => acc + m.wards.length, 0)}</div>
+        <div class="stat-label">Wards</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${Object.keys(segments.byCaste).length}</div>
+        <div class="stat-label">Unique Castes</div>
+      </div>
+    </div>
 
-          <h2>Age Distribution</h2>
-          <table>
-            <tr><th>Age Range</th><th>Count</th><th>Percentage</th></tr>
-            ${Object.entries(segments.byAge).map(([range, count]) => `
-              <tr>
-                <td>${range}</td>
-                <td>${count.toLocaleString()}</td>
-                <td>${segments.total > 0 ? ((count / segments.total) * 100).toFixed(1) : 0}%</td>
-              </tr>
-            `).join('')}
-          </table>
+    <h2>Gender Distribution</h2>
+    <table>
+      <tr><th>Gender</th><th>Count</th><th>Percentage</th></tr>
+      ${Object.entries(segments.byGender).map(([gender, count]) => `
+        <tr>
+          <td>${escapeHtml(gender.charAt(0).toUpperCase() + gender.slice(1))}</td>
+          <td>${count.toLocaleString()}</td>
+          <td>${segments.total > 0 ? ((count / segments.total) * 100).toFixed(1) : 0}%</td>
+        </tr>
+      `).join('')}
+    </table>
 
-          <h2>Newar vs Non-Newar</h2>
-          <table>
-            <tr><th>Category</th><th>Count</th><th>Percentage</th></tr>
-            <tr>
-              <td>Newar</td>
-              <td>${segments.newarVsNonNewar.newar.toLocaleString()}</td>
-              <td>${segments.total > 0 ? ((segments.newarVsNonNewar.newar / segments.total) * 100).toFixed(1) : 0}%</td>
-            </tr>
-            <tr>
-              <td>Non-Newar</td>
-              <td>${segments.newarVsNonNewar.nonNewar.toLocaleString()}</td>
-              <td>${segments.total > 0 ? ((segments.newarVsNonNewar.nonNewar / segments.total) * 100).toFixed(1) : 0}%</td>
-            </tr>
-          </table>
+    <h2>Age Distribution</h2>
+    <table>
+      <tr><th>Age Range</th><th>Count</th><th>Percentage</th></tr>
+      ${Object.entries(segments.byAge).map(([range, count]) => `
+        <tr>
+          <td>${escapeHtml(range)}</td>
+          <td>${count.toLocaleString()}</td>
+          <td>${segments.total > 0 ? ((count / segments.total) * 100).toFixed(1) : 0}%</td>
+        </tr>
+      `).join('')}
+    </table>
 
-          <h2>Top 10 Castes</h2>
-          <table>
-            <tr><th>Rank</th><th>Caste</th><th>Count</th></tr>
-            ${Object.entries(segments.byCaste)
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 10)
-              .map(([caste, count], i) => `
-                <tr>
-                  <td>${i + 1}</td>
-                  <td>${caste || 'Unknown'}</td>
-                  <td>${count.toLocaleString()}</td>
-                </tr>
-              `).join('')}
-          </table>
+    <h2>Newar vs Non-Newar</h2>
+    <table>
+      <tr><th>Category</th><th>Count</th><th>Percentage</th></tr>
+      <tr>
+        <td>Newar</td>
+        <td>${segments.newarVsNonNewar.newar.toLocaleString()}</td>
+        <td>${segments.total > 0 ? ((segments.newarVsNonNewar.newar / segments.total) * 100).toFixed(1) : 0}%</td>
+      </tr>
+      <tr>
+        <td>Non-Newar</td>
+        <td>${segments.newarVsNonNewar.nonNewar.toLocaleString()}</td>
+        <td>${segments.total > 0 ? ((segments.newarVsNonNewar.nonNewar / segments.total) * 100).toFixed(1) : 0}%</td>
+      </tr>
+    </table>
 
-          <script>window.print();</script>
-        </body>
-      </html>
-    `;
+    <h2>Top 10 Castes</h2>
+    <table>
+      <tr><th>Rank</th><th>Caste</th><th>Count</th></tr>
+      ${Object.entries(segments.byCaste)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([caste, count], i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${escapeHtml(caste || 'Unknown')}</td>
+            <td>${count.toLocaleString()}</td>
+          </tr>
+        `).join('')}
+    </table>
 
-    reportWindow.document.write(html);
-    reportWindow.document.close();
-    toast.success('PDF report opened in new tab - use Print to save as PDF');
+    <p style="margin-top: 40px; color: #666; font-size: 12px;">
+      To save as PDF: Open this file in your browser and use Print (Ctrl+P / Cmd+P) → Save as PDF
+    </p>
+  </body>
+</html>`;
+
+    // Use Blob URL for download instead of window.open to avoid browser history traces
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `voter_report_${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    // Revoke URL to free memory
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    
+    toast.success('Report downloaded - open in browser and print to save as PDF');
   };
 
   const exportOptions = [
