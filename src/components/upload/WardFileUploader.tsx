@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { parseFile, getSupportedFormats, getSupportedFormatsText, ParsedRecord } from '@/lib/fileParser';
+import { parseFile, getSupportedFormats, getSupportedFormatsText, getMaxFileSizeMB, FileValidationError, ParsedRecord } from '@/lib/fileParser';
 
 interface WardUploadData {
   wardNumber: number;
@@ -49,7 +49,28 @@ export const WardFileUploader = ({ wards, municipalityName, onWardDataUpdate }: 
     } catch (error) {
       console.error('File parsing error:', error);
       onWardDataUpdate(wardIndex, file, [], 'error');
-      toast.error(`Failed to parse ${file.name}`);
+      
+      // Provide specific error messages based on error type
+      if (error instanceof FileValidationError) {
+        switch (error.code) {
+          case 'SIZE_EXCEEDED':
+            toast.error(`File too large: ${file.name}. Maximum size is ${getMaxFileSizeMB()} MB`);
+            break;
+          case 'INVALID_TYPE':
+          case 'INVALID_MIME':
+            toast.error(`Invalid file type: ${file.name}. Please upload CSV, Excel, or JSON files`);
+            break;
+          case 'UNSUPPORTED_FORMAT':
+            toast.error(`Unsupported format: ${file.name}. Use CSV, Excel (.xlsx, .xls), or JSON`);
+            break;
+          default:
+            toast.error(error.message);
+        }
+      } else if (error instanceof Error) {
+        toast.error(`Failed to parse ${file.name}: ${error.message}`);
+      } else {
+        toast.error(`Failed to parse ${file.name}`);
+      }
     } finally {
       setUploadingIndex(null);
     }
@@ -162,7 +183,7 @@ export const WardFileUploader = ({ wards, municipalityName, onWardDataUpdate }: 
       
       <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border/50">
         <p className="text-xs text-muted-foreground text-center">
-          Supported formats: {getSupportedFormatsText()}
+          Supported formats: {getSupportedFormatsText()} • Max file size: {getMaxFileSizeMB()} MB
         </p>
       </div>
     </ScrollArea>
