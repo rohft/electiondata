@@ -21,6 +21,12 @@ export interface VoterRecord {
   partyLogo?: string;
   voterStatus?: VoterStatus;
   tole?: string;
+  occupation?: string;
+  partyAffiliations?: string[];
+  notes?: string[];
+  customNote?: string;
+  familyMemberIds?: string[];
+  isMainFamilyMember?: boolean;
   originalData: Record<string, string>;
   isEdited?: boolean;
   editHistory?: Array<{ field: string; oldValue: string; newValue: string; timestamp: Date }>;
