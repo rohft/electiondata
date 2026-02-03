@@ -20,6 +20,7 @@ export interface VoterRecord {
   partyName?: string;
   partyLogo?: string;
   voterStatus?: VoterStatus;
+  tole?: string;
   originalData: Record<string, string>;
   isEdited?: boolean;
   editHistory?: Array<{ field: string; oldValue: string; newValue: string; timestamp: Date }>;
