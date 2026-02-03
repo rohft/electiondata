@@ -20,7 +20,7 @@ import {
   Users, UserPlus, FileText, Building2, Plus, Filter, Trash2, Eye, EyeOff,
   ChevronLeft, ChevronRight as ChevronRightIcon, ChevronsLeft, ChevronsRight,
   Sparkles, Wand2, MapPin, Check, Heart, Plane, Skull, UserCheck, Accessibility, Replace,
-  GripVertical, Columns3, ArrowLeftRight, Download
+  GripVertical, Columns3, ArrowLeftRight, Download, Languages, ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,12 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { exportToExcel, exportToCSV } from '@/lib/dataExporter';
+
+// Type definitions for sorting and display
+type SortDirection = 'asc' | 'desc' | null;
+type SortableColumn = 'sn' | 'voterId' | 'fullName' | 'age' | 'gender' | 'caste' | 'surname';
+type DisplayLanguage = 'bilingual' | 'english' | 'nepali';
+
 // Helper to detect if text contains Nepali/Devanagari characters
 const containsNepali = (text: string): boolean => {
   if (!text || typeof text !== 'string') return false;
@@ -94,15 +100,25 @@ const ALL_COLUMNS = [
 // Default column order
 const DEFAULT_COLUMN_ORDER = ['sn', 'voterId', 'fullName', 'age', 'gender', 'spouse', 'parents', 'caste', 'surname', 'tole', 'voterStatus'];
 
-// Sortable Table Header Cell Component
+// Sortable Table Header Cell Component with sort and language support
 const SortableHeaderCell = ({ 
   column, 
   isVisible,
-  onToggleVisibility 
+  onToggleVisibility,
+  sortColumn,
+  sortDirection,
+  onSort,
+  displayLanguage,
+  getSortIcon
 }: { 
   column: typeof ALL_COLUMNS[0]; 
   isVisible: boolean;
   onToggleVisibility: () => void;
+  sortColumn?: SortableColumn | null;
+  sortDirection?: SortDirection;
+  onSort?: (column: SortableColumn) => void;
+  displayLanguage?: DisplayLanguage;
+  getSortIcon?: (column: SortableColumn) => React.ReactNode;
 }) => {
   const {
     attributes,
@@ -119,6 +135,9 @@ const SortableHeaderCell = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const isSortable = ['sn', 'voterId', 'fullName', 'age', 'gender', 'caste', 'surname'].includes(column.key);
+  const lang = displayLanguage || 'bilingual';
+
   return (
     <TableHead 
       ref={setNodeRef}
@@ -127,21 +146,30 @@ const SortableHeaderCell = ({
         "min-w-[80px] select-none",
         column.key === 'sn' && "sticky left-0 bg-background z-20 w-[60px]",
         column.key === 'fullName' && "min-w-[180px]",
-        isDragging && "bg-accent/20"
+        isDragging && "bg-accent/20",
+        isSortable && "cursor-pointer hover:bg-muted/60"
       )}
+      onClick={() => isSortable && onSort?.(column.key as SortableColumn)}
     >
       <div className="flex items-center gap-1">
         <button
           className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+          onClick={(e) => e.stopPropagation()}
           {...attributes}
           {...listeners}
         >
           <GripVertical className="h-3 w-3 text-muted-foreground" />
         </button>
         <div className="flex-1">
-          <div className="font-medium">{column.label}</div>
-          <div className="text-xs text-muted-foreground font-nepali">{column.labelNe}</div>
+          {lang !== 'nepali' && <div className="font-medium">{column.label}</div>}
+          {lang !== 'english' && (
+            <div className={cn(
+              "font-nepali",
+              lang === 'bilingual' ? "text-xs text-muted-foreground" : "font-medium"
+            )}>{column.labelNe}</div>
+          )}
         </div>
+        {isSortable && getSortIcon?.(column.key as SortableColumn)}
       </div>
     </TableHead>
   );
@@ -358,7 +386,11 @@ export const EditSection = () => {
   
   // Custom tole input
   const [customTole, setCustomTole] = useState('');
-
+  
+  // Sorting and language display states
+  const [sortColumn, setSortColumn] = useState<SortableColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [displayLanguage, setDisplayLanguage] = useState<DisplayLanguage>('bilingual');
   // Auto-select municipality if only one exists
   const autoSelectedMunicipality = municipalities.length === 1 ? municipalities[0] : null;
   const effectiveMunicipalityId = selectedMunicipality || (autoSelectedMunicipality?.id || '');
@@ -438,9 +470,84 @@ export const EditSection = () => {
         });
       }
     }
+    // Apply sorting
+    if (sortColumn && sortDirection) {
+      filtered = [...filtered].sort((a, b) => {
+        let aVal: string | number;
+        let bVal: string | number;
+
+        switch (sortColumn) {
+          case 'sn':
+            // SN is computed, use id as fallback
+            aVal = a.id;
+            bVal = b.id;
+            break;
+          case 'voterId':
+            aVal = a.id;
+            bVal = b.id;
+            break;
+          case 'fullName':
+            aVal = a.fullName.toLowerCase();
+            bVal = b.fullName.toLowerCase();
+            break;
+          case 'surname':
+            aVal = (a.surname || '').toLowerCase();
+            bVal = (b.surname || '').toLowerCase();
+            break;
+          case 'age':
+            aVal = a.age;
+            bVal = b.age;
+            break;
+          case 'gender':
+            aVal = a.gender;
+            bVal = b.gender;
+            break;
+          case 'caste':
+            aVal = (a.caste || '').toLowerCase();
+            bVal = (b.caste || '').toLowerCase();
+            break;
+          default:
+            return 0;
+        }
+
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        
+        const comparison = String(aVal).localeCompare(String(bVal));
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
     
     return filtered;
-  }, [allWardVoters, searchTerm, filterGenders, filterCastes, filterSurnames, filterAgeRanges, filterAgeMin, filterAgeMax, filterVoterStatuses]);
+  }, [allWardVoters, searchTerm, filterGenders, filterCastes, filterSurnames, filterAgeRanges, filterAgeMin, filterAgeMax, filterVoterStatuses, sortColumn, sortDirection]);
+
+  // Handle sorting
+  const handleSort = (column: SortableColumn) => {
+    if (sortColumn === column) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  // Get sort icon for column header
+  const getSortIcon = (column: SortableColumn) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-3 w-3 text-muted-foreground/50" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp className="h-3 w-3 text-accent" />;
+    }
+    return <ArrowDown className="h-3 w-3 text-accent" />;
+  };
 
   const paginatedVoters = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -703,9 +810,16 @@ export const EditSection = () => {
     }
   };
 
-  // Render cell content with bilingual display
+  // Render cell content with language display support
   const renderCellContent = (value: { en: string; ne: string } | string | number, columnKey: string): React.ReactNode => {
     if (typeof value === 'object' && 'en' in value && 'ne' in value) {
+      if (displayLanguage === 'english') {
+        return <span className="text-sm">{value.en}</span>;
+      }
+      if (displayLanguage === 'nepali') {
+        return <span className="text-sm font-nepali">{value.ne}</span>;
+      }
+      // Bilingual
       return (
         <div className="flex flex-col">
           <span className="text-sm">{value.en}</span>
@@ -1130,6 +1244,36 @@ export const EditSection = () => {
                     onReplace={updateVoterRecord}
                   />
                 )}
+                {/* Language Toggle */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn("gap-2 h-8", displayLanguage !== 'bilingual' && 'border-accent')}>
+                      <Languages className="h-4 w-4" />
+                      {displayLanguage === 'bilingual' ? 'Both' : displayLanguage === 'english' ? 'EN' : 'ने'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-48 p-2">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground px-2 pb-1">Display Language</p>
+                      {[
+                        { value: 'bilingual', label: 'Bilingual', labelNe: 'दुवै' },
+                        { value: 'english', label: 'English Only', labelNe: 'अंग्रेजी' },
+                        { value: 'nepali', label: 'नेपाली मात्र', labelNe: 'Nepali Only' },
+                      ].map(opt => (
+                        <Button
+                          key={opt.value}
+                          variant={displayLanguage === opt.value ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="w-full justify-start gap-2"
+                          onClick={() => setDisplayLanguage(opt.value as DisplayLanguage)}
+                        >
+                          {displayLanguage === opt.value && <Check className="h-3 w-3" />}
+                          {opt.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 {/* Download Button */}
                 <Popover>
                   <PopoverTrigger asChild>
@@ -1211,12 +1355,19 @@ export const EditSection = () => {
                                   column={col}
                                   isVisible={visibleColumns.includes(col.key)}
                                   onToggleVisibility={() => toggleColumn(col.key)}
+                                  sortColumn={sortColumn}
+                                  sortDirection={sortDirection}
+                                  onSort={handleSort}
+                                  displayLanguage={displayLanguage}
+                                  getSortIcon={getSortIcon}
                                 />
                               ))}
                             </SortableContext>
                             <TableHead className="text-right sticky right-0 bg-background z-10 w-[80px]">
-                              <div>Actions</div>
-                              <div className="text-xs text-muted-foreground font-nepali">कार्य</div>
+                              {displayLanguage !== 'nepali' && <div>Actions</div>}
+                              {displayLanguage !== 'english' && (
+                                <div className={cn("font-nepali", displayLanguage === 'bilingual' ? "text-xs text-muted-foreground" : "")}>कार्य</div>
+                              )}
                             </TableHead>
                           </TableRow>
                         </TableHeader>

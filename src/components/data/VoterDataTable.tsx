@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { 
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -37,7 +38,11 @@ import {
   Eye,
   EyeOff,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Languages
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParsedRecord } from '@/lib/fileParser';
@@ -63,6 +68,10 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, h
 import { CSS } from '@dnd-kit/utilities';
 import { toast } from 'sonner';
 import { exportToExcel, exportToCSV } from '@/lib/dataExporter';
+
+type SortDirection = 'asc' | 'desc' | null;
+type SortableColumn = 'sn' | 'voterId' | 'voterName' | 'surname' | 'age' | 'gender' | 'caste';
+type DisplayLanguage = 'bilingual' | 'english' | 'nepali';
 
 // Helper to detect if text contains Nepali/Devanagari characters
 const containsNepali = (text: string): boolean => {
@@ -131,6 +140,9 @@ export const VoterDataTable = ({
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [compactMode, setCompactMode] = useState(false);
   const [versionDialogOpen, setVersionDialogOpen] = useState(false);
+  const [sortColumn, setSortColumn] = useState<SortableColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [displayLanguage, setDisplayLanguage] = useState<DisplayLanguage>('bilingual');
   const itemsPerPage = 25;
 
   // Get only wards with data
@@ -191,7 +203,7 @@ export const VoterDataTable = ({
   const filteredRecords = useMemo(() => {
     const ageRange = AGE_RANGES.find(r => r.value === ageRangeFilter) || AGE_RANGES[0];
     
-    return enrichedRecords.filter(record => {
+    let filtered = enrichedRecords.filter(record => {
       const matchesSearch = searchQuery === '' || 
         record.voterName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         record.voterId.includes(searchQuery) ||
@@ -206,7 +218,84 @@ export const VoterDataTable = ({
       
       return matchesSearch && matchesGender && matchesAge && matchesCaste;
     });
-  }, [enrichedRecords, searchQuery, genderFilter, ageRangeFilter, casteFilter]);
+
+    // Apply sorting
+    if (sortColumn && sortDirection) {
+      filtered = [...filtered].sort((a, b) => {
+        let aVal: string | number;
+        let bVal: string | number;
+
+        switch (sortColumn) {
+          case 'sn':
+            aVal = a.sn;
+            bVal = b.sn;
+            break;
+          case 'voterId':
+            aVal = a.voterId;
+            bVal = b.voterId;
+            break;
+          case 'voterName':
+            aVal = a.voterName.toLowerCase();
+            bVal = b.voterName.toLowerCase();
+            break;
+          case 'surname':
+            aVal = a.surname.toLowerCase();
+            bVal = b.surname.toLowerCase();
+            break;
+          case 'age':
+            aVal = a.age;
+            bVal = b.age;
+            break;
+          case 'gender':
+            aVal = a.gender;
+            bVal = b.gender;
+            break;
+          case 'caste':
+            aVal = (a.subCaste || '').toLowerCase();
+            bVal = (b.subCaste || '').toLowerCase();
+            break;
+          default:
+            return 0;
+        }
+
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        
+        const comparison = String(aVal).localeCompare(String(bVal));
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return filtered;
+  }, [enrichedRecords, searchQuery, genderFilter, ageRangeFilter, casteFilter, sortColumn, sortDirection]);
+
+  // Handle sorting
+  const handleSort = (column: SortableColumn) => {
+    if (sortColumn === column) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  // Get sort icon for column header
+  const getSortIcon = (column: SortableColumn) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-3 w-3 text-muted-foreground/50" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp className="h-3 w-3 text-accent" />;
+    }
+    return <ArrowDown className="h-3 w-3 text-accent" />;
+  };
 
   // Pagination
   const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
@@ -558,6 +647,36 @@ export const VoterDataTable = ({
               </Select>
             )}
 
+            {/* Language Toggle */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" className={displayLanguage !== 'bilingual' ? 'border-accent' : ''}>
+                  <Languages className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-48 p-2">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground px-2 pb-1">Display Language</p>
+                  {[
+                    { value: 'bilingual', label: 'Bilingual', labelNe: 'दुवै' },
+                    { value: 'english', label: 'English Only', labelNe: 'अंग्रेजी' },
+                    { value: 'nepali', label: 'नेपाली मात्र', labelNe: 'Nepali Only' },
+                  ].map(opt => (
+                    <Button
+                      key={opt.value}
+                      variant={displayLanguage === opt.value ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={() => setDisplayLanguage(opt.value as DisplayLanguage)}
+                    >
+                      {displayLanguage === opt.value && <Check className="h-3 w-3" />}
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
             {/* Column Visibility */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -628,6 +747,7 @@ export const VoterDataTable = ({
                 <TableRow className="hover:bg-transparent">
                   {visibleColumns.map(column => {
                     const labels = getBilingual(column.labelKey);
+                    const isSortable = ['sn', 'voterId', 'voterName', 'surname', 'age', 'gender', 'caste'].includes(column.id);
                     return (
                       <TableHead 
                         key={column.id} 
@@ -635,12 +755,22 @@ export const VoterDataTable = ({
                           "font-semibold text-foreground",
                           column.width,
                           column.id === 'sn' && "sticky left-0 bg-muted/80 z-20",
-                          compactMode && "py-2"
+                          compactMode && "py-2",
+                          isSortable && "cursor-pointer hover:bg-muted/60 select-none"
                         )}
+                        onClick={() => isSortable && handleSort(column.id as SortableColumn)}
                       >
-                        <div className="flex flex-col leading-tight">
-                          <span>{labels.en}</span>
-                          <span className="text-xs font-normal text-muted-foreground">{labels.ne}</span>
+                        <div className="flex items-center gap-1">
+                          <div className="flex flex-col leading-tight flex-1">
+                            {displayLanguage !== 'nepali' && <span>{labels.en}</span>}
+                            {displayLanguage !== 'english' && (
+                              <span className={cn(
+                                "font-nepali",
+                                displayLanguage === 'bilingual' ? "text-xs font-normal text-muted-foreground" : ""
+                              )}>{labels.ne}</span>
+                            )}
+                          </div>
+                          {isSortable && getSortIcon(column.id as SortableColumn)}
                         </div>
                       </TableHead>
                     );
@@ -726,17 +856,39 @@ export const VoterDataTable = ({
                               record.gender === 'female' && 'border-pink-500/50 text-pink-500 bg-pink-500/5'
                             )}
                           >
-                            <span>{genderLabels[record.gender]?.en || record.gender}</span>
-                            <span className="text-[10px] opacity-70 font-nepali">{genderLabels[record.gender]?.ne}</span>
+                            {displayLanguage === 'bilingual' && (
+                              <>
+                                <span>{genderLabels[record.gender]?.en || record.gender}</span>
+                                <span className="text-[10px] opacity-70 font-nepali">{genderLabels[record.gender]?.ne}</span>
+                              </>
+                            )}
+                            {displayLanguage === 'english' && (
+                              <span>{genderLabels[record.gender]?.en || record.gender}</span>
+                            )}
+                            {displayLanguage === 'nepali' && (
+                              <span className="font-nepali">{genderLabels[record.gender]?.ne}</span>
+                            )}
                           </Badge>
                         )}
                         {column.id === 'caste' && (
                           record.subCaste ? (
                             <Badge variant="secondary" className="text-xs flex flex-col items-center py-1 h-auto">
-                              <span>{record.subCaste}</span>
-                              {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe && (
-                                <span className="text-[10px] opacity-70 font-nepali">
-                                  {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe}
+                              {displayLanguage === 'bilingual' && (
+                                <>
+                                  <span>{record.subCaste}</span>
+                                  {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe && (
+                                    <span className="text-[10px] opacity-70 font-nepali">
+                                      {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe}
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                              {displayLanguage === 'english' && (
+                                <span>{record.subCaste}</span>
+                              )}
+                              {displayLanguage === 'nepali' && (
+                                <span className="font-nepali">
+                                  {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe || record.subCaste}
                                 </span>
                               )}
                             </Badge>

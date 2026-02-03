@@ -216,11 +216,33 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
       originalData[h] = String(row[idx] ?? '');
     });
 
+    // Get voterId - prioritize the mapped column, convert numbers properly
+    const voterIdIndex = headerMap['voterId'];
+    let voterId = '';
+    if (voterIdIndex !== undefined && voterIdIndex >= 0) {
+      const rawValue = row[voterIdIndex];
+      // Handle numeric voter IDs - convert to string without scientific notation
+      if (typeof rawValue === 'number') {
+        voterId = Math.floor(rawValue).toString();
+      } else if (rawValue !== null && rawValue !== undefined) {
+        voterId = String(rawValue).trim();
+      }
+    }
+    // Fallback: if voterId is empty, try getting from column 1 (common position)
+    if (!voterId && row[1] !== null && row[1] !== undefined) {
+      const rawValue = row[1];
+      if (typeof rawValue === 'number') {
+        voterId = Math.floor(rawValue).toString();
+      } else {
+        voterId = String(rawValue).trim();
+      }
+    }
+
     const record: ParsedRecord = {
       sn: String(row[headerMap['sn'] ?? -1] ?? ''),
       wardNo: String(row[headerMap['wardNo'] ?? -1] ?? ''),
       centerName: String(row[headerMap['centerName'] ?? -1] ?? ''),
-      voterId: String(row[headerMap['voterId'] ?? 1] ?? ''),
+      voterId: voterId,
       voterName: String(row[headerMap['voterName'] ?? 2] ?? ''),
       age: parseInt(String(row[headerMap['age'] ?? 3])) || 0,
       gender: normalizeGender(String(row[headerMap['gender'] ?? 4] ?? '')),
