@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import {
@@ -19,17 +20,18 @@ type NavItem = {
   id: string;
   icon: React.ComponentType<{ className?: string }>;
   labelKey: string;
+  path: string;
 };
 
 const navItems: NavItem[] = [
-  { id: 'dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard' },
-  { id: 'upload', icon: Upload, labelKey: 'nav.upload' },
-  { id: 'segments', icon: PieChart, labelKey: 'nav.segments' },
-  { id: 'comparison', icon: GitCompare, labelKey: 'nav.comparison' },
-  { id: 'infographics', icon: BarChart3, labelKey: 'nav.infographics' },
-  { id: 'templates', icon: FileText, labelKey: 'nav.templates' },
-  { id: 'edit', icon: Edit3, labelKey: 'nav.edit' },
-  { id: 'export', icon: Download, labelKey: 'nav.export' },
+  { id: 'dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', path: '/dashboard' },
+  { id: 'upload', icon: Upload, labelKey: 'nav.upload', path: '/upload' },
+  { id: 'segments', icon: PieChart, labelKey: 'nav.segments', path: '/segments' },
+  { id: 'comparison', icon: GitCompare, labelKey: 'nav.comparison', path: '/comparison' },
+  { id: 'infographics', icon: BarChart3, labelKey: 'nav.infographics', path: '/infographics' },
+  { id: 'templates', icon: FileText, labelKey: 'nav.templates', path: '/templates' },
+  { id: 'edit', icon: Edit3, labelKey: 'nav.edit', path: '/edit' },
+  { id: 'export', icon: Download, labelKey: 'nav.export', path: '/export' },
 ];
 
 interface SidebarProps {
@@ -40,6 +42,7 @@ interface SidebarProps {
 export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
   const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const location = useLocation();
 
   return (
     <aside
@@ -51,12 +54,12 @@ export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
       {/* Logo Area */}
       <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
         {!isCollapsed && (
-          <div className="flex items-center gap-2 fade-in">
+          <Link to="/" className="flex items-center gap-2 fade-in">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-accent">
               <BarChart3 className="h-4 w-4 text-accent-foreground" />
             </div>
             <span className="font-semibold text-sidebar-foreground">VoterPulse</span>
-          </div>
+          </Link>
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -75,11 +78,13 @@ export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
       <nav className="flex flex-col gap-1 p-3">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeSection === item.id;
+          const isActive = activeSection === item.id || location.pathname === item.path;
 
           return (
-            <button
+            <Link
               key={item.id}
+              to={item.path}
+              target="_self"
               onClick={() => onSectionChange(item.id)}
               className={cn(
                 'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
@@ -98,26 +103,27 @@ export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
                   {t(item.labelKey)}
                 </div>
               )}
-            </button>
+            </Link>
           );
         })}
       </nav>
 
       {/* Settings at bottom */}
       <div className="absolute bottom-4 left-0 right-0 px-3">
-        <button
+        <Link
+          to="/settings"
           onClick={() => onSectionChange('settings')}
           className={cn(
             'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
             'transition-all duration-200 focus-ring',
-            activeSection === 'settings'
+            activeSection === 'settings' || location.pathname === '/settings'
               ? 'bg-sidebar-primary text-sidebar-primary-foreground'
               : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
           )}
         >
           <Settings className="h-5 w-5 flex-shrink-0" />
           {!isCollapsed && <span className="truncate">{t('nav.settings')}</span>}
-        </button>
+        </Link>
       </div>
     </aside>
   );

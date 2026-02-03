@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useVoterData, VoterRecord, VoterStatus } from '@/contexts/VoterDataContext';
+import { useToleData } from '@/contexts/ToleDataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { 
   Edit3, Undo2, Save, Search, X, FolderOpen, ChevronRight, 
   Users, UserPlus, FileText, Building2, Plus, Filter, Trash2, Eye, EyeOff,
@@ -331,6 +333,7 @@ const findPotentialFamilyMembers = (
 export const EditSection = () => {
   const { t, getBilingual } = useLanguage();
   const { municipalities, updateVoterRecord, revertVoterRecord } = useVoterData();
+  const { toles: globalToles, addTole } = useToleData();
   const [selectedMunicipality, setSelectedMunicipality] = useState<string>('');
   const [selectedWard, setSelectedWard] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -556,16 +559,17 @@ export const EditSection = () => {
 
   const totalPages = Math.ceil(voters.length / pageSize);
 
-  // Get unique toles from the data
+  // Get unique toles from the data AND global tole storage
   const uniqueToles = useMemo(() => {
-    const toles = new Set<string>();
+    const toles = new Set<string>(globalToles); // Start with global toles
     allWardVoters.forEach(v => {
-      if (v.originalData?.['Tole'] || v.originalData?.['टोल']) {
-        toles.add(v.originalData['Tole'] || v.originalData['टोल']);
-      }
+      // Check both voter.tole and originalData
+      if (v.tole) toles.add(v.tole);
+      if (v.originalData?.['Tole']) toles.add(v.originalData['Tole']);
+      if (v.originalData?.['टोल']) toles.add(v.originalData['टोल']);
     });
-    return Array.from(toles).sort();
-  }, [allWardVoters]);
+    return Array.from(toles).filter(Boolean).sort();
+  }, [allWardVoters, globalToles]);
 
   // Get unique castes for filter (linked to CASTE_CATEGORIES from segment)
   const uniqueCastes = useMemo(() => {
@@ -619,13 +623,13 @@ export const EditSection = () => {
       surname: voter.surname || detected.surname,
       phone: voter.phone,
       email: voter.email,
-      tole: voter.originalData?.['Tole'] || voter.originalData?.['टोल'] || '',
-      occupation: '',
-      partyAffiliations: [],
-      notes: [],
-      customNote: '',
-      familyMemberIds: [],
-      isMainFamilyMember: false,
+      tole: voter.tole || voter.originalData?.['Tole'] || voter.originalData?.['टोल'] || '',
+      occupation: voter.occupation || '',
+      partyAffiliations: voter.partyAffiliations || [],
+      notes: voter.notes || [],
+      customNote: voter.customNote || '',
+      familyMemberIds: voter.familyMemberIds || [],
+      isMainFamilyMember: voter.isMainFamilyMember || false,
     });
     setShowOriginalData(false);
     setShowAISuggestions(false);
@@ -637,8 +641,13 @@ export const EditSection = () => {
     if (!editingVoter || !effectiveMunicipality || !selectedWard) return;
 
     // Include custom tole if provided
-    const finalTole = customTole || editForm.tole;
+    const finalTole = customTole.trim() || editForm.tole;
     const updatedForm = { ...editForm, tole: finalTole };
+
+    // If a new tole was entered, add it to global storage for future suggestions
+    if (customTole.trim() && !globalToles.includes(customTole.trim())) {
+      addTole(customTole.trim());
+    }
 
     // If surname was changed, also update caste and isNewar based on new surname
     if (updatedForm.surname && updatedForm.surname !== editingVoter.surname) {
@@ -1527,48 +1536,82 @@ export const EditSection = () => {
                                               />
                                             </div>
                                             
-                                            {/* Enhanced Tole Input */}
+                                            {/* Enhanced Tole Input with Autocomplete */}
                                             <div className="space-y-2">
                                               <Label className="flex items-center gap-2">
                                                 <MapPin className="h-4 w-4" />
-                                                {t('edit.tole')} / टोल
+                                                Tole / टोल
                                               </Label>
-                                              <Select 
-                                                value={editForm.tole} 
-                                                onValueChange={(v) => {
-                                                  if (v === '__custom__') {
-                                                    // Keep select empty, use custom input
-                                                    setEditForm({ ...editForm, tole: '' });
-                                                  } else {
-                                                    setEditForm({ ...editForm, tole: v });
-                                                    setCustomTole('');
-                                                  }
-                                                }}
-                                              >
-                                                <SelectTrigger>
-                                                  <SelectValue placeholder="Select or add Tole" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                  {uniqueToles.map(tole => (
-                                                    <SelectItem key={tole} value={tole}>{tole}</SelectItem>
-                                                  ))}
-                                                  <SelectItem value="__custom__">
-                                                    <span className="flex items-center gap-2">
-                                                      <Plus className="h-3 w-3" />
-                                                      Add New Tole
-                                                    </span>
-                                                  </SelectItem>
-                                                </SelectContent>
-                                              </Select>
-                                              {/* Custom Tole Input */}
-                                              {(!editForm.tole || editForm.tole === '__custom__') && (
-                                                <Input
-                                                  placeholder="Enter new tole name..."
-                                                  value={customTole}
-                                                  onChange={(e) => setCustomTole(e.target.value)}
-                                                  className="mt-2"
-                                                />
-                                              )}
+                                              <div className="space-y-2">
+                                                <div className="flex gap-2">
+                                                  <Input
+                                                    placeholder="Type or select tole name..."
+                                                    value={customTole || editForm.tole || ''}
+                                                    onChange={(e) => {
+                                                      setCustomTole(e.target.value);
+                                                      setEditForm({ ...editForm, tole: '' });
+                                                    }}
+                                                    className="flex-1"
+                                                    list="tole-suggestions"
+                                                  />
+                                                  <datalist id="tole-suggestions">
+                                                    {uniqueToles.map(tole => (
+                                                      <option key={tole} value={tole} />
+                                                    ))}
+                                                  </datalist>
+                                                </div>
+                                                
+                                                {/* Quick select from existing toles */}
+                                                {uniqueToles.length > 0 && (
+                                                  <div className="flex flex-wrap gap-1">
+                                                    <span className="text-xs text-muted-foreground">Suggestions:</span>
+                                                    {uniqueToles.slice(0, 8).map(tole => (
+                                                      <Badge
+                                                        key={tole}
+                                                        variant={(editForm.tole === tole || customTole === tole) ? "default" : "outline"}
+                                                        className="cursor-pointer text-xs"
+                                                        onClick={() => {
+                                                          setEditForm({ ...editForm, tole });
+                                                          setCustomTole('');
+                                                        }}
+                                                      >
+                                                        {tole}
+                                                      </Badge>
+                                                    ))}
+                                                    {uniqueToles.length > 8 && (
+                                                      <Popover>
+                                                        <PopoverTrigger asChild>
+                                                          <Badge variant="outline" className="cursor-pointer text-xs">
+                                                            +{uniqueToles.length - 8} more
+                                                          </Badge>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-64 p-2">
+                                                          <ScrollArea className="h-48">
+                                                            <div className="flex flex-wrap gap-1">
+                                                              {uniqueToles.slice(8).map(tole => (
+                                                                <Badge
+                                                                  key={tole}
+                                                                  variant={(editForm.tole === tole || customTole === tole) ? "default" : "outline"}
+                                                                  className="cursor-pointer text-xs"
+                                                                  onClick={() => {
+                                                                    setEditForm({ ...editForm, tole });
+                                                                    setCustomTole('');
+                                                                  }}
+                                                                >
+                                                                  {tole}
+                                                                </Badge>
+                                                              ))}
+                                                            </div>
+                                                          </ScrollArea>
+                                                        </PopoverContent>
+                                                      </Popover>
+                                                    )}
+                                                  </div>
+                                                )}
+                                                <p className="text-xs text-muted-foreground">
+                                                  Type a new tole name or select from suggestions. New names are saved for future use.
+                                                </p>
+                                              </div>
                                             </div>
                                             
                                             <div className="space-y-2">
