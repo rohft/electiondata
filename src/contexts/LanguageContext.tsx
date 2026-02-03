@@ -43,6 +43,7 @@ const translations: Translations = {
   'common.all': { en: 'All', ne: 'सबै' },
   'common.version': { en: 'Version', ne: 'संस्करण' },
   'common.current': { en: 'Current', ne: 'हालको' },
+  'common.download': { en: 'Download', ne: 'डाउनलोड' },
 
   // Dashboard
   'dashboard.title': { en: 'Voter Analysis Dashboard', ne: 'मतदाता विश्लेषण ड्यासबोर्ड' },

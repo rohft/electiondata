@@ -20,7 +20,7 @@ import {
   Users, UserPlus, FileText, Building2, Plus, Filter, Trash2, Eye, EyeOff,
   ChevronLeft, ChevronRight as ChevronRightIcon, ChevronsLeft, ChevronsRight,
   Sparkles, Wand2, MapPin, Check, Heart, Plane, Skull, UserCheck, Accessibility, Replace,
-  GripVertical, Columns3, ArrowLeftRight
+  GripVertical, Columns3, ArrowLeftRight, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,7 @@ import { BulkSurnameReplace } from '@/components/edit/BulkSurnameReplace';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { exportToExcel, exportToCSV } from '@/lib/dataExporter';
 // Helper to detect if text contains Nepali/Devanagari characters
 const containsNepali = (text: string): boolean => {
   if (!text || typeof text !== 'string') return false;
@@ -1110,6 +1111,45 @@ export const EditSection = () => {
                     onReplace={updateVoterRecord}
                   />
                 )}
+                {/* Download Button */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 h-8">
+                      <Download className="h-4 w-4" />
+                      Download
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-48 p-2" align="end">
+                    <div className="space-y-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start gap-2"
+                        onClick={() => {
+                          const fileName = `${effectiveMunicipality?.name}_${currentWard?.name}_voters`;
+                          exportToExcel(voters, fileName);
+                          toast.success('Excel file downloaded');
+                        }}
+                      >
+                        <FileText className="h-4 w-4" />
+                        Excel (.xlsx)
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start gap-2"
+                        onClick={() => {
+                          const fileName = `${effectiveMunicipality?.name}_${currentWard?.name}_voters`;
+                          exportToCSV(voters, fileName);
+                          toast.success('CSV file downloaded');
+                        }}
+                      >
+                        <FileText className="h-4 w-4" />
+                        CSV
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setCurrentPage(1); }}>
                   <SelectTrigger className="w-[100px] h-8">
                     <SelectValue />

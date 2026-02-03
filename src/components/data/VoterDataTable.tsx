@@ -31,7 +31,13 @@ import {
   History,
   Filter,
   Check,
-  GripVertical
+  GripVertical,
+  Download,
+  FileText,
+  Eye,
+  EyeOff,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParsedRecord } from '@/lib/fileParser';
@@ -55,6 +61,8 @@ import {
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { toast } from 'sonner';
+import { exportToExcel, exportToCSV } from '@/lib/dataExporter';
 
 // Helper to detect if text contains Nepali/Devanagari characters
 const containsNepali = (text: string): boolean => {
@@ -397,6 +405,73 @@ export const VoterDataTable = ({
               {t('upload.updateData')}
             </Button>
           )}
+
+          {/* Download Button */}
+          {currentWard && records.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  {t('common.download')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-2" align="end">
+                <div className="space-y-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2"
+                    onClick={() => {
+                      const fileName = `${municipalityName}_Ward${currentWard.wardNumber}_voters`;
+                      // Convert enrichedRecords to ParsedRecord format for export
+                      const recordsToExport = enrichedRecords.map(r => ({
+                        ...r,
+                        voterName: r.voterName,
+                        voterId: r.voterId,
+                        age: r.age,
+                        gender: r.gender,
+                        surname: r.surname,
+                        caste: r.subCaste || '',
+                        spouse: r.spouse || '',
+                        parents: r.parents || '',
+                        originalData: r.originalData
+                      }));
+                      exportToExcel(recordsToExport as any, fileName);
+                      toast.success('Excel file downloaded');
+                    }}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Excel (.xlsx)
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2"
+                    onClick={() => {
+                      const fileName = `${municipalityName}_Ward${currentWard.wardNumber}_voters`;
+                      const recordsToExport = enrichedRecords.map(r => ({
+                        ...r,
+                        voterName: r.voterName,
+                        voterId: r.voterId,
+                        age: r.age,
+                        gender: r.gender,
+                        surname: r.surname,
+                        caste: r.subCaste || '',
+                        spouse: r.spouse || '',
+                        parents: r.parents || '',
+                        originalData: r.originalData
+                      }));
+                      exportToCSV(recordsToExport as any, fileName);
+                      toast.success('CSV file downloaded');
+                    }}
+                  >
+                    <FileText className="h-4 w-4" />
+                    CSV
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
           
           {pendingWards.length > 0 && onUploadMore && (
             <Button variant="outline" size="sm" onClick={onUploadMore}>
@@ -546,210 +621,246 @@ export const VoterDataTable = ({
 
       {/* Data Table */}
       <Card className="border-border/50 overflow-hidden">
-        <ScrollArea className="h-[500px]">
-          <Table>
-            <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
-              <TableRow className="hover:bg-transparent">
-                {visibleColumns.map(column => {
-                  const labels = getBilingual(column.labelKey);
-                  return (
-                    <TableHead 
-                      key={column.id} 
-                      className={cn(
-                        "font-semibold text-foreground",
-                        column.width,
-                        compactMode && "py-2"
-                      )}
-                    >
-                      <div className="flex flex-col leading-tight">
-                        <span>{labels.en}</span>
-                        <span className="text-xs font-normal text-muted-foreground">{labels.ne}</span>
-                      </div>
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedRecords.map((record) => (
-                <TableRow 
-                  key={`${record.voterId}-${record.sn}`}
-                  className={cn(
-                    "group transition-colors",
-                    compactMode && "[&_td]:py-1"
-                  )}
-                >
-                  {visibleColumns.map(column => (
-                    <TableCell key={column.id} className={cn(column.width)}>
-                      {column.id === 'sn' && (
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {record.sn}
-                        </span>
-                      )}
-                      {column.id === 'voterId' && (
-                        <div className="text-sm">
-                          <span className={cn(
-                            "block text-foreground",
-                            containsNepali(record.voterId) ? "font-nepali" : "font-mono"
-                          )}>
-                            {record.voterId || '-'}
+        <ScrollArea className="w-full">
+          <div className="min-w-[800px]">
+            <Table>
+              <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
+                <TableRow className="hover:bg-transparent">
+                  {visibleColumns.map(column => {
+                    const labels = getBilingual(column.labelKey);
+                    return (
+                      <TableHead 
+                        key={column.id} 
+                        className={cn(
+                          "font-semibold text-foreground",
+                          column.width,
+                          column.id === 'sn' && "sticky left-0 bg-muted/80 z-20",
+                          compactMode && "py-2"
+                        )}
+                      >
+                        <div className="flex flex-col leading-tight">
+                          <span>{labels.en}</span>
+                          <span className="text-xs font-normal text-muted-foreground">{labels.ne}</span>
+                        </div>
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedRecords.map((record) => (
+                  <TableRow 
+                    key={`${record.voterId}-${record.sn}`}
+                    className={cn(
+                      "group transition-colors",
+                      compactMode && "[&_td]:py-1"
+                    )}
+                  >
+                    {visibleColumns.map(column => (
+                      <TableCell 
+                        key={column.id} 
+                        className={cn(
+                          column.width,
+                          column.id === 'sn' && "sticky left-0 bg-background z-10"
+                        )}
+                      >
+                        {column.id === 'sn' && (
+                          <span className="font-mono text-sm text-muted-foreground">
+                            {record.sn}
                           </span>
-                          {record.originalData?.['मतदाता नं'] && record.originalData['मतदाता नं'] !== record.voterId && (
-                            <span className="block text-xs text-muted-foreground font-nepali">
-                              {record.originalData['मतदाता नं']}
+                        )}
+                        {column.id === 'voterId' && (
+                          <div className="text-sm">
+                            <span className={cn(
+                              "block text-foreground",
+                              containsNepali(record.voterId) ? "font-nepali" : "font-mono"
+                            )}>
+                              {record.voterId || '-'}
                             </span>
-                          )}
-                        </div>
-                      )}
-                      {column.id === 'voterName' && (
-                        <div className="font-medium">
-                          <span className={cn(
-                            "block",
-                            containsNepali(record.voterName) && "font-nepali"
-                          )}>
-                            {record.voterName}
-                          </span>
-                          {record.originalData?.['मतदाताको नाम'] && record.originalData['मतदाताको नाम'] !== record.voterName && (
-                            <span className="block text-xs text-muted-foreground font-nepali">
-                              {record.originalData['मतदाताको नाम']}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {column.id === 'surname' && (
-                        <div className="flex flex-col">
-                          <span className={cn("text-sm", containsNepali(record.surname) && "font-nepali")}>
-                            {record.surname}
-                          </span>
-                          {record.subCaste && (
-                            <span className="text-xs text-muted-foreground">{record.subCaste}</span>
-                          )}
-                        </div>
-                      )}
-                      {column.id === 'age' && (
-                        <div>
-                          <span className="block">{record.age || '-'}</span>
-                          {record.age && (
-                            <span className="block text-xs text-muted-foreground font-nepali">वर्ष</span>
-                          )}
-                        </div>
-                      )}
-                      {column.id === 'gender' && (
-                        <Badge 
-                          variant="outline" 
-                          className={cn(
-                            'text-xs flex flex-col items-center py-1 h-auto',
-                            record.gender === 'male' && 'border-blue-500/50 text-blue-500 bg-blue-500/5',
-                            record.gender === 'female' && 'border-pink-500/50 text-pink-500 bg-pink-500/5'
-                          )}
-                        >
-                          <span>{genderLabels[record.gender]?.en || record.gender}</span>
-                          <span className="text-[10px] opacity-70 font-nepali">{genderLabels[record.gender]?.ne}</span>
-                        </Badge>
-                      )}
-                      {column.id === 'caste' && (
-                        record.subCaste ? (
-                          <Badge variant="secondary" className="text-xs flex flex-col items-center py-1 h-auto">
-                            <span>{record.subCaste}</span>
-                            {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe && (
-                              <span className="text-[10px] opacity-70 font-nepali">
-                                {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe}
+                            {record.originalData?.['मतदाता नं'] && record.originalData['मतदाता नं'] !== record.voterId && (
+                              <span className="block text-xs text-muted-foreground font-nepali">
+                                {record.originalData['मतदाता नं']}
                               </span>
                             )}
+                          </div>
+                        )}
+                        {column.id === 'voterName' && (
+                          <div className="font-medium min-w-[150px]">
+                            <span className={cn(
+                              "block",
+                              containsNepali(record.voterName) && "font-nepali"
+                            )}>
+                              {record.voterName}
+                            </span>
+                            {record.originalData?.['मतदाताको नाम'] && record.originalData['मतदाताको नाम'] !== record.voterName && (
+                              <span className="block text-xs text-muted-foreground font-nepali">
+                                {record.originalData['मतदाताको नाम']}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {column.id === 'surname' && (
+                          <div className="flex flex-col">
+                            <span className={cn("text-sm", containsNepali(record.surname) && "font-nepali")}>
+                              {record.surname}
+                            </span>
+                            {record.subCaste && (
+                              <span className="text-xs text-muted-foreground">{record.subCaste}</span>
+                            )}
+                          </div>
+                        )}
+                        {column.id === 'age' && (
+                          <div>
+                            <span className="block">{record.age || '-'}</span>
+                            {record.age && (
+                              <span className="block text-xs text-muted-foreground font-nepali">वर्ष</span>
+                            )}
+                          </div>
+                        )}
+                        {column.id === 'gender' && (
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              'text-xs flex flex-col items-center py-1 h-auto',
+                              record.gender === 'male' && 'border-blue-500/50 text-blue-500 bg-blue-500/5',
+                              record.gender === 'female' && 'border-pink-500/50 text-pink-500 bg-pink-500/5'
+                            )}
+                          >
+                            <span>{genderLabels[record.gender]?.en || record.gender}</span>
+                            <span className="text-[10px] opacity-70 font-nepali">{genderLabels[record.gender]?.ne}</span>
                           </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">-</span>
-                        )
-                      )}
-                      {column.id === 'centerName' && (
-                        <span className={cn(
-                          "text-sm text-muted-foreground truncate max-w-[200px] block",
-                          containsNepali(record.centerName || '') && "font-nepali"
-                        )}>
-                          {record.centerName || '-'}
-                        </span>
-                      )}
-                      {column.id === 'spouse' && (
-                        <span className={cn(
-                          "text-sm text-muted-foreground",
-                          containsNepali(record.spouse || '') && "font-nepali"
-                        )}>
-                          {record.spouse || '-'}
-                        </span>
-                      )}
-                      {column.id === 'parents' && (
-                        <span className={cn(
-                          "text-sm text-muted-foreground truncate max-w-[200px] block",
-                          containsNepali(record.parents || '') && "font-nepali"
-                        )}>
-                          {record.parents || '-'}
-                        </span>
-                      )}
+                        )}
+                        {column.id === 'caste' && (
+                          record.subCaste ? (
+                            <Badge variant="secondary" className="text-xs flex flex-col items-center py-1 h-auto">
+                              <span>{record.subCaste}</span>
+                              {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe && (
+                                <span className="text-[10px] opacity-70 font-nepali">
+                                  {CASTE_CATEGORIES.find(c => c.name === record.subCaste)?.nameNe}
+                                </span>
+                              )}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )
+                        )}
+                        {column.id === 'centerName' && (
+                          <span className={cn(
+                            "text-sm text-muted-foreground truncate max-w-[200px] block",
+                            containsNepali(record.centerName || '') && "font-nepali"
+                          )}>
+                            {record.centerName || '-'}
+                          </span>
+                        )}
+                        {column.id === 'spouse' && (
+                          <span className={cn(
+                            "text-sm text-muted-foreground",
+                            containsNepali(record.spouse || '') && "font-nepali"
+                          )}>
+                            {record.spouse || '-'}
+                          </span>
+                        )}
+                        {column.id === 'parents' && (
+                          <span className={cn(
+                            "text-sm text-muted-foreground truncate max-w-[200px] block",
+                            containsNepali(record.parents || '') && "font-nepali"
+                          )}>
+                            {record.parents || '-'}
+                          </span>
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+                {paginatedRecords.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                      <p className="text-muted-foreground">No records found matching your filters</p>
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-              {paginatedRecords.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
-                    <p className="text-muted-foreground">No records found matching your filters</p>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </ScrollArea>
       </Card>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </Button>
-          
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredRecords.length)} of {filteredRecords.length}
+          </p>
           <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let pageNum: number;
-              if (totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (currentPage <= 3) {
-                pageNum = i + 1;
-              } else if (currentPage >= totalPages - 2) {
-                pageNum = totalPages - 4 + i;
-              } else {
-                pageNum = currentPage - 2 + i;
-              }
-              
-              return (
-                <Button
-                  key={pageNum}
-                  variant={currentPage === pageNum ? 'default' : 'outline'}
-                  size="sm"
-                  className="w-8 h-8 p-0"
-                  onClick={() => setCurrentPage(pageNum)}
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-8 w-8"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(1)}
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-8 w-8"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <div className="hidden sm:flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? 'default' : 'outline'}
+                    size="sm"
+                    className="w-8 h-8 p-0"
+                    onClick={() => setCurrentPage(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            
+            <span className="sm:hidden px-3 text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+            
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-8 w-8"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-8 w-8"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(totalPages)}
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
           </div>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
       )}
     </div>
