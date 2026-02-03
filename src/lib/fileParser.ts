@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { z } from 'zod';
 
 export interface ParsedRecord {
@@ -164,44 +164,74 @@ export const parseCSV = (content: string): ParsedRecord[] => {
 
 export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
   const arrayBuffer = await file.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-  const firstSheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[firstSheetName];
+  const workbook = new ExcelJS.Workbook();
   
-  // Convert to array of arrays
-  const data = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
+  // Determine file type and load accordingly
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  if (extension === 'xlsx') {
+    await workbook.xlsx.load(arrayBuffer);
+  } else if (extension === 'xls') {
+    // ExcelJS doesn't support legacy .xls format natively
+    // For .xls files, we'll throw a helpful error
+    throw new Error('Legacy .xls format is not fully supported. Please convert to .xlsx format.');
+  }
+  
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) {
+    throw new Error('No worksheet found in the Excel file');
+  }
+  
+  // Convert worksheet to array of arrays
+  const data: (string | number | boolean | null)[][] = [];
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    const rowData: (string | number | boolean | null)[] = [];
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      // Handle different cell value types
+      let value = cell.value;
+      if (value && typeof value === 'object' && 'result' in value) {
+        // Handle formula cells - use the result
+        value = value.result;
+      }
+      if (value && typeof value === 'object' && 'richText' in value) {
+        // Handle rich text - extract plain text
+        value = (value as { richText: { text: string }[] }).richText.map(rt => rt.text).join('');
+      }
+      rowData[colNumber - 1] = value as string | number | boolean | null;
+    });
+    data[rowNumber - 1] = rowData;
+  });
   
   if (data.length < 2) return [];
   
-  const headers = (data[0] as string[]).map(h => String(h || '').trim());
+  const headers = (data[0] as (string | number | boolean | null)[]).map(h => String(h || '').trim());
   const headerMap = normalizeHeaders(headers);
   const records: ParsedRecord[] = [];
 
   for (let i = 1; i < data.length; i++) {
-    const row = data[i] as string[];
+    const row = data[i] as (string | number | boolean | null)[];
     if (!row || row.length < 3) continue;
 
     const originalData: Record<string, string> = {};
     headers.forEach((h, idx) => {
-      originalData[h] = String(row[idx] || '');
+      originalData[h] = String(row[idx] ?? '');
     });
 
     const record: ParsedRecord = {
-      sn: String(row[headerMap['sn'] ?? -1] || ''),
-      wardNo: String(row[headerMap['wardNo'] ?? -1] || ''),
-      centerName: String(row[headerMap['centerName'] ?? -1] || ''),
-      voterId: String(row[headerMap['voterId'] ?? 1] || ''),
-      voterName: String(row[headerMap['voterName'] ?? 2] || ''),
+      sn: String(row[headerMap['sn'] ?? -1] ?? ''),
+      wardNo: String(row[headerMap['wardNo'] ?? -1] ?? ''),
+      centerName: String(row[headerMap['centerName'] ?? -1] ?? ''),
+      voterId: String(row[headerMap['voterId'] ?? 1] ?? ''),
+      voterName: String(row[headerMap['voterName'] ?? 2] ?? ''),
       age: parseInt(String(row[headerMap['age'] ?? 3])) || 0,
-      gender: normalizeGender(String(row[headerMap['gender'] ?? 4] || '')),
-      spouse: String(row[headerMap['spouse'] ?? -1] || ''),
-      parents: String(row[headerMap['parents'] ?? -1] || ''),
-      caste: String(row[headerMap['caste'] ?? -1] || ''),
-      surname: String(row[headerMap['surname'] ?? -1] || ''),
-      status: String(row[headerMap['status'] ?? -1] || ''),
-      green: String(row[headerMap['green'] ?? -1] || ''),
-      yellow: String(row[headerMap['yellow'] ?? -1] || ''),
-      red: String(row[headerMap['red'] ?? -1] || ''),
+      gender: normalizeGender(String(row[headerMap['gender'] ?? 4] ?? '')),
+      spouse: String(row[headerMap['spouse'] ?? -1] ?? ''),
+      parents: String(row[headerMap['parents'] ?? -1] ?? ''),
+      caste: String(row[headerMap['caste'] ?? -1] ?? ''),
+      surname: String(row[headerMap['surname'] ?? -1] ?? ''),
+      status: String(row[headerMap['status'] ?? -1] ?? ''),
+      green: String(row[headerMap['green'] ?? -1] ?? ''),
+      yellow: String(row[headerMap['yellow'] ?? -1] ?? ''),
+      red: String(row[headerMap['red'] ?? -1] ?? ''),
       originalData,
     };
 
