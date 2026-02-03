@@ -127,8 +127,12 @@ export const AddWardDialog = ({
           const surnameFromName = record.voterName.split(' ').pop() || '';
           const surname = surnameFromRecord || surnameFromName;
           
+          // Use voterId from Excel/parsed data, fallback to UUID only if missing
+          const voterIdFromRecord = record.voterId?.toString().trim();
+          const voterId = voterIdFromRecord && voterIdFromRecord !== '' ? voterIdFromRecord : crypto.randomUUID();
+          
           return {
-            id: crypto.randomUUID(),
+            id: voterId,
             municipality: municipalityName,
             ward: `Ward ${ward.wardNumber}`,
             fullName: record.voterName,
