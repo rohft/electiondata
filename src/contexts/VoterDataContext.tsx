@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 export type VoterStatus = 'available' | 'dead' | 'out_of_country' | 'married' | 'older_citizen' | 'disabled';
 
@@ -49,6 +49,9 @@ interface VoterDataContextType {
   getTotalVoters: () => number;
   getTotalWards: () => number;
   getSegmentCounts: (municipalityId?: string, wardId?: string) => SegmentCounts;
+  saveData: () => void;
+  clearAllData: () => void;
+  isDataLoaded: boolean;
 }
 
 export interface SegmentCounts {
@@ -60,10 +63,76 @@ export interface SegmentCounts {
   total: number;
 }
 
+const STORAGE_KEY = 'voter_data_municipalities';
+
 const VoterDataContext = createContext<VoterDataContextType | undefined>(undefined);
+
+// Helper to serialize data for localStorage (handle Date objects)
+const serializeData = (municipalities: MunicipalityData[]): string => {
+  return JSON.stringify(municipalities, (key, value) => {
+    if (value instanceof Date) {
+      return { __type: 'Date', value: value.toISOString() };
+    }
+    return value;
+  });
+};
+
+// Helper to deserialize data from localStorage (restore Date objects)
+const deserializeData = (data: string): MunicipalityData[] => {
+  return JSON.parse(data, (key, value) => {
+    if (value && typeof value === 'object' && value.__type === 'Date') {
+      return new Date(value.value);
+    }
+    return value;
+  });
+};
 
 export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [municipalities, setMunicipalities] = useState<MunicipalityData[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  // Load data from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        const parsedData = deserializeData(savedData);
+        setMunicipalities(parsedData);
+      }
+    } catch (error) {
+      console.error('Error loading voter data from localStorage:', error);
+    } finally {
+      setIsDataLoaded(true);
+    }
+  }, []);
+
+  // Auto-save to localStorage when data changes (debounced)
+  useEffect(() => {
+    if (!isDataLoaded) return;
+    
+    const timeoutId = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, serializeData(municipalities));
+      } catch (error) {
+        console.error('Error saving voter data to localStorage:', error);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [municipalities, isDataLoaded]);
+
+  const saveData = useCallback(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, serializeData(municipalities));
+    } catch (error) {
+      console.error('Error saving voter data:', error);
+    }
+  }, [municipalities]);
+
+  const clearAllData = useCallback(() => {
+    setMunicipalities([]);
+    localStorage.removeItem(STORAGE_KEY);
+  }, []);
 
   const addWardData = useCallback((municipalityName: string, wardData: WardData) => {
     setMunicipalities(prev => {
@@ -260,7 +329,10 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       revertVoterRecord,
       getTotalVoters,
       getTotalWards,
-      getSegmentCounts
+      getSegmentCounts,
+      saveData,
+      clearAllData,
+      isDataLoaded
     }}>
       {children}
     </VoterDataContext.Provider>
