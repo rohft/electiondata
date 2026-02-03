@@ -533,6 +533,24 @@ export const EditSection = () => {
     const finalTole = customTole || editForm.tole;
     const updatedForm = { ...editForm, tole: finalTole };
 
+    // If surname was changed, also update caste and isNewar based on new surname
+    if (updatedForm.surname && updatedForm.surname !== editingVoter.surname) {
+      const detected = detectCasteFromName(updatedForm.surname);
+      // Only auto-update caste if it wasn't manually changed
+      if (!updatedForm.caste || updatedForm.caste === editingVoter.caste) {
+        updatedForm.caste = detected.caste;
+      }
+      // Update isNewar based on caste
+      const isNewCasteNewar = (updatedForm.caste || detected.caste) === 'Newar' ||
+        CASTE_CATEGORIES.find(c => c.name === 'Newar')?.surnames.some(s => 
+          updatedForm.surname?.toLowerCase().includes(s.toLowerCase())
+        ) ||
+        CASTE_CATEGORIES.find(c => c.name === 'Newar')?.surnamesNe.some(s => 
+          updatedForm.surname?.includes(s)
+        );
+      (updatedForm as any).isNewar = !!isNewCasteNewar;
+    }
+
     updateVoterRecord(effectiveMunicipality.id, selectedWard, editingVoter.id, updatedForm);
     toast.success('Record updated successfully');
     setEditingVoter(null);

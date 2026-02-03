@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Replace, Search, Check, AlertCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { detectCasteFromName, CASTE_CATEGORIES } from '@/lib/casteData';
 
 interface BulkSurnameReplaceProps {
   municipalityId: string;
@@ -46,13 +47,47 @@ export const BulkSurnameReplace = ({
     return str.split(find).join(replace);
   };
 
+  // Detect caste and isNewar status from surname
+  const detectCasteFromSurname = (surname: string): { caste: string; isNewar: boolean } => {
+    const surnameLower = surname.toLowerCase().trim();
+    
+    for (const category of CASTE_CATEGORIES) {
+      // Check English surnames
+      for (const catSurname of category.surnames) {
+        if (surnameLower === catSurname.toLowerCase() || surnameLower.includes(catSurname.toLowerCase())) {
+          return { 
+            caste: category.name, 
+            isNewar: category.name === 'Newar'
+          };
+        }
+      }
+      // Check Nepali surnames
+      for (const catSurnameNe of category.surnamesNe) {
+        if (surname.includes(catSurnameNe)) {
+          return { 
+            caste: category.name, 
+            isNewar: category.name === 'Newar'
+          };
+        }
+      }
+    }
+    
+    return { caste: 'Other', isNewar: false };
+  };
+
   // Preview the replacement results
   const previewResults = useMemo(() => {
-    return matchingVoters.map(voter => ({
-      voter,
-      oldSurname: voter.surname || '',
-      newSurname: safeReplaceAll(voter.surname || '', findText, replaceText)
-    }));
+    return matchingVoters.map(voter => {
+      const newSurname = safeReplaceAll(voter.surname || '', findText, replaceText);
+      const casteInfo = detectCasteFromSurname(newSurname);
+      return {
+        voter,
+        oldSurname: voter.surname || '',
+        newSurname,
+        newCaste: casteInfo.caste,
+        isNewar: casteInfo.isNewar
+      };
+    });
   }, [matchingVoters, findText, replaceText]);
 
   const handleReplace = () => {
@@ -73,7 +108,15 @@ export const BulkSurnameReplace = ({
       const newSurname = safeReplaceAll(oldSurname, findText, replaceText);
       
       if (oldSurname !== newSurname) {
-        onReplace(municipalityId, wardId, voter.id, { surname: newSurname });
+        // Detect caste and isNewar from the new surname
+        const casteInfo = detectCasteFromSurname(newSurname);
+        
+        // Update surname, caste, and isNewar flag
+        onReplace(municipalityId, wardId, voter.id, { 
+          surname: newSurname,
+          caste: casteInfo.caste,
+          isNewar: casteInfo.isNewar
+        });
         replacedCount++;
       }
     });
@@ -184,22 +227,34 @@ export const BulkSurnameReplace = ({
                     <div 
                       key={result.voter.id} 
                       className={cn(
-                        "flex items-center gap-3 p-2 rounded-md text-sm",
+                        "flex flex-col gap-1 p-2 rounded-md text-sm",
                         idx % 2 === 0 ? "bg-muted/30" : ""
                       )}
                     >
-                      <span className="text-muted-foreground w-8">{idx + 1}.</span>
-                      <span className="font-medium font-nepali flex-1 truncate">
-                        {result.voter.fullName}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="font-nepali bg-destructive/10 text-destructive border-destructive/30">
-                          {result.oldSurname || '(empty)'}
-                        </Badge>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        <Badge variant="outline" className="font-nepali bg-accent/10 text-accent border-accent/30">
-                          {result.newSurname || '(empty)'}
-                        </Badge>
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground w-8">{idx + 1}.</span>
+                        <span className="font-medium font-nepali flex-1 truncate">
+                          {result.voter.fullName}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 ml-8">
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="font-nepali bg-destructive/10 text-destructive border-destructive/30 text-xs">
+                            {result.oldSurname || '(empty)'}
+                          </Badge>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <Badge variant="outline" className="font-nepali bg-accent/10 text-accent border-accent/30 text-xs">
+                            {result.newSurname || '(empty)'}
+                          </Badge>
+                        </div>
+                        {result.newCaste !== result.voter.caste && (
+                          <div className="flex items-center gap-1 ml-2">
+                            <span className="text-xs text-muted-foreground">Caste:</span>
+                            <Badge variant="outline" className="text-xs">
+                              {result.voter.caste || 'Other'} → {result.newCaste}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
