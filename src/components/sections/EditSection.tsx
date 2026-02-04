@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useVoterData, VoterRecord, VoterStatus } from '@/contexts/VoterDataContext';
 import { useToleData } from '@/contexts/ToleDataContext';
+import { useCustomTags } from '@/contexts/CustomTagsContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -334,6 +335,7 @@ export const EditSection = () => {
   const { t, getBilingual } = useLanguage();
   const { municipalities, updateVoterRecord, revertVoterRecord } = useVoterData();
   const { toles: globalToles, addTole } = useToleData();
+  const { tags: customTags, addTole: addCustomTole, addCaste, addSurname } = useCustomTags();
   const [selectedMunicipality, setSelectedMunicipality] = useState<string>('');
   const [selectedWard, setSelectedWard] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -559,9 +561,11 @@ export const EditSection = () => {
 
   const totalPages = Math.ceil(voters.length / pageSize);
 
-  // Get unique toles from the data AND global tole storage
+  // Get unique toles from the data AND global tole storage AND custom tags
   const uniqueToles = useMemo(() => {
     const toles = new Set<string>(globalToles); // Start with global toles
+    // Add toles from custom tags
+    customTags.toles.forEach(t => toles.add(t));
     allWardVoters.forEach(v => {
       // Check both voter.tole and originalData
       if (v.tole) toles.add(v.tole);
@@ -569,11 +573,13 @@ export const EditSection = () => {
       if (v.originalData?.['टोल']) toles.add(v.originalData['टोल']);
     });
     return Array.from(toles).filter(Boolean).sort();
-  }, [allWardVoters, globalToles]);
+  }, [allWardVoters, globalToles, customTags.toles]);
 
-  // Get unique castes for filter (linked to CASTE_CATEGORIES from segment)
+  // Get unique castes for filter (linked to CASTE_CATEGORIES and custom tags)
   const uniqueCastes = useMemo(() => {
     const castes = new Set<string>();
+    // Add castes from custom tags first
+    customTags.castes.forEach(c => castes.add(c));
     allWardVoters.forEach(v => {
       const detected = detectCasteFromName(v.fullName);
       castes.add(v.caste || detected.caste);
@@ -582,18 +588,20 @@ export const EditSection = () => {
     const orderedCastes = CASTE_CATEGORIES.map(c => c.name).filter(name => castes.has(name));
     const remaining = Array.from(castes).filter(c => !orderedCastes.includes(c)).sort();
     return [...orderedCastes, ...remaining];
-  }, [allWardVoters]);
+  }, [allWardVoters, customTags.castes]);
 
-  // Get unique surnames for filter
+  // Get unique surnames for filter (including custom tags)
   const uniqueSurnames = useMemo(() => {
     const surnames = new Set<string>();
+    // Add surnames from custom tags
+    customTags.surnames.forEach(s => surnames.add(s));
     allWardVoters.forEach(v => {
       const detected = detectCasteFromName(v.fullName);
       const surname = v.surname || detected.surname;
       if (surname) surnames.add(surname);
     });
     return Array.from(surnames).sort();
-  }, [allWardVoters]);
+  }, [allWardVoters, customTags.surnames]);
 
   // Filter family search results
   const filteredFamilyMembers = useMemo(() => {
@@ -644,9 +652,24 @@ export const EditSection = () => {
     const finalTole = customTole.trim() || editForm.tole;
     const updatedForm = { ...editForm, tole: finalTole };
 
-    // If a new tole was entered, add it to global storage for future suggestions
-    if (customTole.trim() && !globalToles.includes(customTole.trim())) {
-      addTole(customTole.trim());
+    // If a new tole was entered, add it to global storage AND custom tags for future suggestions
+    if (customTole.trim()) {
+      if (!globalToles.includes(customTole.trim())) {
+        addTole(customTole.trim());
+      }
+      if (!customTags.toles.includes(customTole.trim())) {
+        addCustomTole(customTole.trim());
+      }
+    }
+
+    // If a new caste was entered, add it to custom tags
+    if (updatedForm.caste && !customTags.castes.includes(updatedForm.caste)) {
+      addCaste(updatedForm.caste);
+    }
+
+    // If a new surname was entered, add it to custom tags
+    if (updatedForm.surname && !customTags.surnames.includes(updatedForm.surname)) {
+      addSurname(updatedForm.surname);
     }
 
     // If surname was changed, also update caste and isNewar based on new surname
@@ -1511,29 +1534,65 @@ export const EditSection = () => {
                                             </div>
                                             <div className="space-y-2">
                                               <Label>Caste</Label>
-                                              <Select 
-                                                value={editForm.caste} 
-                                                onValueChange={(v) => setEditForm({ ...editForm, caste: v })}
-                                              >
-                                                <SelectTrigger>
-                                                  <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                  {CASTE_CATEGORIES.map(cat => (
-                                                    <SelectItem key={cat.name} value={cat.name}>
-                                                      {cat.name} ({cat.nameNe})
-                                                    </SelectItem>
+                                              <div className="space-y-2">
+                                                <Input
+                                                  placeholder="Type or select caste..."
+                                                  value={editForm.caste || ''}
+                                                  onChange={(e) => setEditForm({ ...editForm, caste: e.target.value })}
+                                                  list="caste-suggestions"
+                                                />
+                                                <datalist id="caste-suggestions">
+                                                  {uniqueCastes.map(caste => (
+                                                    <option key={caste} value={caste} />
                                                   ))}
-                                                  <SelectItem value="Other">Other (अन्य)</SelectItem>
-                                                </SelectContent>
-                                              </Select>
+                                                </datalist>
+                                                {uniqueCastes.length > 0 && (
+                                                  <div className="flex flex-wrap gap-1">
+                                                    <span className="text-xs text-muted-foreground">Quick:</span>
+                                                    {uniqueCastes.slice(0, 6).map(caste => (
+                                                      <Badge
+                                                        key={caste}
+                                                        variant={editForm.caste === caste ? "default" : "outline"}
+                                                        className="cursor-pointer text-xs"
+                                                        onClick={() => setEditForm({ ...editForm, caste })}
+                                                      >
+                                                        {caste}
+                                                      </Badge>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </div>
                                             </div>
                                             <div className="space-y-2">
                                               <Label>Surname</Label>
-                                              <Input
-                                                value={editForm.surname || ''}
-                                                onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
-                                              />
+                                              <div className="space-y-2">
+                                                <Input
+                                                  placeholder="Type or select surname..."
+                                                  value={editForm.surname || ''}
+                                                  onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
+                                                  list="surname-suggestions"
+                                                />
+                                                <datalist id="surname-suggestions">
+                                                  {uniqueSurnames.map(surname => (
+                                                    <option key={surname} value={surname} />
+                                                  ))}
+                                                </datalist>
+                                                {uniqueSurnames.length > 0 && (
+                                                  <div className="flex flex-wrap gap-1">
+                                                    <span className="text-xs text-muted-foreground">Quick:</span>
+                                                    {uniqueSurnames.slice(0, 6).map(surname => (
+                                                      <Badge
+                                                        key={surname}
+                                                        variant={editForm.surname === surname ? "default" : "outline"}
+                                                        className="cursor-pointer text-xs"
+                                                        onClick={() => setEditForm({ ...editForm, surname })}
+                                                      >
+                                                        {surname}
+                                                      </Badge>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </div>
                                             </div>
                                             
                                             {/* Enhanced Tole Input with Autocomplete */}
