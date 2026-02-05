@@ -9,7 +9,6 @@ import {
   GitCompare,
   Users2,
   BarChart3,
-  Edit3,
   Download,
   Settings,
   ChevronLeft,
@@ -34,7 +33,6 @@ const navItems: NavItem[] = [
   { id: 'comparison', icon: GitCompare, labelKey: 'nav.comparison', path: '/comparison' },
   { id: 'infographics', icon: BarChart3, labelKey: 'nav.infographics', path: '/infographics' },
   { id: 'templates', icon: FileText, labelKey: 'nav.templates', path: '/templates' },
-  { id: 'edit', icon: Edit3, labelKey: 'nav.edit', path: '/edit' },
   { id: 'export', icon: Download, labelKey: 'nav.export', path: '/export' },
 ];
 

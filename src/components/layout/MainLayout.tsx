@@ -11,7 +11,7 @@ import { CasteSection } from '@/components/sections/CasteSection';
 import { ComparisonSection } from '@/components/sections/ComparisonSection';
 import { InfographicsSection } from '@/components/sections/InfographicsSection';
 import { TemplatesSection } from '@/components/sections/TemplatesSection';
-import { EditSection } from '@/components/sections/EditSection';
+
 import { ExportSection } from '@/components/sections/ExportSection';
 import { SettingsSection } from '@/components/sections/SettingsSection';
 import { HomePage } from '@/pages/Home';
@@ -29,7 +29,7 @@ const sectionTitles: Record<string, { titleKey: string; subtitleKey?: string }> 
   comparison: { titleKey: 'comparison.title' },
   infographics: { titleKey: 'infographics.title' },
   templates: { titleKey: 'nav.templates' },
-  edit: { titleKey: 'nav.edit' },
+  
   export: { titleKey: 'export.title' },
   settings: { titleKey: 'nav.settings' },
 };
@@ -75,8 +75,6 @@ export const MainLayout = ({ section }: MainLayoutProps) => {
         return <InfographicsSection />;
       case 'templates':
         return <TemplatesSection />;
-      case 'edit':
-        return <EditSection />;
       case 'export':
         return <ExportSection />;
       case 'settings':
