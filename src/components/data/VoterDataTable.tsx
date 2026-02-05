@@ -108,7 +108,13 @@
      switch (key) {
        case 'sn': return row.sn;
        case 'voterName': return row.voterName;
-       case 'surname': return row.surname || '';
+        case 'surname': 
+          return (
+            row.surname || 
+            row.originalData?.['थर'] || 
+            row.originalData?.['Surname'] || 
+            ''
+          );
         case 'voterId': 
           return (
             row.voterId ||
