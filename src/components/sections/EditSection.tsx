@@ -849,7 +849,7 @@ export const EditSection = () => {
       case 'caste': 
         return voter.caste || detected.caste;
       case 'surname': 
-        return voter.surname || detected.surname;
+        return voter.surname || voter.originalData?.['थर'] || voter.originalData?.['Surname'] || detected.surname;
       case 'tole': 
         return tole;
       case 'phone': 
