@@ -64,8 +64,9 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
       headerMap['sn'] = idx;
     }
     // Voter ID - check for various Nepali and English patterns
-    else if (original === 'मतदाता नं' || original === 'मतदाता नं.' || original === 'मतदाता आईडी' || 
-             original === 'मतदाता नम्बर' || original === 'मतदाता परिचयपत्र नं.' ||
+    else if (original === 'मतदाता परिचयपत्र नं.' || original === 'मतदाता परिचयपत्र नं' ||
+             original === 'मतदाता नं' || original === 'मतदाता नं.' || original === 'मतदाता आईडी' ||
+             original === 'मतदाता नम्बर' ||
              lower.includes('voter id') || lower.includes('voter no') || lower === 'id' || lower === 'voterid') {
       headerMap['voterId'] = idx;
     }
