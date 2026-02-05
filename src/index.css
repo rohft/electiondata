@@ -92,6 +92,10 @@
     --glass-border: 214 32% 91% / 0.5;
     --shadow-color: 222 47% 11% / 0.08;
     --shadow-heavy: 222 47% 11% / 0.15;
+  
+  /* Font Variables */
+  --font-nepali: 'Kalimati', 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --font-english: 'Inter', system-ui, sans-serif;
   }
 
   .dark {
@@ -152,6 +156,10 @@
     --glass-border: 222 30% 20% / 0.5;
     --shadow-color: 0 0% 0% / 0.3;
     --shadow-heavy: 0 0% 0% / 0.5;
+  
+  /* Font Variables - same as light mode */
+  --font-nepali: 'Kalimati', 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --font-english: 'Inter', system-ui, sans-serif;
   }
 }
 
@@ -168,14 +176,9 @@
     @apply bg-background text-foreground antialiased;
   }
 
-  /* Nepali text styling - Kalimati as primary */
-  .font-nepali, .nepali-text {
-    font-family: 'Kalimati', 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
-  }
-
-  /* Apply Nepali font to cells containing Devanagari */
-  [data-nepali="true"], .font-devanagari {
-    font-family: 'Kalimati', 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
+  /* Nepali text styling - uses CSS variable for dynamic font selection */
+  .font-nepali, .nepali-text, [data-nepali="true"], .font-devanagari {
+    font-family: var(--font-nepali);
   }
 
   /* Smooth scrolling */

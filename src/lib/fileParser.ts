@@ -13,6 +13,13 @@ export interface ParsedRecord {
   parents?: string;
   caste?: string;
   surname?: string;
+  subCaste?: string;
+  phone?: string;
+  email?: string;
+  occupation?: string;
+  tole?: string;
+  family?: string;
+  party?: string;
   status?: string;
   green?: string;
   yellow?: string;
@@ -51,16 +58,20 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
     
     // Map common variations to standard keys (English and Nepali)
     // Serial Number - MUST check before other patterns
-    if (original === 'सि.नं.' || original === 'सि.नं' || original === 'क्र.सं.' || lower === 'sn' || lower === 's.n' || lower === 's.n.' || lower === 'sn.') {
+    if (original === 'सि.नं.' || original === 'सि.नं' || original === 'क्र.सं.' || 
+        original === 'मतदाता क्र.सं.' || 
+        lower === 'sn' || lower === 's.n' || lower === 's.n.' || lower === 'sn.') {
       headerMap['sn'] = idx;
     }
     // Voter ID - check for various Nepali and English patterns
-    else if (original === 'मतदाता नं' || original === 'मतदाता नं.' || original === 'मतदाता आईडी' || original === 'मतदाता नम्बर' || 
+    else if (original === 'मतदाता नं' || original === 'मतदाता नं.' || original === 'मतदाता आईडी' || 
+             original === 'मतदाता नम्बर' || original === 'मतदाता परिचयपत्र नं.' ||
              lower.includes('voter id') || lower.includes('voter no') || lower === 'id' || lower === 'voterid') {
       headerMap['voterId'] = idx;
     }
     // Voter Name
-    else if (original === 'मतदाताको नाम' || lower.includes('voter name') || lower === 'name') {
+    else if (original === 'मतदाताको नाम' || original === 'नाम' || 
+             lower.includes('voter name') || lower === 'name') {
       headerMap['voterName'] = idx;
     }
     // Age
@@ -76,12 +87,17 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
       headerMap['spouse'] = idx;
     }
     // Parents / Father-Mother
-    else if (original === 'पिता/माताको नाम' || lower.includes('parent') || lower.includes('father')) {
+    else if (original === 'पिता/माताको नाम' || original === 'आमाबुबाको नाम' || 
+             lower.includes('parent') || lower.includes('father')) {
       headerMap['parents'] = idx;
     }
     // Caste
     else if (original === 'जात' || lower === 'caste') {
       headerMap['caste'] = idx;
+    }
+    // Sub-caste / Jati
+    else if (original === 'जाति' || lower === 'sub-caste' || lower === 'subcaste') {
+      headerMap['subCaste'] = idx;
     }
     // Surname
     else if (original === 'थर' || lower === 'surname') {
@@ -98,6 +114,30 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
     // Center
     else if (lower.includes('center') || lower.includes('centre')) {
       headerMap['centerName'] = idx;
+    }
+    // Phone / Mobile
+    else if (original === 'मोबाइल नम्बर' || lower.includes('phone') || lower.includes('mobile')) {
+      headerMap['phone'] = idx;
+    }
+    // Email
+    else if (original === 'इमेल' || lower === 'email') {
+      headerMap['email'] = idx;
+    }
+    // Occupation
+    else if (original === 'व्यवसाय' || lower === 'occupation') {
+      headerMap['occupation'] = idx;
+    }
+    // Tole
+    else if (original === 'टोल' || lower === 'tole') {
+      headerMap['tole'] = idx;
+    }
+    // Family
+    else if (original === 'परिवार' || lower === 'family') {
+      headerMap['family'] = idx;
+    }
+    // Party
+    else if (original === 'पार्टि' || lower === 'party') {
+      headerMap['party'] = idx;
     }
     // Color codes
     else if (lower === 'green') headerMap['green'] = idx;
@@ -250,6 +290,13 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
       parents: String(row[headerMap['parents'] ?? -1] ?? ''),
       caste: String(row[headerMap['caste'] ?? -1] ?? ''),
       surname: String(row[headerMap['surname'] ?? -1] ?? ''),
+      subCaste: String(row[headerMap['subCaste'] ?? -1] ?? ''),
+      phone: String(row[headerMap['phone'] ?? -1] ?? ''),
+      email: String(row[headerMap['email'] ?? -1] ?? ''),
+      occupation: String(row[headerMap['occupation'] ?? -1] ?? ''),
+      tole: String(row[headerMap['tole'] ?? -1] ?? ''),
+      family: String(row[headerMap['family'] ?? -1] ?? ''),
+      party: String(row[headerMap['party'] ?? -1] ?? ''),
       status: String(row[headerMap['status'] ?? -1] ?? ''),
       green: String(row[headerMap['green'] ?? -1] ?? ''),
       yellow: String(row[headerMap['yellow'] ?? -1] ?? ''),

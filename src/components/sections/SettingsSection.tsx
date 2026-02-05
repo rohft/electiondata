@@ -1,16 +1,34 @@
+import { useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCustomTags } from '@/contexts/CustomTagsContext';
+import { useFont } from '@/contexts/FontContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Sun, Moon, Monitor, Languages, Palette, Users, MapPin, Tag, Cloud } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sun, Moon, Monitor, Languages, Palette, Users, MapPin, Tag, Cloud, Type, Upload, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CloudTagInput } from '@/components/settings/CloudTagInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 
 export const SettingsSection = () => {
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
+  const { 
+    nepaliFont, 
+    englishFont, 
+    nepaliFontOptions, 
+    englishFontOptions,
+    customFonts,
+    setNepaliFont, 
+    setEnglishFont,
+    addCustomFont,
+    removeCustomFont
+  } = useFont();
   const {
     tags,
     addCaste, removeCaste,
@@ -20,6 +38,47 @@ export const SettingsSection = () => {
     addTole, removeTole
   } = useCustomTags();
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+ 
+  const handleFontUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    const validExtensions = ['.otf', '.ttf', '.woff', '.woff2'];
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    
+    if (!validExtensions.includes(ext)) {
+      toast.error('Invalid font format. Use .otf, .ttf, .woff, or .woff2');
+      return;
+    }
+    
+    try {
+      // Read file as data URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const url = e.target?.result as string;
+        const fontName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+        
+        addCustomFont({
+          id: Date.now().toString(),
+          name: fontName,
+          fileName: file.name,
+          url: url,
+        });
+        
+        toast.success(`Font "${fontName}" uploaded successfully`);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error('Failed to upload font');
+    }
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+ 
   const themeOptions = [
     { value: 'light', label: t('theme.light'), icon: Sun },
     { value: 'dark', label: t('theme.dark'), icon: Moon },
@@ -67,6 +126,107 @@ export const SettingsSection = () => {
                 );
               })}
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Font Settings */}
+      <Card className="card-shadow border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <Type className="h-4 w-4 text-accent" />
+            Font Settings
+          </CardTitle>
+          <CardDescription>Choose fonts for Nepali and English text display</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Nepali Font Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Nepali Font (नेपाली फन्ट)</Label>
+            <Select value={nepaliFont} onValueChange={setNepaliFont}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {nepaliFontOptions.map(font => (
+                  <SelectItem key={font} value={font}>
+                    <span style={{ fontFamily: font }}>{font}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Preview: <span className="font-nepali" style={{ fontFamily: nepaliFont }}>यो नेपाली पाठ हो</span>
+            </p>
+          </div>
+          
+          {/* English Font Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">English Font</Label>
+            <Select value={englishFont} onValueChange={setEnglishFont}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {englishFontOptions.map(font => (
+                  <SelectItem key={font} value={font}>
+                    <span style={{ fontFamily: font }}>{font}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Preview: <span style={{ fontFamily: englishFont }}>This is English text</span>
+            </p>
+          </div>
+          
+          {/* Upload Custom Font */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Upload Custom Font
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept=".otf,.ttf,.woff,.woff2"
+                onChange={handleFontUpload}
+                className="flex-1"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Supported formats: .otf, .ttf, .woff, .woff2
+            </p>
+            
+            {/* Custom Fonts List */}
+            {customFonts.length > 0 && (
+              <div className="space-y-2 mt-4">
+                <Label className="text-xs text-muted-foreground">Custom Fonts:</Label>
+                <div className="flex flex-wrap gap-2">
+                  {customFonts.map(font => (
+                    <Badge 
+                      key={font.id} 
+                      variant="secondary" 
+                      className="gap-1 pr-1"
+                    >
+                      <span style={{ fontFamily: font.name }}>{font.name}</span>
+                      {(nepaliFont === font.name || englishFont === font.name) && (
+                        <Check className="h-3 w-3 text-accent ml-1" />
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 ml-1 hover:bg-destructive/20"
+                        onClick={() => removeCustomFont(font.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
