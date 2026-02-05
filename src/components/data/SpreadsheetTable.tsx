@@ -12,6 +12,7 @@
  } from 'lucide-react';
  import { exportToExcel, exportToCSV } from '@/lib/dataExporter';
  import { toast } from 'sonner';
+import { toNepaliDigits } from '@/lib/nepaliDigits';
  
  // Column definition matching Excel headers
  export interface SpreadsheetColumn {
@@ -52,6 +53,8 @@
    if (!text || typeof text !== 'string') return false;
    return /[\u0900-\u097F]/.test(text);
  };
+
+  const hasAsciiDigits = (text: string) => /[0-9]/.test(text);
  
  interface SpreadsheetTableProps<T> {
    data: T[];
@@ -207,9 +210,11 @@
      );
    };
  
-   const renderCellValue = (value: string | number, key: string) => {
-     const strValue = String(value);
-     const isNepali = containsNepali(strValue);
+    const renderCellValue = (value: string | number, key: string) => {
+      const strValue = String(value ?? '');
+      const isNepaliText = containsNepali(strValue);
+      const showNepaliNumerals = displayLanguage !== 'english' && hasAsciiDigits(strValue);
+      const renderedText = showNepaliNumerals ? toNepaliDigits(strValue) : (strValue || '-');
      
      // Gender display
      if (key === 'gender') {
@@ -242,13 +247,17 @@
      
      // Age display
      if (key === 'age' && value) {
+        const ageText = showNepaliNumerals ? toNepaliDigits(value) : String(value);
        return (
-         <span className="font-medium">{value} <span className="text-xs text-muted-foreground font-nepali">वर्ष</span></span>
+          <span className={cn("font-medium", displayLanguage !== 'english' && "font-nepali")}>
+            {ageText}{' '}
+            <span className="text-xs text-muted-foreground font-nepali">वर्ष</span>
+          </span>
        );
      }
      
      return (
-       <span className={cn(isNepali && 'font-nepali')}>{strValue || '-'}</span>
+        <span className={cn((isNepaliText || showNepaliNumerals) && 'font-nepali')}>{renderedText}</span>
      );
    };
  

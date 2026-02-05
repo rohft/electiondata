@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useVoterData, VoterRecord, VoterStatus } from '@/contexts/VoterDataContext';
 import { useToleData } from '@/contexts/ToleDataContext';
@@ -33,6 +33,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { exportToExcel, exportToCSV } from '@/lib/dataExporter';
+import { toNepaliDigits } from '@/lib/nepaliDigits';
 
 // Type definitions for sorting and display
 type SortDirection = 'asc' | 'desc' | null;
@@ -396,6 +397,26 @@ export const EditSection = () => {
   const [sortColumn, setSortColumn] = useState<SortableColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [displayLanguage, setDisplayLanguage] = useState<DisplayLanguage>('bilingual');
+
+  const getVoterNo = useCallback((voter: VoterRecord): string => {
+    const od = voter.originalData || {};
+    const raw = (
+      od['मतदाता परिचयपत्र नं.'] ||
+      od['मतदाता परिचयपत्र नं'] ||
+      od['मतदाता नं'] ||
+      od['मतदाता नं.'] ||
+      od['मतदाता नम्बर'] ||
+      od['Voter No'] ||
+      od['VOTER NO'] ||
+      od['Voter ID'] ||
+      od['VOTER ID'] ||
+      od['मतदाता क्र.सं.'] ||
+      od['मतदाता क्र.सं'] ||
+      ''
+    );
+    const str = String(raw ?? '').trim();
+    return str || voter.id;
+  }, []);
   // Auto-select municipality if only one exists
   const autoSelectedMunicipality = municipalities.length === 1 ? municipalities[0] : null;
   const effectiveMunicipalityId = selectedMunicipality || (autoSelectedMunicipality?.id || '');
@@ -488,8 +509,8 @@ export const EditSection = () => {
             bVal = b.id;
             break;
           case 'voterId':
-            aVal = a.id;
-            bVal = b.id;
+            aVal = getVoterNo(a);
+            bVal = getVoterNo(b);
             break;
           case 'fullName':
             aVal = a.fullName.toLowerCase();
@@ -794,9 +815,7 @@ export const EditSection = () => {
   // Helper to get cell value with bilingual support
   const getCellValue = (voter: VoterRecord, columnKey: string, index: number): { en: string; ne: string } | string | number => {
     const detected = detectCasteFromName(voter.fullName);
-    const voterNo = voter.originalData?.['मतदाता नं'] || 
-                    voter.originalData?.['Voter No'] || 
-                    voter.id.slice(0, 8);
+    const voterNo = getVoterNo(voter);
     const spouseName = voter.originalData?.['पति/पत्नीको नाम'] || 
                        voter.originalData?.['Spouse'] || 
                        '-';
@@ -862,9 +881,15 @@ export const EditSection = () => {
     
     const stringValue = String(value);
     const hasNepali = containsNepali(stringValue);
+    const shouldNepaliNumerals =
+      displayLanguage !== 'english' &&
+      ['sn', 'voterId', 'age'].includes(columnKey) &&
+      /[0-9]/.test(stringValue);
+
+    const renderedText = shouldNepaliNumerals ? toNepaliDigits(stringValue) : stringValue;
     
     return (
-      <span className={cn(hasNepali && "font-nepali")}>{stringValue}</span>
+      <span className={cn((hasNepali || shouldNepaliNumerals) && "font-nepali")}>{renderedText}</span>
     );
   };
 
@@ -1412,8 +1437,14 @@ export const EditSection = () => {
                                   <TableCell 
                                     key={col.key}
                                     className={cn(
-                                      col.key === 'sn' && "font-mono text-sm text-muted-foreground sticky left-0 bg-background z-10",
-                                      col.key === 'voterId' && "font-mono text-xs font-medium",
+                                      col.key === 'sn' && cn(
+                                        "text-sm text-muted-foreground sticky left-0 bg-background z-10",
+                                        displayLanguage === 'english' ? 'font-mono' : 'font-nepali'
+                                      ),
+                                      col.key === 'voterId' && cn(
+                                        "text-xs font-medium",
+                                        displayLanguage === 'english' ? 'font-mono' : 'font-nepali'
+                                      ),
                                       col.key === 'fullName' && "font-medium"
                                     )}
                                   >

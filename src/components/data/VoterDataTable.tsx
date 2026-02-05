@@ -109,7 +109,17 @@
        case 'sn': return row.sn;
        case 'voterName': return row.voterName;
        case 'surname': return row.surname || '';
-       case 'voterId': return row.voterId;
+        case 'voterId': 
+          return (
+            row.voterId ||
+            row.originalData?.['मतदाता परिचयपत्र नं.'] ||
+            row.originalData?.['मतदाता परिचयपत्र नं'] ||
+            row.originalData?.['मतदाता नं'] ||
+            row.originalData?.['मतदाता नं.'] ||
+            row.originalData?.['Voter No'] ||
+            row.originalData?.['VOTER ID'] ||
+            ''
+          );
        case 'gender': return row.gender === 'male' ? 'पुरुष' : row.gender === 'female' ? 'महिला' : 'अन्य';
        case 'age': return row.age;
        case 'spouse': return row.spouse || row.originalData?.['पति/पत्नीको नाम'] || '';
