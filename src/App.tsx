@@ -35,7 +35,7 @@ const App = () => (
                       <Route path="/comparison" element={<MainLayout section="comparison" />} />
                       <Route path="/infographics" element={<MainLayout section="infographics" />} />
                       <Route path="/templates" element={<MainLayout section="templates" />} />
-                      <Route path="/edit" element={<MainLayout section="edit" />} />
+                      
                       <Route path="/export" element={<MainLayout section="export" />} />
                       <Route path="/settings" element={<MainLayout section="settings" />} />
                       <Route path="*" element={<Navigate to="/" replace />} />
