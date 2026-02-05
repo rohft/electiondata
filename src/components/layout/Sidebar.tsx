@@ -27,8 +27,8 @@ type NavItem = {
 const navItems: NavItem[] = [
   { id: 'dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', path: '/dashboard' },
   { id: 'upload', icon: Upload, labelKey: 'nav.upload', path: '/upload' },
-   { id: 'caste', icon: Users2, labelKey: 'nav.caste', path: '/caste' },
-   { id: 'segments', icon: PieChart, labelKey: 'nav.segments', path: '/segments' },
+  { id: 'caste', icon: Users2, labelKey: 'nav.ethnicGroup', path: '/caste' },
+  { id: 'segments', icon: PieChart, labelKey: 'nav.segments', path: '/segments' },
   { id: 'comparison', icon: GitCompare, labelKey: 'nav.comparison', path: '/comparison' },
   { id: 'infographics', icon: BarChart3, labelKey: 'nav.infographics', path: '/infographics' },
   { id: 'templates', icon: FileText, labelKey: 'nav.templates', path: '/templates' },

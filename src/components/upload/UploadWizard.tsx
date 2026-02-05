@@ -7,11 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Database, Building2, FolderPlus, ChevronDown, ChevronRight, FileText, Trash2 } from 'lucide-react';
+import { Plus, Database, Building2, FolderPlus, ChevronDown, ChevronRight, FileText, Trash2, MapPin } from 'lucide-react';
 import { VoterDataTable } from '@/components/data/VoterDataTable';
 import { DashboardUploadWizard } from './DashboardUploadWizard';
 import { AddWardDialog } from './AddWardDialog';
 import { DeleteDataDialog } from './DeleteDataDialog';
+import { BoothCentreManager } from './BoothCentreManager';
 import { ParsedRecord } from '@/lib/fileParser';
 import { isNewarName } from '@/lib/surnameUtils';
 import { cn } from '@/lib/utils';
@@ -186,6 +187,12 @@ export const UploadWizard = () => {
                       >
                         <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                         <span className="truncate">{ward.name}</span>
+                        {(ward.boothCentres?.length || 0) > 0 && (
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5">
+                            <MapPin className="h-2.5 w-2.5" />
+                            {ward.boothCentres?.length}
+                          </Badge>
+                        )}
                         <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1">
                           {ward.voters.length}
                         </Badge>
@@ -219,23 +226,42 @@ export const UploadWizard = () => {
       </Card>
 
       {/* Main Content Area */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 space-y-6">
         {currentMunicipalityData ? (
-          <VoterDataTable
-            wards={getWardDataForMunicipality(currentMunicipalityData.id)}
-            municipalityName={currentMunicipalityData.name}
-            selectedWardIndex={selectedWardIndex}
-            onWardSelect={setSelectedWardIndex}
-            onUploadMore={() => setUploadDialogOpen(true)}
-          />
+          <>
+            <VoterDataTable
+              wards={getWardDataForMunicipality(currentMunicipalityData.id)}
+              municipalityName={currentMunicipalityData.name}
+              selectedWardIndex={selectedWardIndex}
+              onWardSelect={setSelectedWardIndex}
+              onUploadMore={() => setUploadDialogOpen(true)}
+            />
+            {/* Booth Centre Manager for selected ward */}
+            {currentMunicipalityData.wards[selectedWardIndex] && (
+              <BoothCentreManager
+                municipalityId={currentMunicipalityData.id}
+                wardId={currentMunicipalityData.wards[selectedWardIndex].id}
+                boothCentres={currentMunicipalityData.wards[selectedWardIndex].boothCentres || []}
+              />
+            )}
+          </>
         ) : municipalities.length > 0 ? (
-          <VoterDataTable
-            wards={getWardDataForMunicipality(municipalities[0].id)}
-            municipalityName={municipalities[0].name}
-            selectedWardIndex={selectedWardIndex}
-            onWardSelect={setSelectedWardIndex}
-            onUploadMore={() => setUploadDialogOpen(true)}
-          />
+          <>
+            <VoterDataTable
+              wards={getWardDataForMunicipality(municipalities[0].id)}
+              municipalityName={municipalities[0].name}
+              selectedWardIndex={selectedWardIndex}
+              onWardSelect={setSelectedWardIndex}
+              onUploadMore={() => setUploadDialogOpen(true)}
+            />
+            {municipalities[0].wards[selectedWardIndex] && (
+              <BoothCentreManager
+                municipalityId={municipalities[0].id}
+                wardId={municipalities[0].wards[selectedWardIndex].id}
+                boothCentres={municipalities[0].wards[selectedWardIndex].boothCentres || []}
+              />
+            )}
+          </>
         ) : null}
       </div>
 
