@@ -32,6 +32,12 @@ export interface VoterRecord {
   editHistory?: Array<{ field: string; oldValue: string; newValue: string; timestamp: Date }>;
 }
 
+export interface BoothCentre {
+  id: string;
+  name: string;
+  createdAt: Date;
+}
+
 export interface WardData {
   id: string;
   name: string;
@@ -39,6 +45,7 @@ export interface WardData {
   voters: VoterRecord[];
   uploadedAt: Date;
   fileName: string;
+  boothCentres?: BoothCentre[];
 }
 
 export interface MunicipalityData {
@@ -53,6 +60,9 @@ interface VoterDataContextType {
   removeWardData: (municipalityId: string, wardId: string) => void;
   updateVoterRecord: (municipalityId: string, wardId: string, voterId: string, updates: Partial<VoterRecord>) => void;
   revertVoterRecord: (municipalityId: string, wardId: string, voterId: string) => void;
+  addBoothCentre: (municipalityId: string, wardId: string, name: string) => void;
+  updateBoothCentre: (municipalityId: string, wardId: string, boothId: string, name: string) => void;
+  removeBoothCentre: (municipalityId: string, wardId: string, boothId: string) => void;
   getTotalVoters: () => number;
   getTotalWards: () => number;
   getSegmentCounts: (municipalityId?: string, wardId?: string) => SegmentCounts;
@@ -250,6 +260,73 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, []);
 
+  const addBoothCentre = useCallback((municipalityId: string, wardId: string, name: string) => {
+    setMunicipalities(prev => {
+      return prev.map(m => {
+        if (m.id === municipalityId) {
+          return {
+            ...m,
+            wards: m.wards.map(w => {
+              if (w.id === wardId) {
+                const newBooth: BoothCentre = {
+                  id: crypto.randomUUID(),
+                  name: name.trim(),
+                  createdAt: new Date()
+                };
+                return { ...w, boothCentres: [...(w.boothCentres || []), newBooth] };
+              }
+              return w;
+            })
+          };
+        }
+        return m;
+      });
+    });
+  }, []);
+
+  const updateBoothCentre = useCallback((municipalityId: string, wardId: string, boothId: string, name: string) => {
+    setMunicipalities(prev => {
+      return prev.map(m => {
+        if (m.id === municipalityId) {
+          return {
+            ...m,
+            wards: m.wards.map(w => {
+              if (w.id === wardId && w.boothCentres) {
+                return {
+                  ...w,
+                  boothCentres: w.boothCentres.map(b => 
+                    b.id === boothId ? { ...b, name: name.trim() } : b
+                  )
+                };
+              }
+              return w;
+            })
+          };
+        }
+        return m;
+      });
+    });
+  }, []);
+
+  const removeBoothCentre = useCallback((municipalityId: string, wardId: string, boothId: string) => {
+    setMunicipalities(prev => {
+      return prev.map(m => {
+        if (m.id === municipalityId) {
+          return {
+            ...m,
+            wards: m.wards.map(w => {
+              if (w.id === wardId && w.boothCentres) {
+                return { ...w, boothCentres: w.boothCentres.filter(b => b.id !== boothId) };
+              }
+              return w;
+            })
+          };
+        }
+        return m;
+      });
+    });
+  }, []);
+
   const getTotalVoters = useCallback(() => {
     return municipalities.reduce((total, m) => 
       total + m.wards.reduce((wTotal, w) => wTotal + w.voters.length, 0), 0
@@ -334,6 +411,9 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       removeWardData,
       updateVoterRecord,
       revertVoterRecord,
+      addBoothCentre,
+      updateBoothCentre,
+      removeBoothCentre,
       getTotalVoters,
       getTotalWards,
       getSegmentCounts,

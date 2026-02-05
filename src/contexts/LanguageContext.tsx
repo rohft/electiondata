@@ -13,6 +13,7 @@ const translations: Translations = {
   // Navigation
   'nav.dashboard': { en: 'Dashboard', ne: 'ड्यासबोर्ड' },
   'nav.upload': { en: 'Upload Data', ne: 'डाटा अपलोड' },
+  'nav.ethnicGroup': { en: 'Ethnic Group', ne: 'जातीय समूह' },
   'nav.segments': { en: 'Segments', ne: 'खण्डहरू' },
   'nav.comparison': { en: 'Comparison', ne: 'तुलना' },
   'nav.infographics': { en: 'Infographics', ne: 'इन्फोग्राफिक्स' },
