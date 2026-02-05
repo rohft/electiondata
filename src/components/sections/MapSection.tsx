@@ -36,9 +36,20 @@ import {
 } from '@/components/ui/dialog';
 import { 
   ArrowRight, Save, RotateCcw, Wand2, CheckCircle2, AlertCircle, 
-  Plus, Trash2, PlusCircle, GripVertical, Upload, FolderTree, ChevronUp, ChevronDown 
+  Plus, Trash2, PlusCircle, GripVertical, Upload, FolderTree, ChevronUp, ChevronDown, AlertTriangle 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 // Application fields that data can be mapped to
 const APP_FIELDS = [
@@ -71,7 +82,7 @@ interface CustomTargetField {
 
 export const MapSection = () => {
   const { t, language } = useLanguage();
-  const { municipalities } = useVoterData();
+  const { municipalities, clearAllData } = useVoterData();
   const { tags, getVisibleCastes, importCasteData } = useCustomTags();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -420,6 +431,45 @@ export const MapSection = () => {
               <RotateCcw className="h-4 w-4" />
               {t('map.resetMapping')}
             </Button>
+            
+            {/* Clear All Data */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  {language === 'ne' ? 'सबै डाटा मेट्नुहोस्' : 'Clear All Data'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    {language === 'ne' ? 'सबै डाटा मेट्ने?' : 'Clear All Data?'}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {language === 'ne' 
+                      ? 'यो कार्यले सबै अपलोड गरिएको डाटा, म्यापिङहरू र म्युनिसिपालिटीहरू मेट्नेछ। यो कार्य पूर्ववत गर्न सकिँदैन।'
+                      : 'This will delete all uploaded data, mappings, and municipalities. This action cannot be undone.'}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>
+                    {language === 'ne' ? 'रद्द गर्नुहोस्' : 'Cancel'}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      clearAllData();
+                      setMappings([]);
+                      localStorage.removeItem('voter_field_mappings');
+                      toast.success(language === 'ne' ? 'सबै डाटा मेटाइयो' : 'All data cleared');
+                    }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {language === 'ne' ? 'मेट्नुहोस्' : 'Delete All'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             
             {/* Add Source Column Dialog */}
             <Dialog open={addSourceDialogOpen} onOpenChange={setAddSourceDialogOpen}>
