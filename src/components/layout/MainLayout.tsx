@@ -5,8 +5,9 @@ import { Header } from './Header';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSection } from '@/components/sections/DashboardSection';
 import { UploadSection } from '@/components/sections/UploadSection';
- import { SegmentsSection } from '@/components/sections/SegmentsSection';
- import { CasteSection } from '@/components/sections/CasteSection';
+import { MapSection } from '@/components/sections/MapSection';
+import { SegmentsSection } from '@/components/sections/SegmentsSection';
+import { CasteSection } from '@/components/sections/CasteSection';
 import { ComparisonSection } from '@/components/sections/ComparisonSection';
 import { InfographicsSection } from '@/components/sections/InfographicsSection';
 import { TemplatesSection } from '@/components/sections/TemplatesSection';
@@ -22,8 +23,9 @@ interface MainLayoutProps {
 const sectionTitles: Record<string, { titleKey: string; subtitleKey?: string }> = {
   dashboard: { titleKey: 'dashboard.title', subtitleKey: 'dashboard.subtitle' },
   upload: { titleKey: 'upload.title', subtitleKey: 'upload.description' },
-   caste: { titleKey: 'nav.caste' },
-   segments: { titleKey: 'segments.title' },
+  map: { titleKey: 'map.title', subtitleKey: 'map.description' },
+  caste: { titleKey: 'nav.ethnicGroup' },
+  segments: { titleKey: 'segments.title' },
   comparison: { titleKey: 'comparison.title' },
   infographics: { titleKey: 'infographics.title' },
   templates: { titleKey: 'nav.templates' },
@@ -61,10 +63,12 @@ export const MainLayout = ({ section }: MainLayoutProps) => {
         return <DashboardSection />;
       case 'upload':
         return <UploadSection />;
-       case 'caste':
-         return <CasteSection />;
-       case 'segments':
-         return <SegmentsSection />;
+      case 'map':
+        return <MapSection />;
+      case 'caste':
+        return <CasteSection />;
+      case 'segments':
+        return <SegmentsSection />;
       case 'comparison':
         return <ComparisonSection />;
       case 'infographics':

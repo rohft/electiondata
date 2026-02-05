@@ -96,8 +96,8 @@ const buildTreeFromVoters = (
 ): TreeNode[] => {
   const rootNodes: TreeNode[] = [];
 
-  // Build caste folders from visible castes + Other
-  const allCastes = [...new Set([...visibleCastes, 'Other'])];
+  // Build caste folders from visible castes only (no "Other" folder)
+  const allCastes = [...new Set(visibleCastes)];
 
   allCastes.forEach((casteName) => {
     const cat = casteCategories.find((c) => c.name === casteName);
