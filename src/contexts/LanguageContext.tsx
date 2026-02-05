@@ -21,6 +21,15 @@ const translations: Translations = {
   'nav.export': { en: 'Export', ne: 'निर्यात' },
   'nav.settings': { en: 'Settings', ne: 'सेटिङहरू' },
   'nav.templates': { en: 'Templates', ne: 'टेम्प्लेटहरू' },
+  'nav.map': { en: 'Map Data', ne: 'डाटा म्यापिङ' },
+  'map.title': { en: 'Map Data Fields', ne: 'डाटा फिल्डहरू म्याप गर्नुहोस्' },
+  'map.description': { en: 'Map columns from your uploaded data to application fields', ne: 'अपलोड गरिएको डाटाबाट स्तम्भहरूलाई एप्लिकेशन फिल्डहरूमा म्याप गर्नुहोस्' },
+  'map.sourceColumn': { en: 'Source Column', ne: 'स्रोत स्तम्भ' },
+  'map.targetField': { en: 'Target Field', ne: 'लक्षित फिल्ड' },
+  'map.unmapped': { en: 'Unmapped', ne: 'म्याप नगरिएको' },
+  'map.saveMapping': { en: 'Save Mapping', ne: 'म्यापिङ सेभ गर्नुहोस्' },
+  'map.resetMapping': { en: 'Reset Mapping', ne: 'म्यापिङ रिसेट गर्नुहोस्' },
+  'map.autoDetect': { en: 'Auto Detect', ne: 'स्वत: पत्ता लगाउनुहोस्' },
 
   // Common
   'common.search': { en: 'Search...', ne: 'खोज्नुहोस्...' },

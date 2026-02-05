@@ -6,8 +6,8 @@ import {
   LayoutDashboard,
   Upload,
   PieChart,
-   GitCompare,
-   Users2,
+  GitCompare,
+  Users2,
   BarChart3,
   Edit3,
   Download,
@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Map,
 } from 'lucide-react';
 
 type NavItem = {
@@ -27,6 +28,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { id: 'dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', path: '/dashboard' },
   { id: 'upload', icon: Upload, labelKey: 'nav.upload', path: '/upload' },
+  { id: 'map', icon: Map, labelKey: 'nav.map', path: '/map' },
   { id: 'caste', icon: Users2, labelKey: 'nav.ethnicGroup', path: '/caste' },
   { id: 'segments', icon: PieChart, labelKey: 'nav.segments', path: '/segments' },
   { id: 'comparison', icon: GitCompare, labelKey: 'nav.comparison', path: '/comparison' },
