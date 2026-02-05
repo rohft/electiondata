@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -20,7 +21,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ArrowRight, Save, RotateCcw, Wand2, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { ArrowRight, Save, RotateCcw, Wand2, CheckCircle2, AlertCircle, Plus, Trash2, PlusCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Application fields that data can be mapped to
@@ -41,11 +51,31 @@ const APP_FIELDS = [
 interface FieldMapping {
   sourceColumn: string;
   targetField: string | null;
+  isCustom?: boolean;
+}
+
+interface CustomTargetField {
+  id: string;
+  labelEn: string;
+  labelNe: string;
 }
 
 export const MapSection = () => {
   const { t, language } = useLanguage();
   const { municipalities } = useVoterData();
+  
+  // Custom target fields added by user
+  const [customTargetFields, setCustomTargetFields] = useState<CustomTargetField[]>(() => {
+    const saved = localStorage.getItem('voter_custom_target_fields');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Dialog states
+  const [addSourceDialogOpen, setAddSourceDialogOpen] = useState(false);
+  const [addTargetDialogOpen, setAddTargetDialogOpen] = useState(false);
+  const [newSourceColumn, setNewSourceColumn] = useState('');
+  const [newTargetFieldEn, setNewTargetFieldEn] = useState('');
+  const [newTargetFieldNe, setNewTargetFieldNe] = useState('');
   
   // Get all unique headers from uploaded data
   const allHeaders = useMemo(() => {
@@ -62,20 +92,38 @@ export const MapSection = () => {
     return Array.from(headers);
   }, [municipalities]);
 
-  // Initialize mappings
-  const [mappings, setMappings] = useState<FieldMapping[]>(() => 
-    allHeaders.map(header => ({
+  // Combined target fields (default + custom)
+  const allTargetFields = useMemo(() => {
+    return [...APP_FIELDS, ...customTargetFields.map(f => ({ ...f, aliases: [] }))];
+  }, [customTargetFields]);
+
+  // Initialize mappings from localStorage or headers
+  const [mappings, setMappings] = useState<FieldMapping[]>(() => {
+    const saved = localStorage.getItem('voter_field_mappings');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return allHeaders.map(header => ({
       sourceColumn: header,
       targetField: null,
-    }))
-  );
+      isCustom: false,
+    }));
+  });
 
-  // Update mappings when headers change
+  // Update mappings when headers change (preserve custom mappings)
   React.useEffect(() => {
-    setMappings(allHeaders.map(header => ({
-      sourceColumn: header,
-      targetField: mappings.find(m => m.sourceColumn === header)?.targetField || null,
-    })));
+    setMappings(prev => {
+      const customMappings = prev.filter(m => m.isCustom);
+      const headerMappings = allHeaders.map(header => {
+        const existing = prev.find(m => m.sourceColumn === header && !m.isCustom);
+        return {
+          sourceColumn: header,
+          targetField: existing?.targetField || null,
+          isCustom: false,
+        };
+      });
+      return [...headerMappings, ...customMappings];
+    });
   }, [allHeaders]);
 
   const handleMappingChange = (sourceColumn: string, targetField: string | null) => {
@@ -86,21 +134,82 @@ export const MapSection = () => {
     ));
   };
 
+  const addCustomSourceColumn = () => {
+    if (!newSourceColumn.trim()) {
+      toast.error(language === 'ne' ? 'स्रोत कलम नाम आवश्यक छ' : 'Source column name is required');
+      return;
+    }
+    if (mappings.some(m => m.sourceColumn === newSourceColumn.trim())) {
+      toast.error(language === 'ne' ? 'यो स्रोत कलम पहिले नै छ' : 'This source column already exists');
+      return;
+    }
+    setMappings(prev => [...prev, {
+      sourceColumn: newSourceColumn.trim(),
+      targetField: null,
+      isCustom: true,
+    }]);
+    setNewSourceColumn('');
+    setAddSourceDialogOpen(false);
+    toast.success(language === 'ne' ? 'स्रोत कलम थपियो' : 'Source column added');
+  };
+
+  const addCustomTargetField = () => {
+    if (!newTargetFieldEn.trim()) {
+      toast.error(language === 'ne' ? 'अंग्रेजी नाम आवश्यक छ' : 'English name is required');
+      return;
+    }
+    const id = newTargetFieldEn.trim().toLowerCase().replace(/\s+/g, '_');
+    if (allTargetFields.some(f => f.id === id)) {
+      toast.error(language === 'ne' ? 'यो फिल्ड पहिले नै छ' : 'This field already exists');
+      return;
+    }
+    const newField: CustomTargetField = {
+      id,
+      labelEn: newTargetFieldEn.trim(),
+      labelNe: newTargetFieldNe.trim() || newTargetFieldEn.trim(),
+    };
+    const updated = [...customTargetFields, newField];
+    setCustomTargetFields(updated);
+    localStorage.setItem('voter_custom_target_fields', JSON.stringify(updated));
+    setNewTargetFieldEn('');
+    setNewTargetFieldNe('');
+    setAddTargetDialogOpen(false);
+    toast.success(language === 'ne' ? 'लक्ष्य फिल्ड थपियो' : 'Target field added');
+  };
+
+  const removeMapping = (sourceColumn: string) => {
+    setMappings(prev => prev.filter(m => m.sourceColumn !== sourceColumn));
+    toast.info(language === 'ne' ? 'म्यापिङ हटाइयो' : 'Mapping removed');
+  };
+
+  const removeCustomTargetField = (id: string) => {
+    const updated = customTargetFields.filter(f => f.id !== id);
+    setCustomTargetFields(updated);
+    localStorage.setItem('voter_custom_target_fields', JSON.stringify(updated));
+    // Also update any mappings using this field
+    setMappings(prev => prev.map(m => m.targetField === id ? { ...m, targetField: null } : m));
+    toast.info(language === 'ne' ? 'लक्ष्य फिल्ड हटाइयो' : 'Target field removed');
+  };
+
   const autoDetectMappings = () => {
-    const newMappings = allHeaders.map(header => {
-      const headerLower = header.toLowerCase().trim();
-      const matchedField = APP_FIELDS.find(field => 
-        field.aliases.some(alias => 
-          headerLower === alias.toLowerCase() || 
-          headerLower.includes(alias.toLowerCase())
-        )
-      );
-      return {
-        sourceColumn: header,
-        targetField: matchedField?.id || null,
-      };
+    setMappings(prev => {
+      const customMappings = prev.filter(m => m.isCustom);
+      const headerMappings = allHeaders.map(header => {
+        const headerLower = header.toLowerCase().trim();
+        const matchedField = APP_FIELDS.find(field => 
+          field.aliases.some(alias => 
+            headerLower === alias.toLowerCase() || 
+            headerLower.includes(alias.toLowerCase())
+          )
+        );
+        return {
+          sourceColumn: header,
+          targetField: matchedField?.id || null,
+          isCustom: false,
+        };
+      });
+      return [...headerMappings, ...customMappings];
     });
-    setMappings(newMappings);
     toast.success(language === 'ne' ? 'म्यापिङ स्वत: पत्ता लगाइयो' : 'Auto-detected mappings');
   };
 
@@ -108,6 +217,7 @@ export const MapSection = () => {
     setMappings(allHeaders.map(header => ({
       sourceColumn: header,
       targetField: null,
+      isCustom: false,
     })));
     toast.info(language === 'ne' ? 'म्यापिङ रिसेट गरियो' : 'Mappings reset');
   };
@@ -115,7 +225,8 @@ export const MapSection = () => {
   const saveMappings = () => {
     // Save to localStorage for persistence
     localStorage.setItem('voter_field_mappings', JSON.stringify(mappings));
-    toast.success(language === 'ne' ? 'म्यापिङ सेभ गरियो' : 'Mappings saved successfully');
+    localStorage.setItem('voter_custom_target_fields', JSON.stringify(customTargetFields));
+    toast.success(language === 'ne' ? 'म्यापिङ सेभ गरियो र डाटा अपडेट हुनेछ' : 'Mappings saved - data will be updated');
   };
 
   const mappedCount = mappings.filter(m => m.targetField).length;
@@ -169,7 +280,7 @@ export const MapSection = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-4">
             <Button variant="outline" onClick={autoDetectMappings} className="gap-2">
               <Wand2 className="h-4 w-4" />
               {t('map.autoDetect')}
@@ -178,11 +289,107 @@ export const MapSection = () => {
               <RotateCcw className="h-4 w-4" />
               {t('map.resetMapping')}
             </Button>
+            
+            {/* Add Source Column Dialog */}
+            <Dialog open={addSourceDialogOpen} onOpenChange={setAddSourceDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  {language === 'ne' ? 'स्रोत कलम थप्नुहोस्' : 'Add Source Column'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{language === 'ne' ? 'नयाँ स्रोत कलम थप्नुहोस्' : 'Add New Source Column'}</DialogTitle>
+                  <DialogDescription>
+                    {language === 'ne' ? 'कस्टम स्रोत कलम नाम प्रविष्ट गर्नुहोस्' : 'Enter a custom source column name'}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <Input
+                    placeholder={language === 'ne' ? 'स्रोत कलम नाम' : 'Source Column Name'}
+                    value={newSourceColumn}
+                    onChange={(e) => setNewSourceColumn(e.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddSourceDialogOpen(false)}>
+                    {language === 'ne' ? 'रद्द गर्नुहोस्' : 'Cancel'}
+                  </Button>
+                  <Button onClick={addCustomSourceColumn}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {language === 'ne' ? 'थप्नुहोस्' : 'Add'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Add Target Field Dialog */}
+            <Dialog open={addTargetDialogOpen} onOpenChange={setAddTargetDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <PlusCircle className="h-4 w-4" />
+                  {language === 'ne' ? 'लक्ष्य फिल्ड थप्नुहोस्' : 'Add Target Field'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{language === 'ne' ? 'नयाँ लक्ष्य फिल्ड थप्नुहोस्' : 'Add New Target Field'}</DialogTitle>
+                  <DialogDescription>
+                    {language === 'ne' ? 'कस्टम लक्ष्य फिल्ड थप्नुहोस् जुन म्यापिङमा प्रयोग गर्न सकिन्छ' : 'Add a custom target field that can be used in mappings'}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <Input
+                    placeholder={language === 'ne' ? 'अंग्रेजी नाम' : 'English Name'}
+                    value={newTargetFieldEn}
+                    onChange={(e) => setNewTargetFieldEn(e.target.value)}
+                  />
+                  <Input
+                    placeholder={language === 'ne' ? 'नेपाली नाम (वैकल्पिक)' : 'Nepali Name (optional)'}
+                    value={newTargetFieldNe}
+                    onChange={(e) => setNewTargetFieldNe(e.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddTargetDialogOpen(false)}>
+                    {language === 'ne' ? 'रद्द गर्नुहोस्' : 'Cancel'}
+                  </Button>
+                  <Button onClick={addCustomTargetField}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {language === 'ne' ? 'थप्नुहोस्' : 'Add'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <Button onClick={saveMappings} className="gap-2 ml-auto">
               <Save className="h-4 w-4" />
               {t('map.saveMapping')}
             </Button>
           </div>
+
+          {/* Custom Target Fields List */}
+          {customTargetFields.length > 0 && (
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm font-medium mb-2">
+                {language === 'ne' ? 'कस्टम लक्ष्य फिल्डहरू:' : 'Custom Target Fields:'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {customTargetFields.map(field => (
+                  <Badge key={field.id} variant="secondary" className="gap-1">
+                    {language === 'ne' ? field.labelNe : field.labelEn}
+                    <button
+                      onClick={() => removeCustomTargetField(field.id)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           <ScrollArea className="h-[500px]">
             <Table>
@@ -196,13 +403,20 @@ export const MapSection = () => {
               </TableHeader>
               <TableBody>
                 {mappings.map((mapping) => {
-                  const targetFieldInfo = APP_FIELDS.find(f => f.id === mapping.targetField);
+                  const targetFieldInfo = allTargetFields.find(f => f.id === mapping.targetField);
                   return (
                     <TableRow key={mapping.sourceColumn}>
                       <TableCell className="font-medium">
-                        <code className="bg-muted px-2 py-1 rounded text-sm">
-                          {mapping.sourceColumn}
-                        </code>
+                        <div className="flex items-center gap-2">
+                          <code className="bg-muted px-2 py-1 rounded text-sm">
+                            {mapping.sourceColumn}
+                          </code>
+                          {mapping.isCustom && (
+                            <Badge variant="outline" className="text-xs">
+                              {language === 'ne' ? 'कस्टम' : 'Custom'}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -219,7 +433,7 @@ export const MapSection = () => {
                             <SelectItem value="unmapped">
                               <span className="text-muted-foreground">— {t('map.unmapped')} —</span>
                             </SelectItem>
-                            {APP_FIELDS.map((field) => (
+                            {allTargetFields.map((field) => (
                               <SelectItem key={field.id} value={field.id}>
                                 {language === 'ne' ? field.labelNe : field.labelEn}
                               </SelectItem>
@@ -228,17 +442,29 @@ export const MapSection = () => {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        {mapping.targetField ? (
-                          <Badge variant="default" className="gap-1">
-                            <CheckCircle2 className="h-3 w-3" />
-                            {language === 'ne' ? 'म्याप गरिएको' : 'Mapped'}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="gap-1 text-muted-foreground">
-                            <AlertCircle className="h-3 w-3" />
-                            {t('map.unmapped')}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {mapping.targetField ? (
+                            <Badge variant="default" className="gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {language === 'ne' ? 'म्याप गरिएको' : 'Mapped'}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="gap-1 text-muted-foreground">
+                              <AlertCircle className="h-3 w-3" />
+                              {t('map.unmapped')}
+                            </Badge>
+                          )}
+                          {mapping.isCustom && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => removeMapping(mapping.sourceColumn)}
+                            >
+                              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
