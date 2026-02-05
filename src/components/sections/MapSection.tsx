@@ -1,17 +1,21 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useVoterData } from '@/contexts/VoterDataContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCustomTags } from '@/contexts/CustomTagsContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import {
   Table,
@@ -30,22 +34,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { ArrowRight, Save, RotateCcw, Wand2, CheckCircle2, AlertCircle, Plus, Trash2, PlusCircle } from 'lucide-react';
+import { 
+  ArrowRight, Save, RotateCcw, Wand2, CheckCircle2, AlertCircle, 
+  Plus, Trash2, PlusCircle, GripVertical, Upload, FolderTree, ChevronUp, ChevronDown 
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 // Application fields that data can be mapped to
 const APP_FIELDS = [
-  { id: 'voterId', labelEn: 'Voter ID', labelNe: 'मतदाता आईडी', aliases: ['मतदाता परिचयपत्र नं.', 'voter id', 'id', 'voterId'] },
-  { id: 'serialNumber', labelEn: 'Serial Number', labelNe: 'क्र.सं.', aliases: ['मतदाता क्र.सं.', 'क्र.सं.', 'sn', 's.n.', 'serial'] },
-  { id: 'fullName', labelEn: 'Full Name', labelNe: 'नाम', aliases: ['नाम', 'name', 'fullname', 'पुरा नाम'] },
-  { id: 'surname', labelEn: 'Surname', labelNe: 'थर', aliases: ['थर', 'surname', 'family name'] },
-  { id: 'age', labelEn: 'Age', labelNe: 'उमेर', aliases: ['उमेर', 'age'] },
-  { id: 'gender', labelEn: 'Gender', labelNe: 'लिङ्ग', aliases: ['लिङ्ग', 'gender', 'sex'] },
-  { id: 'caste', labelEn: 'Caste/Ethnic Group', labelNe: 'जात/जातीय समूह', aliases: ['जात', 'caste', 'ethnicity'] },
-  { id: 'tole', labelEn: 'Tole/Address', labelNe: 'टोल/ठेगाना', aliases: ['टोल', 'tole', 'address', 'ठेगाना'] },
-  { id: 'spouse', labelEn: 'Spouse', labelNe: 'पति/पत्नी', aliases: ['पति/पत्नी', 'spouse', 'husband', 'wife'] },
-  { id: 'parents', labelEn: 'Parents', labelNe: 'अभिभावक', aliases: ['बाबु/आमा', 'parents', 'father', 'mother', 'अभिभावक'] },
-  { id: 'center', labelEn: 'Voting Center', labelNe: 'मतदान केन्द्र', aliases: ['मतदान केन्द्र', 'center', 'booth'] },
+  { id: 'voterId', labelEn: 'Voter ID', labelNe: 'मतदाता आईडी', aliases: ['मतदाता परिचयपत्र नं.', 'voter id', 'id', 'voterId'], isSystem: true },
+  { id: 'serialNumber', labelEn: 'Serial Number', labelNe: 'क्र.सं.', aliases: ['मतदाता क्र.सं.', 'क्र.सं.', 'sn', 's.n.', 'serial'], isSystem: true },
+  { id: 'fullName', labelEn: 'Full Name', labelNe: 'नाम', aliases: ['नाम', 'name', 'fullname', 'पुरा नाम'], isSystem: true },
+  { id: 'surname', labelEn: 'Surname', labelNe: 'थर', aliases: ['थर', 'surname', 'family name'], isSystem: true },
+  { id: 'age', labelEn: 'Age', labelNe: 'उमेर', aliases: ['उमेर', 'age'], isSystem: true },
+  { id: 'gender', labelEn: 'Gender', labelNe: 'लिङ्ग', aliases: ['लिङ्ग', 'gender', 'sex'], isSystem: true },
+  { id: 'caste', labelEn: 'Caste/Ethnic Group', labelNe: 'जात/जातीय समूह', aliases: ['जात', 'caste', 'ethnicity'], isSystem: true },
+  { id: 'tole', labelEn: 'Tole/Address', labelNe: 'टोल/ठेगाना', aliases: ['टोल', 'tole', 'address', 'ठेगाना'], isSystem: true },
+  { id: 'spouse', labelEn: 'Spouse', labelNe: 'पति/पत्नी', aliases: ['पति/पत्नी', 'spouse', 'husband', 'wife'], isSystem: true },
+  { id: 'parents', labelEn: 'Parents', labelNe: 'अभिभावक', aliases: ['बाबु/आमा', 'parents', 'father', 'mother', 'अभिभावक'], isSystem: true },
+  { id: 'center', labelEn: 'Voting Center', labelNe: 'मतदान केन्द्र', aliases: ['मतदान केन्द्र', 'center', 'booth'], isSystem: true },
 ];
 
 interface FieldMapping {
@@ -58,11 +65,15 @@ interface CustomTargetField {
   id: string;
   labelEn: string;
   labelNe: string;
+  isEthnicGroup?: boolean;
+  parentGroup?: string;
 }
 
 export const MapSection = () => {
   const { t, language } = useLanguage();
   const { municipalities } = useVoterData();
+  const { tags, getVisibleCastes, importCasteData } = useCustomTags();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Custom target fields added by user
   const [customTargetFields, setCustomTargetFields] = useState<CustomTargetField[]>(() => {
@@ -73,9 +84,14 @@ export const MapSection = () => {
   // Dialog states
   const [addSourceDialogOpen, setAddSourceDialogOpen] = useState(false);
   const [addTargetDialogOpen, setAddTargetDialogOpen] = useState(false);
+  const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
   const [newSourceColumn, setNewSourceColumn] = useState('');
   const [newTargetFieldEn, setNewTargetFieldEn] = useState('');
   const [newTargetFieldNe, setNewTargetFieldNe] = useState('');
+  const [bulkCategories, setBulkCategories] = useState('');
+  
+  // Drag state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   
   // Get all unique headers from uploaded data
   const allHeaders = useMemo(() => {
@@ -92,9 +108,43 @@ export const MapSection = () => {
     return Array.from(headers);
   }, [municipalities]);
 
-  // Combined target fields (default + custom)
+  // Get ethnic group categories from CustomTagsContext
+  const ethnicGroupCategories = useMemo(() => {
+    const visibleCastes = getVisibleCastes();
+    const categories: CustomTargetField[] = [];
+    
+    visibleCastes.forEach(caste => {
+      categories.push({
+        id: `ethnic_${caste.toLowerCase().replace(/\s+/g, '_')}`,
+        labelEn: caste,
+        labelNe: caste,
+        isEthnicGroup: true,
+      });
+      
+      // Add subfolders if they exist
+      const hierarchy = tags.casteHierarchy[caste];
+      if (hierarchy?.subfolders) {
+        hierarchy.subfolders.forEach(sub => {
+          categories.push({
+            id: `ethnic_${caste.toLowerCase().replace(/\s+/g, '_')}_${sub.toLowerCase().replace(/\s+/g, '_')}`,
+            labelEn: `${caste} > ${sub}`,
+            labelNe: `${caste} > ${sub}`,
+            isEthnicGroup: true,
+            parentGroup: caste,
+          });
+        });
+      }
+    });
+    
+    return categories;
+  }, [getVisibleCastes, tags.casteHierarchy]);
+
+  // Combined target fields (default + custom + ethnic groups)
   const allTargetFields = useMemo(() => {
-    return [...APP_FIELDS, ...customTargetFields.map(f => ({ ...f, aliases: [] }))];
+    return [
+      ...APP_FIELDS, 
+      ...customTargetFields.map(f => ({ ...f, aliases: [], isSystem: false })),
+    ];
   }, [customTargetFields]);
 
   // Initialize mappings from localStorage or headers
@@ -114,15 +164,19 @@ export const MapSection = () => {
   React.useEffect(() => {
     setMappings(prev => {
       const customMappings = prev.filter(m => m.isCustom);
-      const headerMappings = allHeaders.map(header => {
-        const existing = prev.find(m => m.sourceColumn === header && !m.isCustom);
-        return {
-          sourceColumn: header,
-          targetField: existing?.targetField || null,
-          isCustom: false,
-        };
-      });
-      return [...headerMappings, ...customMappings];
+      const existingSourceColumns = new Set(prev.map(m => m.sourceColumn));
+      
+      // Only add new headers that don't exist yet
+      const newHeaders = allHeaders.filter(h => !existingSourceColumns.has(h));
+      const headerMappings = prev.filter(m => !m.isCustom && allHeaders.includes(m.sourceColumn));
+      
+      const newMappings = newHeaders.map(header => ({
+        sourceColumn: header,
+        targetField: null,
+        isCustom: false,
+      }));
+      
+      return [...headerMappings, ...newMappings, ...customMappings];
     });
   }, [allHeaders]);
 
@@ -186,16 +240,96 @@ export const MapSection = () => {
     const updated = customTargetFields.filter(f => f.id !== id);
     setCustomTargetFields(updated);
     localStorage.setItem('voter_custom_target_fields', JSON.stringify(updated));
-    // Also update any mappings using this field
     setMappings(prev => prev.map(m => m.targetField === id ? { ...m, targetField: null } : m));
     toast.info(language === 'ne' ? 'लक्ष्य फिल्ड हटाइयो' : 'Target field removed');
   };
 
+  // Move mapping up/down
+  const moveMapping = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= mappings.length) return;
+    
+    setMappings(prev => {
+      const newMappings = [...prev];
+      [newMappings[index], newMappings[newIndex]] = [newMappings[newIndex], newMappings[index]];
+      return newMappings;
+    });
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    
+    setMappings(prev => {
+      const newMappings = [...prev];
+      const draggedItem = newMappings[draggedIndex];
+      newMappings.splice(draggedIndex, 1);
+      newMappings.splice(index, 0, draggedItem);
+      return newMappings;
+    });
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
+  // Bulk upload ethnic group categories
+  const handleBulkUploadCategories = () => {
+    const lines = bulkCategories.split('\n').filter(line => line.trim());
+    if (lines.length === 0) {
+      toast.error(language === 'ne' ? 'कुनै श्रेणी प्रविष्ट गरिएको छैन' : 'No categories entered');
+      return;
+    }
+
+    const newCastes: string[] = [];
+    const newHierarchy: Record<string, { subfolders: string[], surnames: string[] }> = {};
+    
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.includes('>')) {
+        // It's a subfolder: "Parent > Child"
+        const [parent, child] = trimmed.split('>').map(s => s.trim());
+        if (parent && child) {
+          if (!newCastes.includes(parent)) {
+            newCastes.push(parent);
+          }
+          if (!newHierarchy[parent]) {
+            newHierarchy[parent] = { subfolders: [], surnames: [] };
+          }
+          if (!newHierarchy[parent].subfolders.includes(child)) {
+            newHierarchy[parent].subfolders.push(child);
+          }
+        }
+      } else if (trimmed) {
+        // It's a main category
+        if (!newCastes.includes(trimmed)) {
+          newCastes.push(trimmed);
+        }
+      }
+    });
+
+    importCasteData({
+      castes: newCastes,
+      casteHierarchy: newHierarchy,
+    });
+
+    setBulkCategories('');
+    setBulkUploadDialogOpen(false);
+    toast.success(language === 'ne' 
+      ? `${newCastes.length} श्रेणीहरू थपियो` 
+      : `Added ${newCastes.length} categories`);
+  };
+
   const autoDetectMappings = () => {
     setMappings(prev => {
-      const customMappings = prev.filter(m => m.isCustom);
-      const headerMappings = allHeaders.map(header => {
-        const headerLower = header.toLowerCase().trim();
+      return prev.map(mapping => {
+        const headerLower = mapping.sourceColumn.toLowerCase().trim();
         const matchedField = APP_FIELDS.find(field => 
           field.aliases.some(alias => 
             headerLower === alias.toLowerCase() || 
@@ -203,27 +337,20 @@ export const MapSection = () => {
           )
         );
         return {
-          sourceColumn: header,
-          targetField: matchedField?.id || null,
-          isCustom: false,
+          ...mapping,
+          targetField: matchedField?.id || mapping.targetField,
         };
       });
-      return [...headerMappings, ...customMappings];
     });
     toast.success(language === 'ne' ? 'म्यापिङ स्वत: पत्ता लगाइयो' : 'Auto-detected mappings');
   };
 
   const resetMappings = () => {
-    setMappings(allHeaders.map(header => ({
-      sourceColumn: header,
-      targetField: null,
-      isCustom: false,
-    })));
+    setMappings(prev => prev.map(m => ({ ...m, targetField: null })));
     toast.info(language === 'ne' ? 'म्यापिङ रिसेट गरियो' : 'Mappings reset');
   };
 
   const saveMappings = () => {
-    // Save to localStorage for persistence
     localStorage.setItem('voter_field_mappings', JSON.stringify(mappings));
     localStorage.setItem('voter_custom_target_fields', JSON.stringify(customTargetFields));
     toast.success(language === 'ne' ? 'म्यापिङ सेभ गरियो र डाटा अपडेट हुनेछ' : 'Mappings saved - data will be updated');
@@ -232,7 +359,7 @@ export const MapSection = () => {
   const mappedCount = mappings.filter(m => m.targetField).length;
   const unmappedCount = mappings.filter(m => !m.targetField).length;
 
-  if (allHeaders.length === 0) {
+  if (allHeaders.length === 0 && mappings.length === 0) {
     return (
       <div className="space-y-6">
         <Card>
@@ -246,11 +373,15 @@ export const MapSection = () => {
               <h3 className="text-lg font-medium mb-2">
                 {language === 'ne' ? 'कुनै डाटा अपलोड भएको छैन' : 'No Data Uploaded'}
               </h3>
-              <p className="text-muted-foreground max-w-md">
+              <p className="text-muted-foreground max-w-md mb-4">
                 {language === 'ne' 
-                  ? 'म्यापिङ कन्फिगर गर्न पहिले डाटा अपलोड गर्नुहोस्।' 
-                  : 'Please upload data first to configure field mappings.'}
+                  ? 'म्यापिङ कन्फिगर गर्न पहिले डाटा अपलोड गर्नुहोस् वा म्यानुअल रूपमा थप्नुहोस्।' 
+                  : 'Please upload data first to configure field mappings, or add manually.'}
               </p>
+              <Button onClick={() => setAddSourceDialogOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                {language === 'ne' ? 'स्रोत कलम थप्नुहोस्' : 'Add Source Column'}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -295,7 +426,7 @@ export const MapSection = () => {
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <Plus className="h-4 w-4" />
-                  {language === 'ne' ? 'स्रोत कलम थप्नुहोस्' : 'Add Source Column'}
+                  {language === 'ne' ? 'स्रोत कलम' : 'Source Column'}
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -329,14 +460,14 @@ export const MapSection = () => {
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <PlusCircle className="h-4 w-4" />
-                  {language === 'ne' ? 'लक्ष्य फिल्ड थप्नुहोस्' : 'Add Target Field'}
+                  {language === 'ne' ? 'लक्ष्य फिल्ड' : 'Target Field'}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{language === 'ne' ? 'नयाँ लक्ष्य फिल्ड थप्नुहोस्' : 'Add New Target Field'}</DialogTitle>
                   <DialogDescription>
-                    {language === 'ne' ? 'कस्टम लक्ष्य फिल्ड थप्नुहोस् जुन म्यापिङमा प्रयोग गर्न सकिन्छ' : 'Add a custom target field that can be used in mappings'}
+                    {language === 'ne' ? 'कस्टम लक्ष्य फिल्ड थप्नुहोस्' : 'Add a custom target field'}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -358,6 +489,51 @@ export const MapSection = () => {
                   <Button onClick={addCustomTargetField}>
                     <Plus className="h-4 w-4 mr-2" />
                     {language === 'ne' ? 'थप्नुहोस्' : 'Add'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Bulk Upload Ethnic Categories Dialog */}
+            <Dialog open={bulkUploadDialogOpen} onOpenChange={setBulkUploadDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <FolderTree className="h-4 w-4" />
+                  {language === 'ne' ? 'जातीय समूह थप्नुहोस्' : 'Ethnic Categories'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>{language === 'ne' ? 'जातीय समूह श्रेणीहरू थप्नुहोस्' : 'Bulk Add Ethnic Categories'}</DialogTitle>
+                  <DialogDescription>
+                    {language === 'ne' 
+                      ? 'प्रति लाइन एक श्रेणी। उप-फोल्डरको लागि "अभिभावक > बच्चा" प्रयोग गर्नुहोस्।' 
+                      : 'One category per line. Use "Parent > Child" for subfolders.'}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <Textarea
+                    placeholder={language === 'ne' 
+                      ? "ब्राह्मण\nक्षेत्री\nनेवार > श्रेष्ठ\nनेवार > जोशी\nमगर" 
+                      : "Brahmin\nChhetri\nNewar > Shrestha\nNewar > Joshi\nMagar"}
+                    value={bulkCategories}
+                    onChange={(e) => setBulkCategories(e.target.value)}
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {language === 'ne' 
+                      ? 'यी श्रेणीहरू जातीय समूह ट्याबमा थपिनेछन् र म्यापिङमा प्रयोग गर्न सकिन्छ।' 
+                      : 'These categories will be added to Ethnic Group tab and available for mapping.'}
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setBulkUploadDialogOpen(false)}>
+                    {language === 'ne' ? 'रद्द गर्नुहोस्' : 'Cancel'}
+                  </Button>
+                  <Button onClick={handleBulkUploadCategories}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    {language === 'ne' ? 'थप्नुहोस्' : 'Import'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -395,17 +571,30 @@ export const MapSection = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead className="w-1/3">{t('map.sourceColumn')}</TableHead>
-                  <TableHead className="w-16"></TableHead>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead className="w-1/3">{t('map.targetField')}</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{language === 'ne' ? 'कार्य' : 'Actions'}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mappings.map((mapping) => {
+                {mappings.map((mapping, index) => {
                   const targetFieldInfo = allTargetFields.find(f => f.id === mapping.targetField);
+                  const isEthnicTarget = mapping.targetField?.startsWith('ethnic_');
+                  
                   return (
-                    <TableRow key={mapping.sourceColumn}>
+                    <TableRow 
+                      key={mapping.sourceColumn}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                      className={draggedIndex === index ? 'opacity-50' : ''}
+                    >
+                      <TableCell className="cursor-grab">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <code className="bg-muted px-2 py-1 rounded text-sm">
@@ -433,37 +622,82 @@ export const MapSection = () => {
                             <SelectItem value="unmapped">
                               <span className="text-muted-foreground">— {t('map.unmapped')} —</span>
                             </SelectItem>
-                            {allTargetFields.map((field) => (
-                              <SelectItem key={field.id} value={field.id}>
-                                {language === 'ne' ? field.labelNe : field.labelEn}
-                              </SelectItem>
-                            ))}
+                            
+                            <SelectGroup>
+                              <SelectLabel>{language === 'ne' ? 'प्रणाली फिल्डहरू' : 'System Fields'}</SelectLabel>
+                              {APP_FIELDS.map((field) => (
+                                <SelectItem key={field.id} value={field.id}>
+                                  {language === 'ne' ? field.labelNe : field.labelEn}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                            
+                            {customTargetFields.length > 0 && (
+                              <SelectGroup>
+                                <SelectLabel>{language === 'ne' ? 'कस्टम फिल्डहरू' : 'Custom Fields'}</SelectLabel>
+                                {customTargetFields.map((field) => (
+                                  <SelectItem key={field.id} value={field.id}>
+                                    {language === 'ne' ? field.labelNe : field.labelEn}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
+                            
+                            {ethnicGroupCategories.length > 0 && (
+                              <SelectGroup>
+                                <SelectLabel>{language === 'ne' ? 'जातीय समूह' : 'Ethnic Groups'}</SelectLabel>
+                                {ethnicGroupCategories.map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.id}>
+                                    <span className={cat.parentGroup ? 'pl-2 text-muted-foreground' : ''}>
+                                      {cat.labelEn}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
                           </SelectContent>
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           {mapping.targetField ? (
                             <Badge variant="default" className="gap-1">
                               <CheckCircle2 className="h-3 w-3" />
-                              {language === 'ne' ? 'म्याप गरिएको' : 'Mapped'}
+                              {language === 'ne' ? 'म्याप' : 'Mapped'}
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="gap-1 text-muted-foreground">
+                            <Badge variant="outline" className="gap-1 text-muted-foreground text-xs">
                               <AlertCircle className="h-3 w-3" />
-                              {t('map.unmapped')}
                             </Badge>
                           )}
-                          {mapping.isCustom && (
+                          <div className="flex">
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6"
-                              onClick={() => removeMapping(mapping.sourceColumn)}
+                              onClick={() => moveMapping(index, 'up')}
+                              disabled={index === 0}
                             >
-                              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                              <ChevronUp className="h-3 w-3" />
                             </Button>
-                          )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => moveMapping(index, 'down')}
+                              disabled={index === mappings.length - 1}
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => removeMapping(mapping.sourceColumn)}
+                          >
+                            <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -476,44 +710,46 @@ export const MapSection = () => {
       </Card>
 
       {/* Preview of sample data */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {language === 'ne' ? 'डाटा पूर्वावलोकन' : 'Data Preview'}
-          </CardTitle>
-          <CardDescription>
-            {language === 'ne' 
-              ? 'अपलोड गरिएको डाटाबाट नमूना रेकर्डहरू' 
-              : 'Sample records from uploaded data'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[200px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {allHeaders.slice(0, 6).map(header => (
-                    <TableHead key={header} className="min-w-[120px]">
-                      {header}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {municipalities[0]?.wards[0]?.voters.slice(0, 5).map((voter, idx) => (
-                  <TableRow key={idx}>
+      {municipalities.length > 0 && municipalities[0]?.wards?.[0]?.voters?.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {language === 'ne' ? 'डाटा पूर्वावलोकन' : 'Data Preview'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'ne' 
+                ? 'अपलोड गरिएको डाटाबाट नमूना रेकर्डहरू' 
+                : 'Sample records from uploaded data'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[200px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
                     {allHeaders.slice(0, 6).map(header => (
-                      <TableCell key={header} className="text-sm">
-                        {voter.originalData?.[header] || '-'}
-                      </TableCell>
+                      <TableHead key={header} className="min-w-[120px]">
+                        {header}
+                      </TableHead>
                     ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {municipalities[0]?.wards[0]?.voters.slice(0, 5).map((voter, idx) => (
+                    <TableRow key={idx}>
+                      {allHeaders.slice(0, 6).map(header => (
+                        <TableCell key={header} className="text-sm">
+                          {voter.originalData?.[header] || '-'}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
