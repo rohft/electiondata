@@ -220,7 +220,9 @@ export const UploadWizard = () => {
                       <CollapsibleContent className="pl-6">
                         <ExplorerBoothManager
                           municipalityId={municipality.id}
+                          municipalityName={municipality.name}
                           wardId={ward.id}
+                          wardName={ward.name}
                           boothCentres={ward.boothCentres || []}
                         />
                       </CollapsibleContent>

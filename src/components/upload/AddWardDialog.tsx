@@ -117,35 +117,44 @@ export const AddWardDialog = ({
     const uploadedWards = wardsToUpload.filter(w => w.status === 'uploaded' && w.records.length > 0);
     
     uploadedWards.forEach(ward => {
+      const voters = ward.records.map(record => {
+        const surnameFromRecord = record.surname?.trim();
+        const surnameFromName = record.voterName.split(' ').pop() || '';
+        const surname = surnameFromRecord || surnameFromName;
+        const voterIdFromRecord = record.voterId?.toString().trim();
+        const voterId = voterIdFromRecord && voterIdFromRecord !== '' ? voterIdFromRecord : crypto.randomUUID();
+        
+        return {
+          id: voterId,
+          municipality: municipalityName,
+          ward: `Ward ${ward.wardNumber}`,
+          fullName: record.voterName,
+          age: record.age,
+          gender: record.gender,
+          caste: record.caste || '',
+          surname: surname,
+          isNewar: isNewarName(record.voterName),
+          originalData: record.originalData
+        };
+      });
+
+      const defaultBooth = {
+        id: crypto.randomUUID(),
+        name: `Booth 1`,
+        createdAt: new Date(),
+        voters: voters,
+        fileName: ward.fileName || '',
+        uploadedAt: new Date()
+      };
+
       const wardData: WardData = {
         id: crypto.randomUUID(),
         name: `Ward ${ward.wardNumber}`,
         municipality: municipalityName,
-        voters: ward.records.map(record => {
-          // Use surname from parsed data if available, otherwise extract from name
-          const surnameFromRecord = record.surname?.trim();
-          const surnameFromName = record.voterName.split(' ').pop() || '';
-          const surname = surnameFromRecord || surnameFromName;
-          
-          // Use voterId from Excel/parsed data, fallback to UUID only if missing
-          const voterIdFromRecord = record.voterId?.toString().trim();
-          const voterId = voterIdFromRecord && voterIdFromRecord !== '' ? voterIdFromRecord : crypto.randomUUID();
-          
-          return {
-            id: voterId,
-            municipality: municipalityName,
-            ward: `Ward ${ward.wardNumber}`,
-            fullName: record.voterName,
-            age: record.age,
-            gender: record.gender,
-            caste: record.caste || '',
-            surname: surname,
-            isNewar: isNewarName(record.voterName),
-            originalData: record.originalData
-          };
-        }),
+        voters: voters,
         uploadedAt: new Date(),
-        fileName: ward.fileName || ''
+        fileName: ward.fileName || '',
+        boothCentres: [defaultBooth]
       };
       addWardData(municipalityName, wardData);
     });
