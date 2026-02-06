@@ -4,17 +4,16 @@ import { useVoterData } from '@/contexts/VoterDataContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Database, Building2, FolderPlus, ChevronDown, ChevronRight, FileText, Trash2, MapPin } from 'lucide-react';
+import { Plus, Database, Building2, FolderPlus, ChevronDown, ChevronRight, FileText, MapPin } from 'lucide-react';
 import { VoterDataTable } from '@/components/data/VoterDataTable';
 import { DashboardUploadWizard } from './DashboardUploadWizard';
 import { AddWardDialog } from './AddWardDialog';
 import { DeleteDataDialog } from './DeleteDataDialog';
-import { BoothCentreManager } from './BoothCentreManager';
+import { ExplorerBoothManager } from './ExplorerBoothManager';
 import { ParsedRecord } from '@/lib/fileParser';
-import { isNewarName } from '@/lib/surnameUtils';
 import { cn } from '@/lib/utils';
 
 interface WardUploadData {
@@ -35,10 +34,17 @@ export const UploadWizard = () => {
   const [expandedMunicipalities, setExpandedMunicipalities] = useState<string[]>(
     municipalities.length > 0 ? [municipalities[0].id] : []
   );
+  const [expandedWards, setExpandedWards] = useState<string[]>([]);
 
   const toggleMunicipalityExpand = (id: string) => {
     setExpandedMunicipalities(prev => 
       prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  };
+
+  const toggleWardExpand = (id: string) => {
+    setExpandedWards(prev => 
+      prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id]
     );
   };
 
@@ -169,40 +175,56 @@ export const UploadWizard = () => {
 
                 <CollapsibleContent className="pl-4">
                   {municipality.wards.map((ward, idx) => (
-                    <div 
-                      key={ward.id} 
-                      className="group flex items-center"
+                    <Collapsible
+                      key={ward.id}
+                      open={expandedWards.includes(ward.id)}
+                      onOpenChange={() => toggleWardExpand(ward.id)}
                     >
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          "flex-1 justify-start gap-1.5 h-7 px-2 text-sm",
-                          selectedMunicipality === municipality.id && selectedWardIndex === idx && "bg-accent"
-                        )}
-                        onClick={() => {
-                          setSelectedMunicipality(municipality.id);
-                          setSelectedWardIndex(idx);
-                        }}
-                      >
-                        <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{ward.name}</span>
-                        {(ward.boothCentres?.length || 0) > 0 && (
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5">
-                            <MapPin className="h-2.5 w-2.5" />
-                            {ward.boothCentres?.length}
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1">
-                          {ward.voters.length}
-                        </Badge>
-                      </Button>
-                      <DeleteDataDialog 
-                        type="ward" 
-                        municipality={municipality}
-                        ward={ward}
-                      />
-                    </div>
+                      <div className="group flex items-center">
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                              "flex-1 justify-start gap-1.5 h-7 px-2 text-sm",
+                              selectedMunicipality === municipality.id && selectedWardIndex === idx && "bg-accent"
+                            )}
+                            onClick={() => {
+                              setSelectedMunicipality(municipality.id);
+                              setSelectedWardIndex(idx);
+                            }}
+                          >
+                            {expandedWards.includes(ward.id)
+                              ? <ChevronDown className="h-3 w-3 shrink-0" />
+                              : <ChevronRight className="h-3 w-3 shrink-0" />
+                            }
+                            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="truncate">{ward.name}</span>
+                            {(ward.boothCentres?.length || 0) > 0 && (
+                              <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5">
+                                <MapPin className="h-2.5 w-2.5" />
+                                {ward.boothCentres?.length}
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1">
+                              {ward.voters.length}
+                            </Badge>
+                          </Button>
+                        </CollapsibleTrigger>
+                        <DeleteDataDialog 
+                          type="ward" 
+                          municipality={municipality}
+                          ward={ward}
+                        />
+                      </div>
+                      <CollapsibleContent className="pl-6">
+                        <ExplorerBoothManager
+                          municipalityId={municipality.id}
+                          wardId={ward.id}
+                          boothCentres={ward.boothCentres || []}
+                        />
+                      </CollapsibleContent>
+                    </Collapsible>
                   ))}
                   
                   {/* Add Ward Button */}
@@ -228,7 +250,6 @@ export const UploadWizard = () => {
       {/* Main Content Area */}
       <div className="flex-1 min-w-0 space-y-6">
         {currentMunicipalityData ? (
-          <>
             <VoterDataTable
               wards={getWardDataForMunicipality(currentMunicipalityData.id)}
               municipalityName={currentMunicipalityData.name}
@@ -236,17 +257,7 @@ export const UploadWizard = () => {
               onWardSelect={setSelectedWardIndex}
               onUploadMore={() => setUploadDialogOpen(true)}
             />
-            {/* Booth Centre Manager for selected ward */}
-            {currentMunicipalityData.wards[selectedWardIndex] && (
-              <BoothCentreManager
-                municipalityId={currentMunicipalityData.id}
-                wardId={currentMunicipalityData.wards[selectedWardIndex].id}
-                boothCentres={currentMunicipalityData.wards[selectedWardIndex].boothCentres || []}
-              />
-            )}
-          </>
         ) : municipalities.length > 0 ? (
-          <>
             <VoterDataTable
               wards={getWardDataForMunicipality(municipalities[0].id)}
               municipalityName={municipalities[0].name}
@@ -254,14 +265,6 @@ export const UploadWizard = () => {
               onWardSelect={setSelectedWardIndex}
               onUploadMore={() => setUploadDialogOpen(true)}
             />
-            {municipalities[0].wards[selectedWardIndex] && (
-              <BoothCentreManager
-                municipalityId={municipalities[0].id}
-                wardId={municipalities[0].wards[selectedWardIndex].id}
-                boothCentres={municipalities[0].wards[selectedWardIndex].boothCentres || []}
-              />
-            )}
-          </>
         ) : null}
       </div>
 
