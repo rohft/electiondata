@@ -5,20 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Building2, Hash, Check, AlertCircle, ImagePlus, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, Hash, MapPin, Check, ImagePlus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { WardFileUploader } from './WardFileUploader';
-import { parseFile, ParsedRecord } from '@/lib/fileParser';
 import { toast } from '@/components/ui/use-toast';
 import { isNewarName } from '@/lib/surnameUtils';
-
-interface WardUploadData {
-  wardNumber: number;
-  file: File | null;
-  records: ParsedRecord[];
-  status: 'pending' | 'uploaded' | 'error';
-  fileName?: string;
-}
+import { BoothSetupStep, WardBoothConfig } from './BoothSetupStep';
+import { BoothFileUploader, BoothUploadData } from './BoothFileUploader';
+import { ParsedRecord } from '@/lib/fileParser';
 
 interface DashboardUploadWizardProps {
   onComplete: () => void;
@@ -31,127 +24,143 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
   const [municipalityName, setMunicipalityName] = useState('');
   const [municipalityLogo, setMunicipalityLogo] = useState<string | null>(null);
   const [wardCount, setWardCount] = useState<number | ''>('');
-  const [wardsData, setWardsData] = useState<WardUploadData[]>([]);
+  const [wardBooths, setWardBooths] = useState<WardBoothConfig[]>([]);
+  const [boothUploads, setBoothUploads] = useState<BoothUploadData[]>([]);
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const totalSteps = 4;
+  const progress = (step / totalSteps) * 100;
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        toast({
-          title: 'Error',
-          description: 'Logo file must be less than 2MB',
-          variant: 'destructive'
-        });
+        toast({ title: 'Error', description: 'Logo file must be less than 2MB', variant: 'destructive' });
         return;
       }
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setMunicipalityLogo(event.target?.result as string);
-      };
+      reader.onload = (event) => setMunicipalityLogo(event.target?.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const totalSteps = 3;
-  const progress = (step / totalSteps) * 100;
-
-  const initializeWards = () => {
+  const initializeWardBooths = () => {
     if (typeof wardCount !== 'number' || wardCount < 1) return;
-    
-    const newWards: WardUploadData[] = [];
-    for (let i = 1; i <= wardCount; i++) {
-      newWards.push({
-        wardNumber: i,
-        file: null,
-        records: [],
-        status: 'pending'
-      });
-    }
-    setWardsData(newWards);
+    setWardBooths(
+      Array.from({ length: wardCount }, (_, i) => ({
+        wardNumber: i + 1,
+        booths: [{ id: crypto.randomUUID(), name: 'Booth 1' }],
+      }))
+    );
+  };
+
+  const initializeBoothUploads = () => {
+    setBoothUploads(
+      wardBooths.flatMap((ward) =>
+        ward.booths.map((booth) => ({
+          wardNumber: ward.wardNumber,
+          boothId: booth.id,
+          boothName: booth.name,
+          file: null,
+          records: [],
+          status: 'pending' as const,
+        }))
+      )
+    );
   };
 
   const handleNext = () => {
-    if (step === 2) {
-      initializeWards();
-    }
-    setStep(prev => Math.min(prev + 1, totalSteps));
+    if (step === 2) initializeWardBooths();
+    if (step === 3) initializeBoothUploads();
+    setStep((prev) => Math.min(prev + 1, totalSteps));
   };
 
   const handleBack = () => {
-    setStep(prev => Math.max(prev - 1, 1));
+    setStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleWardDataUpdate = (wardIndex: number, file: File | null, records: ParsedRecord[], status: 'pending' | 'uploaded' | 'error') => {
-    setWardsData(prev => {
+  const handleBoothDataUpdate = (
+    index: number,
+    file: File | null,
+    records: ParsedRecord[],
+    status: 'pending' | 'uploaded' | 'error'
+  ) => {
+    setBoothUploads((prev) => {
       const updated = [...prev];
-      updated[wardIndex] = {
-        ...updated[wardIndex],
-        file,
-        records,
-        status,
-        fileName: file?.name
-      };
+      updated[index] = { ...updated[index], file, records, status, fileName: file?.name };
       return updated;
     });
   };
 
   const handleSaveAndComplete = () => {
-    // Save uploaded wards to context - each ward gets a default booth with voters
-    wardsData.forEach(ward => {
-      if (ward.status === 'uploaded' && ward.records.length > 0) {
-        const voters = ward.records.map(record => {
-          const surnameFromRecord = record.surname?.trim();
-          const surnameFromName = record.voterName.split(' ').pop() || '';
-          const surname = surnameFromRecord || surnameFromName;
-          const voterIdFromRecord = record.voterId?.toString().trim();
-          const voterId = voterIdFromRecord && voterIdFromRecord !== '' ? voterIdFromRecord : crypto.randomUUID();
-          
-          return {
-            id: voterId,
-            municipality: municipalityName,
-            ward: `Ward ${ward.wardNumber}`,
-            fullName: record.voterName,
-            age: record.age,
-            gender: record.gender,
-            caste: record.caste || '',
-            surname: surname,
-            isNewar: isNewarName(record.voterName),
-            originalData: record.originalData
-          };
-        });
+    wardBooths.forEach((ward) => {
+      const boothCentres = ward.booths.map((booth) => {
+        const uploadData = boothUploads.find(
+          (b) => b.wardNumber === ward.wardNumber && b.boothId === booth.id
+        );
 
-        const defaultBooth = {
-          id: crypto.randomUUID(),
-          name: `Booth 1`,
+        let voters: any[] = [];
+        if (uploadData?.status === 'uploaded' && uploadData.records.length > 0) {
+          voters = uploadData.records.map((record) => {
+            const surnameFromRecord = record.surname?.trim();
+            const surnameFromName = record.voterName.split(' ').pop() || '';
+            const surname = surnameFromRecord || surnameFromName;
+            const voterIdFromRecord = record.voterId?.toString().trim();
+            const voterId =
+              voterIdFromRecord && voterIdFromRecord !== ''
+                ? voterIdFromRecord
+                : crypto.randomUUID();
+
+            return {
+              id: voterId,
+              municipality: municipalityName,
+              ward: `Ward ${ward.wardNumber}`,
+              fullName: record.voterName,
+              age: record.age,
+              gender: record.gender,
+              caste: record.caste || '',
+              surname,
+              isNewar: isNewarName(record.voterName),
+              originalData: record.originalData,
+            };
+          });
+        }
+
+        return {
+          id: booth.id,
+          name: booth.name,
           createdAt: new Date(),
-          voters: voters,
-          fileName: ward.fileName || '',
-          uploadedAt: new Date()
-        };
-
-        addWardData(municipalityName, {
-          id: crypto.randomUUID(),
-          name: `Ward ${ward.wardNumber}`,
-          municipality: municipalityName,
-          voters: voters,
+          voters,
+          fileName: uploadData?.fileName || '',
           uploadedAt: new Date(),
-          fileName: ward.fileName || '',
-          boothCentres: [defaultBooth]
-        });
-      }
+        };
+      });
+
+      const allVoters = boothCentres.flatMap((b) => b.voters);
+
+      addWardData(municipalityName, {
+        id: crypto.randomUUID(),
+        name: `Ward ${ward.wardNumber}`,
+        municipality: municipalityName,
+        voters: allVoters,
+        uploadedAt: new Date(),
+        fileName: '',
+        boothCentres,
+      });
     });
+
+    const uploadedBoothsCount = boothUploads.filter((b) => b.status === 'uploaded').length;
+    const totalBoothCount = wardBooths.reduce((s, w) => s + w.booths.length, 0);
 
     toast({
       title: t('upload.success'),
-      description: `${uploadedWardsCount} ward(s) uploaded successfully`,
+      description: `${wardBooths.length} ward(s) with ${totalBoothCount} booth(s) created${
+        uploadedBoothsCount > 0 ? `, ${uploadedBoothsCount} with data` : ''
+      }`,
     });
 
     onComplete();
   };
-
-  const uploadedWardsCount = wardsData.filter(w => w.status === 'uploaded').length;
-  const canProceedToSave = uploadedWardsCount > 0;
 
   const canProceed = () => {
     switch (step) {
@@ -160,32 +169,39 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
       case 2:
         return typeof wardCount === 'number' && wardCount >= 1;
       case 3:
-        return canProceedToSave;
+        return wardBooths.every((w) => w.booths.length > 0);
+      case 4:
+        return true; // Upload is optional
       default:
         return true;
     }
   };
 
+  const stepIcons = [Building2, Hash, MapPin, Check];
+  const StepIcon = stepIcons[step - 1] || Building2;
+
   return (
     <div className="space-y-6">
       <Progress value={progress} className="h-1" />
 
+      {/* Step 1: Municipality Name */}
       {step === 1 && (
         <div className="space-y-6">
           <div className="flex items-center gap-3 text-muted-foreground mb-4">
             <Building2 className="h-5 w-5" />
-            <span className="text-sm">{t('upload.step')} 1 {t('common.of')} {totalSteps}</span>
+            <span className="text-sm">
+              {t('upload.step')} 1 {t('common.of')} {totalSteps}
+            </span>
           </div>
-          
-          {/* Municipality Logo Upload */}
+
           <div className="space-y-3">
             <Label className="text-base font-medium">Municipality Logo (Optional)</Label>
             <div className="flex items-center gap-4">
               {municipalityLogo ? (
                 <div className="relative">
-                  <img 
-                    src={municipalityLogo} 
-                    alt="Municipality Logo" 
+                  <img
+                    src={municipalityLogo}
+                    alt="Municipality Logo"
                     className="h-20 w-20 object-contain rounded-lg border border-border"
                   />
                   <button
@@ -229,18 +245,19 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
               onChange={(e) => setMunicipalityName(e.target.value)}
               className="text-lg py-6"
             />
-            <p className="text-sm text-muted-foreground">
-              {t('upload.municipalityHint')}
-            </p>
+            <p className="text-sm text-muted-foreground">{t('upload.municipalityHint')}</p>
           </div>
         </div>
       )}
 
+      {/* Step 2: Ward Count */}
       {step === 2 && (
         <div className="space-y-6">
           <div className="flex items-center gap-3 text-muted-foreground mb-4">
             <Hash className="h-5 w-5" />
-            <span className="text-sm">{t('upload.step')} 2 {t('common.of')} {totalSteps}</span>
+            <span className="text-sm">
+              {t('upload.step')} 2 {t('common.of')} {totalSteps}
+            </span>
           </div>
           <div className="space-y-3">
             <Label htmlFor="ward-count" className="text-base font-medium">
@@ -263,29 +280,35 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
         </div>
       )}
 
+      {/* Step 3: Booth Setup */}
       {step === 3 && (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3 text-muted-foreground mb-4">
+            <MapPin className="h-5 w-5" />
+            <span className="text-sm">
+              {t('upload.step')} 3 {t('common.of')} {totalSteps} • Booth Configuration
+            </span>
+          </div>
+          <BoothSetupStep wardBooths={wardBooths} onWardBoothsChange={setWardBooths} />
+        </div>
+      )}
+
+      {/* Step 4: Upload Voter Data */}
+      {step === 4 && (
         <div className="space-y-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm text-muted-foreground">
-              {t('upload.step')} 3 {t('common.of')} {totalSteps} • {t('upload.uploadFilesForWards')}
-            </span>
-            <span className="text-sm font-medium text-accent">
-              {uploadedWardsCount} / {wardsData.length} {t('upload.wardsUploaded')}
+              {t('upload.step')} 4 {t('common.of')} {totalSteps} • {t('upload.uploadFilesForWards')}
             </span>
           </div>
-          
-          <p className="text-sm text-muted-foreground">
-            {t('upload.uploadPartialHint')}
-          </p>
-          
-          <WardFileUploader
-            wards={wardsData}
-            municipalityName={municipalityName}
-            onWardDataUpdate={handleWardDataUpdate}
+          <BoothFileUploader
+            boothUploads={boothUploads}
+            onBoothDataUpdate={handleBoothDataUpdate}
           />
         </div>
       )}
 
+      {/* Navigation */}
       <div className="flex items-center justify-between pt-4 border-t border-border/50">
         <Button
           variant="outline"
@@ -296,20 +319,14 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
           <ArrowLeft className="h-4 w-4 mr-2" />
           {t('common.back')}
         </Button>
-        
-        {step < 3 ? (
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed()}
-          >
+
+        {step < totalSteps ? (
+          <Button onClick={handleNext} disabled={!canProceed()}>
             {t('common.next')}
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         ) : (
-          <Button
-            onClick={handleSaveAndComplete}
-            disabled={!canProceed()}
-          >
+          <Button onClick={handleSaveAndComplete}>
             <Check className="h-4 w-4 mr-2" />
             {t('upload.saveAndView')}
           </Button>
