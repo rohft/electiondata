@@ -1,7 +1,6 @@
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { VoterDataProvider } from '@/contexts/VoterDataContext';
-import { ToleDataProvider } from '@/contexts/ToleDataContext';
 import { CustomTagsProvider } from '@/contexts/CustomTagsContext';
 import { FontProvider } from '@/contexts/FontContext';
 import { Toaster } from "@/components/ui/toaster";
@@ -19,8 +18,7 @@ const App = () => (
       <ThemeProvider>
         <LanguageProvider>
           <VoterDataProvider>
-            <ToleDataProvider>
-              <CustomTagsProvider>
+            <CustomTagsProvider>
                 <FontProvider>
                   <TooltipProvider>
                     <Toaster />
@@ -42,8 +40,7 @@ const App = () => (
                     </Routes>
                   </TooltipProvider>
                 </FontProvider>
-              </CustomTagsProvider>
-            </ToleDataProvider>
+            </CustomTagsProvider>
           </VoterDataProvider>
         </LanguageProvider>
       </ThemeProvider>
