@@ -64,6 +64,7 @@ import {
 import { cn } from '@/lib/utils';
 import { CASTE_CATEGORIES, detectCasteFromName } from '@/lib/casteData';
 import { toast } from 'sonner';
+import { CasteTagCloud } from '@/components/caste/CasteTagCloud';
 
 /* ============ DATA TYPES ============ */
 type ViewMode = 'list' | 'large-icons' | 'extra-large-icons';
@@ -698,6 +699,8 @@ export const CasteSection = () => {
 
   return (
     <div className="space-y-6">
+      {/* Tag Cloud */}
+      <CasteTagCloud />
       {/* Header */}
       <Card className="card-shadow border-border/50">
         <CardHeader>
