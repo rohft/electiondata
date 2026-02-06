@@ -35,7 +35,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { 
-  ArrowRight, Save, RotateCcw, Wand2, CheckCircle2, AlertCircle, 
+  ArrowRight, Save, RotateCcw, CheckCircle2, AlertCircle, 
   Plus, Trash2, PlusCircle, GripVertical, Upload, FolderTree, ChevronUp, ChevronDown, AlertTriangle 
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -337,24 +337,6 @@ export const MapSection = () => {
       : `Added ${newCastes.length} categories`);
   };
 
-  const autoDetectMappings = () => {
-    setMappings(prev => {
-      return prev.map(mapping => {
-        const headerLower = mapping.sourceColumn.toLowerCase().trim();
-        const matchedField = APP_FIELDS.find(field => 
-          field.aliases.some(alias => 
-            headerLower === alias.toLowerCase() || 
-            headerLower.includes(alias.toLowerCase())
-          )
-        );
-        return {
-          ...mapping,
-          targetField: matchedField?.id || mapping.targetField,
-        };
-      });
-    });
-    toast.success(language === 'ne' ? 'म्यापिङ स्वत: पत्ता लगाइयो' : 'Auto-detected mappings');
-  };
 
   const resetMappings = () => {
     setMappings(prev => prev.map(m => ({ ...m, targetField: null })));
@@ -423,10 +405,6 @@ export const MapSection = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2 mb-4">
-            <Button variant="outline" onClick={autoDetectMappings} className="gap-2">
-              <Wand2 className="h-4 w-4" />
-              {t('map.autoDetect')}
-            </Button>
             <Button variant="outline" onClick={resetMappings} className="gap-2">
               <RotateCcw className="h-4 w-4" />
               {t('map.resetMapping')}

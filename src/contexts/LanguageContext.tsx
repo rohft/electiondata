@@ -29,7 +29,7 @@ const translations: Translations = {
   'map.unmapped': { en: 'Unmapped', ne: 'म्याप नगरिएको' },
   'map.saveMapping': { en: 'Save Mapping', ne: 'म्यापिङ सेभ गर्नुहोस्' },
   'map.resetMapping': { en: 'Reset Mapping', ne: 'म्यापिङ रिसेट गर्नुहोस्' },
-  'map.autoDetect': { en: 'Auto Detect', ne: 'स्वत: पत्ता लगाउनुहोस्' },
+  
 
   // Common
   'common.search': { en: 'Search...', ne: 'खोज्नुहोस्...' },
