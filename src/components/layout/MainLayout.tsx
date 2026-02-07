@@ -11,7 +11,7 @@ import { CasteSection } from '@/components/sections/CasteSection';
 import { ComparisonSection } from '@/components/sections/ComparisonSection';
 import { InfographicsSection } from '@/components/sections/InfographicsSection';
 import { TemplatesSection } from '@/components/sections/TemplatesSection';
-
+import { CategorySection } from '@/components/sections/CategorySection';
 import { ExportSection } from '@/components/sections/ExportSection';
 import { SettingsSection } from '@/components/sections/SettingsSection';
 import { HomePage } from '@/pages/Home';
@@ -25,11 +25,11 @@ const sectionTitles: Record<string, { titleKey: string; subtitleKey?: string }> 
   upload: { titleKey: 'upload.title', subtitleKey: 'upload.description' },
   map: { titleKey: 'map.title', subtitleKey: 'map.description' },
   caste: { titleKey: 'nav.ethnicGroup' },
+  'category-mgmt': { titleKey: 'nav.categoryMgmt' },
   segments: { titleKey: 'segments.title' },
   comparison: { titleKey: 'comparison.title' },
   infographics: { titleKey: 'infographics.title' },
   templates: { titleKey: 'nav.templates' },
-  
   export: { titleKey: 'export.title' },
   settings: { titleKey: 'nav.settings' },
 };
@@ -67,6 +67,8 @@ export const MainLayout = ({ section }: MainLayoutProps) => {
         return <MapSection />;
       case 'caste':
         return <CasteSection />;
+      case 'category-mgmt':
+        return <CategorySection />;
       case 'segments':
         return <SegmentsSection />;
       case 'comparison':
