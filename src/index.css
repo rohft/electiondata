@@ -348,6 +348,43 @@
       opacity: 1;
     }
   }
+  /* Cloud Tag styles */
+  .cloud-tag {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 cursor-default;
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  .cloud-tag:hover {
+    @apply shadow-md scale-105;
+  }
+
+  .cloud-tag-sm {
+    @apply text-xs px-2 py-1;
+  }
+
+  .cloud-tag-lg {
+    @apply text-base px-4 py-2;
+  }
+
+  /* Flow node styles */
+  .flow-node {
+    @apply rounded-lg px-4 py-3 transition-all duration-200 cursor-pointer select-none;
+    background: hsl(var(--card));
+    border: 2px solid hsl(var(--border));
+  }
+
+  .flow-node:hover {
+    border-color: hsl(var(--primary));
+    @apply shadow-lg;
+  }
+
+  .flow-node.active {
+    border-color: hsl(var(--primary));
+    @apply shadow-md;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
+  }
 }
 
 @layer utilities {

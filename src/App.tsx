@@ -29,6 +29,7 @@ const App = () => (
                       <Route path="/upload" element={<MainLayout section="upload" />} />
                       <Route path="/map" element={<MainLayout section="map" />} />
                       <Route path="/caste" element={<MainLayout section="caste" />} />
+                      <Route path="/category-mgmt" element={<MainLayout section="category-mgmt" />} />
                       <Route path="/segments" element={<MainLayout section="segments" />} />
                       <Route path="/comparison" element={<MainLayout section="comparison" />} />
                       <Route path="/infographics" element={<MainLayout section="infographics" />} />
