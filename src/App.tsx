@@ -9,6 +9,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
+import SignUp from '@/pages/SignUp';
+import SignIn from '@/pages/SignIn';
+import OnAuthSuccess from '@/pages/OnAuthSuccess';
 
 const queryClient = new QueryClient();
 
@@ -37,6 +40,12 @@ const App = () =>
                       
                       <Route path="/export" element={<MainLayout section="export" />} />
                       <Route path="/settings" element={<MainLayout section="settings" />} />
+                      
+                      {/* Authentication routes */}
+                      <Route path="/signup" element={<SignUp />} />
+                      <Route path="/signin" element={<SignIn />} />
+                      <Route path="/onauthsuccess" element={<OnAuthSuccess />} />
+                      
                       <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                   </TooltipProvider>

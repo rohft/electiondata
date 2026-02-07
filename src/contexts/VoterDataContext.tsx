@@ -253,7 +253,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
         const loadedMunicipalities = Array.from(municipalitiesMap.values());
         setMunicipalities(loadedMunicipalities);
-        
+
         // Also save to localStorage as backup
         localStorage.setItem(STORAGE_KEY, serializeData(loadedMunicipalities));
       } catch (error) {
@@ -324,9 +324,9 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         OrderByField: 'id',
         IsAsc: false,
         Filters: [
-          { name: 'municipality_name', op: 'Equal', value: municipalityName },
-          { name: 'ward_number', op: 'Equal', value: wardNumber }
-        ]
+        { name: 'municipality_name', op: 'Equal', value: municipalityName },
+        { name: 'ward_number', op: 'Equal', value: wardNumber }]
+
       });
 
       const dbWardId = createdWard?.List?.[0]?.id;
@@ -338,7 +338,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         if (wardData.boothCentres && wardData.boothCentres.length > 0) {
           for (const booth of wardData.boothCentres) {
             const boothNumber = booth.id;
-            
+
             const { error: boothError } = await window.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
               ward_id: dbWardId,
               booth_number: boothNumber,
@@ -412,9 +412,9 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
   }, []);
 
   const removeWardData = useCallback(async (municipalityId: string, wardId: string) => {
-    const municipality = municipalities.find(m => m.id === municipalityId);
-    const ward = municipality?.wards.find(w => w.id === wardId);
-    
+    const municipality = municipalities.find((m) => m.id === municipalityId);
+    const ward = municipality?.wards.find((w) => w.id === wardId);
+
     if (!ward) return;
 
     const wardNumber = extractWardNumber(ward.name);
@@ -427,9 +427,9 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         OrderByField: 'id',
         IsAsc: true,
         Filters: [
-          { name: 'municipality_name', op: 'Equal', value: municipality.name },
-          { name: 'ward_number', op: 'Equal', value: wardNumber }
-        ]
+        { name: 'municipality_name', op: 'Equal', value: municipality.name },
+        { name: 'ward_number', op: 'Equal', value: wardNumber }]
+
       });
 
       const dbWardId = wardData?.List?.[0]?.id;
@@ -578,9 +578,9 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
   }, []);
 
   const addBoothCentre = useCallback(async (municipalityId: string, wardId: string, name: string) => {
-    const municipality = municipalities.find(m => m.id === municipalityId);
-    const ward = municipality?.wards.find(w => w.id === wardId);
-    
+    const municipality = municipalities.find((m) => m.id === municipalityId);
+    const ward = municipality?.wards.find((w) => w.id === wardId);
+
     if (!ward) return;
 
     const wardNumber = extractWardNumber(ward.name);
@@ -593,16 +593,16 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         OrderByField: 'id',
         IsAsc: true,
         Filters: [
-          { name: 'municipality_name', op: 'Equal', value: municipality.name },
-          { name: 'ward_number', op: 'Equal', value: wardNumber }
-        ]
+        { name: 'municipality_name', op: 'Equal', value: municipality.name },
+        { name: 'ward_number', op: 'Equal', value: wardNumber }]
+
       });
 
       const dbWardId = wardData?.List?.[0]?.id;
 
       if (dbWardId) {
         const boothId = crypto.randomUUID();
-        
+
         const { error: boothError } = await window.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
           ward_id: dbWardId,
           booth_number: boothId,
@@ -712,9 +712,9 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           OrderByField: 'id',
           IsAsc: true,
           Filters: [
-            { name: 'ward_id', op: 'Equal', value: dbWardId },
-            { name: 'booth_number', op: 'Equal', value: boothId }
-          ]
+          { name: 'ward_id', op: 'Equal', value: dbWardId },
+          { name: 'booth_number', op: 'Equal', value: boothId }]
+
         });
 
         if (votersData?.List) {
@@ -764,9 +764,9 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
   }, []);
 
   const addBoothVoters = useCallback(async (municipalityId: string, wardId: string, boothId: string, voters: VoterRecord[], fileName: string) => {
-    const municipality = municipalities.find(m => m.id === municipalityId);
-    const ward = municipality?.wards.find(w => w.id === wardId);
-    
+    const municipality = municipalities.find((m) => m.id === municipalityId);
+    const ward = municipality?.wards.find((w) => w.id === wardId);
+
     if (!ward) return;
 
     const wardNumber = extractWardNumber(ward.name);
@@ -779,9 +779,9 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         OrderByField: 'id',
         IsAsc: true,
         Filters: [
-          { name: 'municipality_name', op: 'Equal', value: municipality.name },
-          { name: 'ward_number', op: 'Equal', value: wardNumber }
-        ]
+        { name: 'municipality_name', op: 'Equal', value: municipality.name },
+        { name: 'ward_number', op: 'Equal', value: wardNumber }]
+
       });
 
       const dbWardId = wardData?.List?.[0]?.id;
