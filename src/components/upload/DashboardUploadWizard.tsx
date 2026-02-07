@@ -240,7 +240,7 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
             </Label>
             <Input
             id="municipality-name"
-            placeholder="e.g., चन्द्रागिरि or Chandragiri"
+            placeholder="e.g., कीर्तिपुर or Kirtipur"
             value={municipalityName}
             onChange={(e) => setMunicipalityName(e.target.value)}
             className="text-lg py-6" />

@@ -123,7 +123,7 @@ const CASTE_SURNAME_MAP: Record<string, string> = {
   'Kami': CASTE_CATEGORIES.DALIT,
   'Sarki': CASTE_CATEGORIES.DALIT,
   'Pariyar': CASTE_CATEGORIES.DALIT,
-  'Bishwakarma': CASTE_CATEGORIES.DALIT,
+  'Bishwakarma': CASTE_CATEGORIES.DALIT
 };
 
 /**
@@ -139,7 +139,7 @@ export function detectCasteFromName(fullName: string): {
 
   // Split name into parts
   const nameParts = fullName.trim().split(/\s+/);
-  
+
   // Check each part against the caste map
   for (const part of nameParts) {
     const normalized = part.trim();
@@ -179,8 +179,8 @@ export function getAllCasteCategories(): string[] {
  */
 export function getCasteStats(names: string[]): Record<string, number> {
   const stats: Record<string, number> = {};
-  
-  names.forEach(name => {
+
+  names.forEach((name) => {
     const { caste } = detectCasteFromName(name);
     const category = caste || CASTE_CATEGORIES.OTHER;
     stats[category] = (stats[category] || 0) + 1;
