@@ -8,8 +8,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  DropdownMenuTrigger } from
+'@/components/ui/dropdown-menu';
 import { Sun, Moon, Monitor, Languages, Search, User, LogOut, LogIn, UserPlus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -29,14 +29,14 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
       await logout();
       toast({
         title: 'Logged Out',
-        description: 'You have been successfully logged out.',
+        description: 'You have been successfully logged out.'
       });
       navigate('/signin');
     } catch (err) {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
@@ -55,8 +55,8 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
           <input
             type="text"
             placeholder={t('common.search')}
-            className="h-9 w-64 rounded-lg border border-input bg-background pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-          />
+            className="h-9 w-64 rounded-lg border border-input bg-background pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background" />
+
         </div>
 
         {/* Language Toggle */}
@@ -70,14 +70,14 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               onClick={() => setLanguage('en')}
-              className={language === 'en' ? 'bg-accent' : ''}
-            >
+              className={language === 'en' ? 'bg-accent' : ''}>
+
               {t('language.english')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setLanguage('ne')}
-              className={language === 'ne' ? 'bg-accent' : ''}
-            >
+              className={language === 'ne' ? 'bg-accent' : ''}>
+
               {t('language.nepali')}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -95,22 +95,22 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               onClick={() => setTheme('light')}
-              className={theme === 'light' ? 'bg-accent' : ''}
-            >
+              className={theme === 'light' ? 'bg-accent' : ''}>
+
               <Sun className="mr-2 h-4 w-4" />
               {t('theme.light')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setTheme('dark')}
-              className={theme === 'dark' ? 'bg-accent' : ''}
-            >
+              className={theme === 'dark' ? 'bg-accent' : ''}>
+
               <Moon className="mr-2 h-4 w-4" />
               {t('theme.dark')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setTheme('system')}
-              className={theme === 'system' ? 'bg-accent' : ''}
-            >
+              className={theme === 'system' ? 'bg-accent' : ''}>
+
               <Monitor className="mr-2 h-4 w-4" />
               {t('theme.system')}
             </DropdownMenuItem>
@@ -118,8 +118,8 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
         </DropdownMenu>
 
         {/* User Menu */}
-        {isAuthenticated && user ? (
-          <DropdownMenu>
+        {isAuthenticated && user ?
+        <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
                 <User className="h-4 w-4" />
@@ -137,30 +137,30 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
                 Log Out
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="flex items-center gap-2">
+          </DropdownMenu> :
+
+        <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/signin')}
-              className="h-9"
-            >
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/signin')}
+            className="h-9">
+
               <LogIn className="mr-2 h-4 w-4" />
               Sign In
             </Button>
             <Button
-              variant="default"
-              size="sm"
-              onClick={() => navigate('/signup')}
-              className="h-9"
-            >
+            variant="default"
+            size="sm"
+            onClick={() => navigate('/signup')}
+            className="h-9">
+
               <UserPlus className="mr-2 h-4 w-4" />
               Sign Up
             </Button>
           </div>
-        )}
+        }
       </div>
-    </header>
-  );
+    </header>);
+
 };

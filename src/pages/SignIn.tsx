@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const signinSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  password: z.string().min(1, 'Password is required')
 });
 
 type SigninFormData = z.infer<typeof signinSchema>;
@@ -29,8 +29,8 @@ export default function SignIn() {
     resolver: zodResolver(signinSchema),
     defaultValues: {
       email: '',
-      password: '',
-    },
+      password: ''
+    }
   });
 
   const onSubmit = async (data: SigninFormData) => {
@@ -38,14 +38,14 @@ export default function SignIn() {
     try {
       const { error } = await window.ezsite.apis.login({
         email: data.email,
-        password: data.password,
+        password: data.password
       });
 
       if (error) {
         toast({
           title: 'Sign in failed',
           description: error,
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
@@ -55,7 +55,7 @@ export default function SignIn() {
 
       toast({
         title: 'Welcome back!',
-        description: 'You have successfully signed in.',
+        description: 'You have successfully signed in.'
       });
 
       // Redirect to the page they tried to visit, or home
@@ -65,7 +65,7 @@ export default function SignIn() {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
@@ -85,39 +85,39 @@ export default function SignIn() {
               <FormField
                 control={form.control}
                 name="email"
-                render={({ field }) => (
-                  <FormItem>
+                render={({ field }) =>
+                <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
-                        type="email"
-                        placeholder="you@example.com"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      type="email"
+                      placeholder="you@example.com"
+                      disabled={isLoading}
+                      {...field} />
+
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
+                } />
+
               <FormField
                 control={form.control}
                 name="password"
-                render={({ field }) => (
-                  <FormItem>
+                render={({ field }) =>
+                <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <Input
-                        type="password"
-                        placeholder="••••••••"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      type="password"
+                      placeholder="••••••••"
+                      disabled={isLoading}
+                      {...field} />
+
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
+                } />
+
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In
@@ -134,6 +134,6 @@ export default function SignIn() {
           </p>
         </CardFooter>
       </Card>
-    </div>
-  );
+    </div>);
+
 }

@@ -14,10 +14,10 @@ const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(1, 'Please confirm your password'),
+  confirmPassword: z.string().min(1, 'Please confirm your password')
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
-  path: ['confirmPassword'],
+  path: ['confirmPassword']
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
@@ -33,8 +33,8 @@ export default function SignUp() {
       name: '',
       email: '',
       password: '',
-      confirmPassword: '',
-    },
+      confirmPassword: ''
+    }
   });
 
   const onSubmit = async (data: SignupFormData) => {
@@ -43,21 +43,21 @@ export default function SignUp() {
       const { error } = await window.ezsite.apis.register({
         name: data.name,
         email: data.email,
-        password: data.password,
+        password: data.password
       });
 
       if (error) {
         toast({
           title: 'Registration failed',
           description: error,
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
 
       toast({
         title: 'Registration successful!',
-        description: 'Please check your email to verify your account.',
+        description: 'Please check your email to verify your account.'
       });
 
       // Redirect to signin after successful registration
@@ -68,7 +68,7 @@ export default function SignUp() {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
@@ -88,75 +88,75 @@ export default function SignUp() {
               <FormField
                 control={form.control}
                 name="name"
-                render={({ field }) => (
-                  <FormItem>
+                render={({ field }) =>
+                <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input
-                        type="text"
-                        placeholder="John Doe"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      type="text"
+                      placeholder="John Doe"
+                      disabled={isLoading}
+                      {...field} />
+
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
+                } />
+
               <FormField
                 control={form.control}
                 name="email"
-                render={({ field }) => (
-                  <FormItem>
+                render={({ field }) =>
+                <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
-                        type="email"
-                        placeholder="you@example.com"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      type="email"
+                      placeholder="you@example.com"
+                      disabled={isLoading}
+                      {...field} />
+
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
+                } />
+
               <FormField
                 control={form.control}
                 name="password"
-                render={({ field }) => (
-                  <FormItem>
+                render={({ field }) =>
+                <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <Input
-                        type="password"
-                        placeholder="••••••••"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      type="password"
+                      placeholder="••••••••"
+                      disabled={isLoading}
+                      {...field} />
+
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
+                } />
+
               <FormField
                 control={form.control}
                 name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
+                render={({ field }) =>
+                <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
                       <Input
-                        type="password"
-                        placeholder="••••••••"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      type="password"
+                      placeholder="••••••••"
+                      disabled={isLoading}
+                      {...field} />
+
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
+                } />
+
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign Up
@@ -173,6 +173,6 @@ export default function SignUp() {
           </p>
         </CardFooter>
       </Card>
-    </div>
-  );
+    </div>);
+
 }

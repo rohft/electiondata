@@ -8,15 +8,22 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PublicRoute } from '@/components/auth/PublicRoute';
+import HomePage from '@/pages/Home';
 import SignUp from '@/pages/SignUp';
 import SignIn from '@/pages/SignIn';
 import OnAuthSuccess from '@/pages/OnAuthSuccess';
 
 const queryClient = new QueryClient();
+
+// Wrapper component for Home page to access navigation
+const HomePageWrapper = () => {
+  const navigate = useNavigate();
+  return <HomePage onEnterDashboard={() => navigate('/dashboard')} />;
+};
 
 const App = () =>
 <QueryClientProvider client={queryClient}>
@@ -31,8 +38,10 @@ const App = () =>
                     <Toaster />
                     <Sonner />
                     <Routes>
+                      {/* Public Home Page - Accessible to Everyone */}
+                      <Route path="/" element={<HomePageWrapper />} />
+                      
                       {/* Protected Routes - Require Authentication */}
-                      <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><MainLayout section="dashboard" /></ProtectedRoute>} />
                       <Route path="/upload" element={<ProtectedRoute><MainLayout section="upload" /></ProtectedRoute>} />
                       <Route path="/map" element={<ProtectedRoute><MainLayout section="map" /></ProtectedRoute>} />
