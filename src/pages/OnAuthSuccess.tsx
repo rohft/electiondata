@@ -43,6 +43,6 @@ export default function OnAuthSuccess() {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>);
+
 }

@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Sun, Moon, Monitor, Languages, Search, User, LogOut, LogIn, UserPlus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -18,62 +18,25 @@ interface HeaderProps {
   subtitle?: string;
 }
 
-interface UserInfo {
-  ID: number;
-  Name: string;
-  Email: string;
-  CreateTime: string;
-  Roles: string;
-}
-
 export const Header = ({ title, subtitle }: HeaderProps) => {
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    try {
-      const { data, error } = await window.ezsite.apis.getUserInfo();
-      if (!error && data) {
-        setUser(data);
-      }
-    } catch (err) {
-      // User not logged in
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleLogout = async () => {
     try {
-      const { error } = await window.ezsite.apis.logout();
-      if (error) {
-        toast({
-          title: 'Logout Failed',
-          description: error,
-          variant: 'destructive'
-        });
-        return;
-      }
-
+      await logout();
       toast({
         title: 'Logged Out',
         description: 'You have been successfully logged out.',
       });
-
-      setUser(null);
       navigate('/signin');
     } catch (err) {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }
   };
@@ -155,51 +118,47 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
         </DropdownMenu>
 
         {/* User Menu */}
-        {!isLoading && (
-          <>
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <User className="h-4 w-4" />
-                    <span className="sr-only">User menu</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{user.Name}</p>
-                    <p className="text-xs text-muted-foreground">{user.Email}</p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/signin')}
-                  className="h-9"
-                >
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Sign In
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => navigate('/signup')}
-                  className="h-9"
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Sign Up
-                </Button>
+        {isAuthenticated && user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <User className="h-4 w-4" />
+                <span className="sr-only">User menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-2 py-1.5">
+                <p className="text-sm font-medium">{user.Name}</p>
+                <p className="text-xs text-muted-foreground">{user.Email}</p>
               </div>
-            )}
-          </>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Log Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/signin')}
+              className="h-9"
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign In
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate('/signup')}
+              className="h-9"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Sign Up
+            </Button>
+          </div>
         )}
       </div>
     </header>
