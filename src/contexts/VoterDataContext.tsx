@@ -295,7 +295,61 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     }
   }, [municipalities]);
 
-  const clearAllData = useCallback(() => {
+  const clearAllData = useCallback(async () => {
+    try {
+      // Clear from database
+      const { data: wardsData } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+        PageNo: 1,
+        PageSize: 1000,
+        OrderByField: 'id',
+        IsAsc: true,
+        Filters: []
+      });
+
+      if (wardsData?.List) {
+        for (const ward of wardsData.List) {
+          // Delete all voters for this ward
+          const { data: votersData } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+            PageNo: 1,
+            PageSize: 100000,
+            OrderByField: 'id',
+            IsAsc: true,
+            Filters: [{ name: 'ward_id', op: 'Equal', value: ward.id }]
+          });
+
+          if (votersData?.List) {
+            for (const voter of votersData.List) {
+              await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+            }
+          }
+
+          // Delete all booths for this ward
+          const { data: boothsData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+            PageNo: 1,
+            PageSize: 1000,
+            OrderByField: 'id',
+            IsAsc: true,
+            Filters: [{ name: 'ward_id', op: 'Equal', value: ward.id }]
+          });
+
+          if (boothsData?.List) {
+            for (const booth of boothsData.List) {
+              await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
+            }
+          }
+
+          // Delete ward
+          await window.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: ward.id });
+        }
+      }
+
+      toast.success('All data cleared from database');
+    } catch (error) {
+      console.error('Error clearing data from database:', error);
+      toast.error('Failed to clear some data from database');
+    }
+
+    // Clear local state and localStorage
     setMunicipalities([]);
     localStorage.removeItem(STORAGE_KEY);
   }, []);
@@ -418,10 +472,11 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     if (!ward) return;
 
     const wardNumber = extractWardNumber(ward.name);
+    let deletionSuccessful = false;
 
     try {
       // Get ward from database
-      const { data: wardData } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+      const { data: wardData, error: wardFetchError } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
         PageNo: 1,
         PageSize: 1,
         OrderByField: 'id',
@@ -432,11 +487,15 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
       });
 
+      if (wardFetchError) {
+        throw new Error(`Failed to fetch ward: ${wardFetchError}`);
+      }
+
       const dbWardId = wardData?.List?.[0]?.id;
 
       if (dbWardId) {
         // Delete voters for this ward
-        const { data: votersData } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+        const { data: votersData, error: votersError } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
           PageNo: 1,
           PageSize: 100000,
           OrderByField: 'id',
@@ -444,14 +503,21 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           Filters: [{ name: 'ward_id', op: 'Equal', value: dbWardId }]
         });
 
+        if (votersError) {
+          throw new Error(`Failed to fetch voters: ${votersError}`);
+        }
+
         if (votersData?.List) {
           for (const voter of votersData.List) {
-            await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+            const { error: deleteError } = await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+            if (deleteError) {
+              throw new Error(`Failed to delete voter ${voter.id}: ${deleteError}`);
+            }
           }
         }
 
         // Delete booths for this ward
-        const { data: boothsData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+        const { data: boothsData, error: boothsError } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
           PageNo: 1,
           PageSize: 1000,
           OrderByField: 'id',
@@ -459,29 +525,58 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           Filters: [{ name: 'ward_id', op: 'Equal', value: dbWardId }]
         });
 
+        if (boothsError) {
+          throw new Error(`Failed to fetch booths: ${boothsError}`);
+        }
+
         if (boothsData?.List) {
           for (const booth of boothsData.List) {
-            await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
+            const { error: deleteError } = await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
+            if (deleteError) {
+              throw new Error(`Failed to delete booth ${booth.id}: ${deleteError}`);
+            }
           }
         }
 
         // Delete ward
-        await window.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: dbWardId });
+        const { error: wardDeleteError } = await window.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: dbWardId });
+        if (wardDeleteError) {
+          throw new Error(`Failed to delete ward: ${wardDeleteError}`);
+        }
+
+        deletionSuccessful = true;
+      } else {
+        // No ward found in database, still update local state
+        deletionSuccessful = true;
       }
     } catch (error) {
       console.error('Error deleting ward from database:', error);
+      toast.error(`Failed to delete ward: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Don't update local state if database deletion failed
+      return;
     }
 
-    // Update local state
-    setMunicipalities((prev) => {
-      return prev.map((m) => {
-        if (m.id === municipalityId) {
-          const updatedWards = m.wards.filter((w) => w.id !== wardId);
-          return { ...m, wards: updatedWards };
+    // Only update local state if database deletion was successful
+    if (deletionSuccessful) {
+      setMunicipalities((prev) => {
+        const updated = prev.map((m) => {
+          if (m.id === municipalityId) {
+            const updatedWards = m.wards.filter((w) => w.id !== wardId);
+            return { ...m, wards: updatedWards };
+          }
+          return m;
+        }).filter((m) => m.wards.length > 0);
+
+        // Immediately save to localStorage after successful deletion
+        try {
+          localStorage.setItem(STORAGE_KEY, serializeData(updated));
+        } catch (error) {
+          console.error('Error saving to localStorage after deletion:', error);
         }
-        return m;
-      }).filter((m) => m.wards.length > 0);
-    });
+
+        return updated;
+      });
+    }
   }, [municipalities]);
 
   const updateVoterRecord = useCallback((
@@ -691,9 +786,11 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
   }, []);
 
   const removeBoothCentre = useCallback(async (municipalityId: string, wardId: string, boothId: string) => {
+    let deletionSuccessful = false;
+
     // Delete from database
     try {
-      const { data: boothData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+      const { data: boothData, error: boothError } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
         PageNo: 1,
         PageSize: 1,
         OrderByField: 'id',
@@ -701,12 +798,16 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         Filters: [{ name: 'booth_number', op: 'Equal', value: boothId }]
       });
 
+      if (boothError) {
+        throw new Error(`Failed to fetch booth: ${boothError}`);
+      }
+
       const dbBoothId = boothData?.List?.[0]?.id;
       const dbWardId = boothData?.List?.[0]?.ward_id;
 
       if (dbBoothId) {
         // Delete voters for this booth
-        const { data: votersData } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+        const { data: votersData, error: votersError } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
           PageNo: 1,
           PageSize: 100000,
           OrderByField: 'id',
@@ -717,38 +818,66 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
         });
 
+        if (votersError) {
+          throw new Error(`Failed to fetch voters: ${votersError}`);
+        }
+
         if (votersData?.List) {
           for (const voter of votersData.List) {
-            await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+            const { error: deleteError } = await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+            if (deleteError) {
+              throw new Error(`Failed to delete voter ${voter.id}: ${deleteError}`);
+            }
           }
         }
 
         // Delete booth
-        await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: dbBoothId });
+        const { error: deleteBoothError } = await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: dbBoothId });
+        if (deleteBoothError) {
+          throw new Error(`Failed to delete booth: ${deleteBoothError}`);
+        }
+
+        deletionSuccessful = true;
+      } else {
+        // No booth found in database, still update local state
+        deletionSuccessful = true;
       }
     } catch (error) {
       console.error('Error deleting booth from database:', error);
+      toast.error(`Failed to delete booth: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return;
     }
 
-    // Update local state
-    setMunicipalities((prev) => {
-      return prev.map((m) => {
-        if (m.id === municipalityId) {
-          return {
-            ...m,
-            wards: m.wards.map((w) => {
-              if (w.id === wardId && w.boothCentres) {
-                const updatedBooths = w.boothCentres.filter((b) => b.id !== boothId);
-                const allVoters = updatedBooths.flatMap((b) => b.voters || []);
-                return { ...w, boothCentres: updatedBooths, voters: allVoters };
-              }
-              return w;
-            })
-          };
+    // Update local state only if deletion was successful
+    if (deletionSuccessful) {
+      setMunicipalities((prev) => {
+        const updated = prev.map((m) => {
+          if (m.id === municipalityId) {
+            return {
+              ...m,
+              wards: m.wards.map((w) => {
+                if (w.id === wardId && w.boothCentres) {
+                  const updatedBooths = w.boothCentres.filter((b) => b.id !== boothId);
+                  const allVoters = updatedBooths.flatMap((b) => b.voters || []);
+                  return { ...w, boothCentres: updatedBooths, voters: allVoters };
+                }
+                return w;
+              })
+            };
+          }
+          return m;
+        });
+
+        // Immediately save to localStorage after successful deletion
+        try {
+          localStorage.setItem(STORAGE_KEY, serializeData(updated));
+        } catch (error) {
+          console.error('Error saving to localStorage after deletion:', error);
         }
-        return m;
+
+        return updated;
       });
-    });
+    }
   }, []);
 
   // Sync ward.voters from booth centres
