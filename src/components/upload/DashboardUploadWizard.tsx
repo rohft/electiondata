@@ -29,7 +29,7 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const totalSteps = 4;
-  const progress = (step / totalSteps) * 100;
+  const progress = step / totalSteps * 100;
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,7 +49,7 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
     setWardBooths(
       Array.from({ length: wardCount }, (_, i) => ({
         wardNumber: i + 1,
-        booths: [{ id: crypto.randomUUID(), name: 'Booth 1' }],
+        booths: [{ id: crypto.randomUUID(), name: 'Booth 1' }]
       }))
     );
   };
@@ -57,14 +57,14 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
   const initializeBoothUploads = () => {
     setBoothUploads(
       wardBooths.flatMap((ward) =>
-        ward.booths.map((booth) => ({
-          wardNumber: ward.wardNumber,
-          boothId: booth.id,
-          boothName: booth.name,
-          file: null,
-          records: [],
-          status: 'pending' as const,
-        }))
+      ward.booths.map((booth) => ({
+        wardNumber: ward.wardNumber,
+        boothId: booth.id,
+        boothName: booth.name,
+        file: null,
+        records: [],
+        status: 'pending' as const
+      }))
       )
     );
   };
@@ -80,11 +80,11 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
   };
 
   const handleBoothDataUpdate = (
-    index: number,
-    file: File | null,
-    records: ParsedRecord[],
-    status: 'pending' | 'uploaded' | 'error'
-  ) => {
+  index: number,
+  file: File | null,
+  records: ParsedRecord[],
+  status: 'pending' | 'uploaded' | 'error') =>
+  {
     setBoothUploads((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], file, records, status, fileName: file?.name };
@@ -107,9 +107,9 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
             const surname = surnameFromRecord || surnameFromName;
             const voterIdFromRecord = record.voterId?.toString().trim();
             const voterId =
-              voterIdFromRecord && voterIdFromRecord !== ''
-                ? voterIdFromRecord
-                : crypto.randomUUID();
+            voterIdFromRecord && voterIdFromRecord !== '' ?
+            voterIdFromRecord :
+            crypto.randomUUID();
 
             return {
               id: voterId,
@@ -121,7 +121,7 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
               caste: record.caste || '',
               surname,
               isNewar: isNewarName(record.voterName),
-              originalData: record.originalData,
+              originalData: record.originalData
             };
           });
         }
@@ -132,7 +132,7 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
           createdAt: new Date(),
           voters,
           fileName: uploadData?.fileName || '',
-          uploadedAt: new Date(),
+          uploadedAt: new Date()
         };
       });
 
@@ -145,7 +145,7 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
         voters: allVoters,
         uploadedAt: new Date(),
         fileName: '',
-        boothCentres,
+        boothCentres
       });
     });
 
@@ -155,8 +155,8 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
     toast({
       title: t('upload.success'),
       description: `${wardBooths.length} ward(s) with ${totalBoothCount} booth(s) created${
-        uploadedBoothsCount > 0 ? `, ${uploadedBoothsCount} with data` : ''
-      }`,
+      uploadedBoothsCount > 0 ? `, ${uploadedBoothsCount} with data` : ''}`
+
     });
 
     onComplete();
@@ -185,8 +185,8 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
       <Progress value={progress} className="h-1" />
 
       {/* Step 1: Municipality Name */}
-      {step === 1 && (
-        <div className="space-y-6">
+      {step === 1 &&
+      <div className="space-y-6">
           <div className="flex items-center gap-3 text-muted-foreground mb-4">
             <Building2 className="h-5 w-5" />
             <span className="text-sm">
@@ -197,36 +197,36 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
           <div className="space-y-3">
             <Label className="text-base font-medium">Municipality Logo (Optional)</Label>
             <div className="flex items-center gap-4">
-              {municipalityLogo ? (
-                <div className="relative">
+              {municipalityLogo ?
+            <div className="relative">
                   <img
-                    src={municipalityLogo}
-                    alt="Municipality Logo"
-                    className="h-20 w-20 object-contain rounded-lg border border-border"
-                  />
+                src={municipalityLogo}
+                alt="Municipality Logo"
+                className="h-20 w-20 object-contain rounded-lg border border-border" />
+
                   <button
-                    onClick={() => setMunicipalityLogo(null)}
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
-                  >
+                onClick={() => setMunicipalityLogo(null)}
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
+
                     <X className="h-3 w-3" />
                   </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => logoInputRef.current?.click()}
-                  className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-accent transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-accent"
-                >
+                </div> :
+
+            <button
+              onClick={() => logoInputRef.current?.click()}
+              className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-accent transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-accent">
+
                   <ImagePlus className="h-6 w-6" />
                   <span className="text-xs">Add Logo</span>
                 </button>
-              )}
+            }
               <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleLogoUpload}
-                className="hidden"
-              />
+              ref={logoInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden" />
+
               <div className="text-sm text-muted-foreground">
                 <p>Upload municipality logo</p>
                 <p className="text-xs">PNG, JPG up to 2MB</p>
@@ -239,20 +239,20 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
               {t('upload.municipalityName')}
             </Label>
             <Input
-              id="municipality-name"
-              placeholder="e.g., चन्द्रागिरि or Chandragiri"
-              value={municipalityName}
-              onChange={(e) => setMunicipalityName(e.target.value)}
-              className="text-lg py-6"
-            />
+            id="municipality-name"
+            placeholder="e.g., चन्द्रागिरि or Chandragiri"
+            value={municipalityName}
+            onChange={(e) => setMunicipalityName(e.target.value)}
+            className="text-lg py-6" />
+
             <p className="text-sm text-muted-foreground">{t('upload.municipalityHint')}</p>
           </div>
         </div>
-      )}
+      }
 
       {/* Step 2: Ward Count */}
-      {step === 2 && (
-        <div className="space-y-6">
+      {step === 2 &&
+      <div className="space-y-6">
           <div className="flex items-center gap-3 text-muted-foreground mb-4">
             <Hash className="h-5 w-5" />
             <span className="text-sm">
@@ -264,25 +264,25 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
               {t('upload.numberOfWards')}
             </Label>
             <Input
-              id="ward-count"
-              type="number"
-              min={1}
-              max={50}
-              placeholder="e.g., 19"
-              value={wardCount}
-              onChange={(e) => setWardCount(e.target.value ? parseInt(e.target.value) : '')}
-              className="text-lg py-6"
-            />
+            id="ward-count"
+            type="number"
+            min={1}
+            max={50}
+            placeholder="e.g., 19"
+            value={wardCount}
+            onChange={(e) => setWardCount(e.target.value ? parseInt(e.target.value) : '')}
+            className="text-lg py-6" />
+
             <p className="text-sm text-muted-foreground">
               {t('upload.wardCountHint')} {municipalityName || 'the municipality'}
             </p>
           </div>
         </div>
-      )}
+      }
 
       {/* Step 3: Booth Setup */}
-      {step === 3 && (
-        <div className="space-y-6">
+      {step === 3 &&
+      <div className="space-y-6">
           <div className="flex items-center gap-3 text-muted-foreground mb-4">
             <MapPin className="h-5 w-5" />
             <span className="text-sm">
@@ -291,22 +291,22 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
           </div>
           <BoothSetupStep wardBooths={wardBooths} onWardBoothsChange={setWardBooths} />
         </div>
-      )}
+      }
 
       {/* Step 4: Upload Voter Data */}
-      {step === 4 && (
-        <div className="space-y-6">
+      {step === 4 &&
+      <div className="space-y-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm text-muted-foreground">
               {t('upload.step')} 4 {t('common.of')} {totalSteps} • {t('upload.uploadFilesForWards')}
             </span>
           </div>
           <BoothFileUploader
-            boothUploads={boothUploads}
-            onBoothDataUpdate={handleBoothDataUpdate}
-          />
+          boothUploads={boothUploads}
+          onBoothDataUpdate={handleBoothDataUpdate} />
+
         </div>
-      )}
+      }
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4 border-t border-border/50">
@@ -314,24 +314,24 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
           variant="outline"
           onClick={handleBack}
           disabled={step === 1}
-          className={cn(step === 1 && 'invisible')}
-        >
+          className={cn(step === 1 && 'invisible')}>
+
           <ArrowLeft className="h-4 w-4 mr-2" />
           {t('common.back')}
         </Button>
 
-        {step < totalSteps ? (
-          <Button onClick={handleNext} disabled={!canProceed()}>
+        {step < totalSteps ?
+        <Button onClick={handleNext} disabled={!canProceed()}>
             {t('common.next')}
             <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        ) : (
-          <Button onClick={handleSaveAndComplete}>
+          </Button> :
+
+        <Button onClick={handleSaveAndComplete}>
             <Check className="h-4 w-4 mr-2" />
             {t('upload.saveAndView')}
           </Button>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 };

@@ -12,8 +12,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+const App = () =>
+<QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <ThemeProvider>
         <LanguageProvider>
@@ -28,7 +28,7 @@ const App = () => (
                       <Route path="/dashboard" element={<MainLayout section="dashboard" />} />
                       <Route path="/upload" element={<MainLayout section="upload" />} />
                       <Route path="/map" element={<MainLayout section="map" />} />
-                      <Route path="/caste" element={<MainLayout section="caste" />} />
+
                       <Route path="/category-mgmt" element={<MainLayout section="category-mgmt" />} />
                       <Route path="/segments" element={<MainLayout section="segments" />} />
                       <Route path="/comparison" element={<MainLayout section="comparison" />} />
@@ -46,7 +46,7 @@ const App = () => (
         </LanguageProvider>
       </ThemeProvider>
     </BrowserRouter>
-  </QueryClientProvider>
-);
+  </QueryClientProvider>;
+
 
 export default App;

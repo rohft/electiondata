@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+  PopoverTrigger } from
+'@/components/ui/popover';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +16,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  AlertDialogTitle } from
+'@/components/ui/alert-dialog';
 import { Plus, MapPin, MoreHorizontal, Edit3, Trash2, Check, X, Upload, Loader2, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseFile, getSupportedFormats, ParsedRecord } from '@/lib/fileParser';
@@ -36,7 +36,7 @@ export const ExplorerBoothManager: React.FC<ExplorerBoothManagerProps> = ({
   municipalityName,
   wardId,
   wardName,
-  boothCentres,
+  boothCentres
 }) => {
   const { addBoothCentre, updateBoothCentre, removeBoothCentre, addBoothVoters } = useVoterData();
 
@@ -84,7 +84,7 @@ export const ExplorerBoothManager: React.FC<ExplorerBoothManagerProps> = ({
         return;
       }
 
-      const voters = records.map(record => {
+      const voters = records.map((record) => {
         const surnameFromRecord = record.surname?.trim();
         const surnameFromName = record.voterName.split(' ').pop() || '';
         const surname = surnameFromRecord || surnameFromName;
@@ -126,59 +126,59 @@ export const ExplorerBoothManager: React.FC<ExplorerBoothManagerProps> = ({
   return (
     <div className="space-y-0.5">
       {/* Booth items */}
-      {boothCentres.map((booth) => (
-        <div key={booth.id} className="group flex items-center">
-          {renamingId === booth.id ? (
-            <div className="flex items-center gap-1 flex-1 px-2 py-0.5">
+      {boothCentres.map((booth) =>
+      <div key={booth.id} className="group flex items-center">
+          {renamingId === booth.id ?
+        <div className="flex items-center gap-1 flex-1 px-2 py-0.5">
               <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
               <Input
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleRename(booth.id);
-                  if (e.key === 'Escape') setRenamingId(null);
-                }}
-                className="h-6 text-xs px-1.5 py-0"
-                autoFocus
-              />
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRename(booth.id);
+              if (e.key === 'Escape') setRenamingId(null);
+            }}
+            className="h-6 text-xs px-1.5 py-0"
+            autoFocus />
+
               <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => handleRename(booth.id)}>
                 <Check className="h-3 w-3 text-accent" />
               </Button>
               <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => setRenamingId(null)}>
                 <X className="h-3 w-3" />
               </Button>
-            </div>
-          ) : (
-            <>
+            </div> :
+
+        <>
               <div className="flex-1 flex items-center gap-1.5 h-6 px-2 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3 shrink-0 text-accent" />
                 <span className="truncate">{booth.name}</span>
-                {(booth.voters?.length || 0) > 0 && (
-                  <Badge variant="outline" className="text-[10px] h-4 px-1 ml-auto">
+                {(booth.voters?.length || 0) > 0 &&
+            <Badge variant="outline" className="text-[10px] h-4 px-1 ml-auto">
                     {booth.voters.length}
                   </Badge>
-                )}
-                {booth.fileName && (
-                  <FileSpreadsheet className="h-2.5 w-2.5 shrink-0 text-muted-foreground/60" />
-                )}
+            }
+                {booth.fileName &&
+            <FileSpreadsheet className="h-2.5 w-2.5 shrink-0 text-muted-foreground/60" />
+            }
               </div>
               <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 {/* Upload to booth */}
-                {uploadingBoothId === booth.id ? (
-                  <Loader2 className="h-3 w-3 animate-spin text-accent mx-1" />
-                ) : (
-                  <label className="cursor-pointer">
+                {uploadingBoothId === booth.id ?
+            <Loader2 className="h-3 w-3 animate-spin text-accent mx-1" /> :
+
+            <label className="cursor-pointer">
                     <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" asChild>
                       <span><Upload className="h-3 w-3" /></span>
                     </Button>
                     <input
-                      type="file"
-                      accept={getSupportedFormats()}
-                      onChange={(e) => handleFileInput(booth.id, e)}
-                      className="hidden"
-                    />
+                type="file"
+                accept={getSupportedFormats()}
+                onChange={(e) => handleFileInput(booth.id, e)}
+                className="hidden" />
+
                   </label>
-                )}
+            }
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0">
@@ -187,20 +187,20 @@ export const ExplorerBoothManager: React.FC<ExplorerBoothManagerProps> = ({
                   </PopoverTrigger>
                   <PopoverContent className="w-32 p-1" align="end" side="right">
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start gap-2 h-7 text-xs"
-                      onClick={() => startRename(booth)}
-                    >
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-7 text-xs"
+                  onClick={() => startRename(booth)}>
+
                       <Edit3 className="h-3 w-3" />
                       Rename
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start gap-2 h-7 text-xs text-destructive hover:text-destructive"
-                      onClick={() => setDeleteTarget(booth)}
-                    >
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-7 text-xs text-destructive hover:text-destructive"
+                  onClick={() => setDeleteTarget(booth)}>
+
                       <Trash2 className="h-3 w-3" />
                       Delete
                     </Button>
@@ -208,43 +208,43 @@ export const ExplorerBoothManager: React.FC<ExplorerBoothManagerProps> = ({
                 </Popover>
               </div>
             </>
-          )}
+        }
         </div>
-      ))}
+      )}
 
       {/* Add new booth inline */}
-      {isAdding ? (
-        <div className="flex items-center gap-1 px-2 py-0.5">
+      {isAdding ?
+      <div className="flex items-center gap-1 px-2 py-0.5">
           <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
           <Input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAdd();
-              if (e.key === 'Escape') { setIsAdding(false); setNewName(''); }
-            }}
-            placeholder="Booth name..."
-            className="h-6 text-xs px-1.5 py-0"
-            autoFocus
-          />
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleAdd();
+            if (e.key === 'Escape') {setIsAdding(false);setNewName('');}
+          }}
+          placeholder="Booth name..."
+          className="h-6 text-xs px-1.5 py-0"
+          autoFocus />
+
           <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={handleAdd}>
             <Check className="h-3 w-3 text-accent" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => { setIsAdding(false); setNewName(''); }}>
+          <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => {setIsAdding(false);setNewName('');}}>
             <X className="h-3 w-3" />
           </Button>
-        </div>
-      ) : (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-1.5 h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-          onClick={() => setIsAdding(true)}
-        >
+        </div> :
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start gap-1.5 h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+        onClick={() => setIsAdding(true)}>
+
           <Plus className="h-3 w-3 shrink-0" />
           <span>Add Booth...</span>
         </Button>
-      )}
+      }
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
@@ -259,13 +259,13 @@ export const ExplorerBoothManager: React.FC<ExplorerBoothManagerProps> = ({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>);
+
 };

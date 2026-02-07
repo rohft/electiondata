@@ -3,90 +3,22 @@ import { Category } from "@/types/category";
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
-const defaultCategories: Category[] = [
-  {
-    id: "1",
-    name: "Electronics",
-    parentId: null,
-    linkedIds: [],
-    children: [
-      {
-        id: "1-1",
-        name: "Computers",
-        parentId: "1",
-        linkedIds: [],
-        children: [
-          { id: "1-1-1", name: "Laptops", parentId: "1-1", linkedIds: [], children: [] },
-          { id: "1-1-2", name: "Desktops", parentId: "1-1", linkedIds: [], children: [] },
-          { id: "1-1-3", name: "Tablets", parentId: "1-1", linkedIds: [], children: [] },
-        ],
-      },
-      {
-        id: "1-2",
-        name: "Phones",
-        parentId: "1",
-        linkedIds: [],
-        children: [
-          { id: "1-2-1", name: "Smartphones", parentId: "1-2", linkedIds: [], children: [] },
-          { id: "1-2-2", name: "Feature Phones", parentId: "1-2", linkedIds: [], children: [] },
-        ],
-      },
-      { id: "1-3", name: "Accessories", parentId: "1", linkedIds: [], children: [] },
-    ],
-  },
-  {
-    id: "2",
-    name: "Clothing",
-    parentId: null,
-    linkedIds: [],
-    children: [
-      {
-        id: "2-1",
-        name: "Men",
-        parentId: "2",
-        linkedIds: [],
-        children: [
-          { id: "2-1-1", name: "Shirts", parentId: "2-1", linkedIds: [], children: [] },
-          { id: "2-1-2", name: "Pants", parentId: "2-1", linkedIds: [], children: [] },
-        ],
-      },
-      {
-        id: "2-2",
-        name: "Women",
-        parentId: "2",
-        linkedIds: [],
-        children: [
-          { id: "2-2-1", name: "Dresses", parentId: "2-2", linkedIds: [], children: [] },
-          { id: "2-2-2", name: "Tops", parentId: "2-2", linkedIds: [], children: [] },
-        ],
-      },
-    ],
-  },
-  {
-    id: "3",
-    name: "Home & Garden",
-    parentId: null,
-    linkedIds: [],
-    children: [
-      { id: "3-1", name: "Furniture", parentId: "3", linkedIds: [], children: [] },
-      { id: "3-2", name: "Kitchen", parentId: "3", linkedIds: [], children: [] },
-    ],
-  },
-];
+const defaultCategories: Category[] = [];
+
 
 function findAndUpdate(
-  categories: Category[],
-  id: string,
-  updater: (cat: Category) => Category | null
-): Category[] {
-  return categories
-    .map((cat) => {
-      if (cat.id === id) {
-        return updater(cat);
-      }
-      return { ...cat, children: findAndUpdate(cat.children, id, updater) };
-    })
-    .filter(Boolean) as Category[];
+categories: Category[],
+id: string,
+updater: (cat: Category) => Category | null)
+: Category[] {
+  return categories.
+  map((cat) => {
+    if (cat.id === id) {
+      return updater(cat);
+    }
+    return { ...cat, children: findAndUpdate(cat.children, id, updater) };
+  }).
+  filter(Boolean) as Category[];
 }
 
 function addChildTo(categories: Category[], parentId: string, child: Category): Category[] {
@@ -98,8 +30,8 @@ function addChildTo(categories: Category[], parentId: string, child: Category): 
   });
 }
 
-function flattenCategories(categories: Category[], depth = 0): { cat: Category; depth: number }[] {
-  const result: { cat: Category; depth: number }[] = [];
+function flattenCategories(categories: Category[], depth = 0): {cat: Category;depth: number;}[] {
+  const result: {cat: Category;depth: number;}[] = [];
   for (const cat of categories) {
     result.push({ cat, depth });
     result.push(...flattenCategories(cat.children, depth + 1));
@@ -126,7 +58,7 @@ export function useCategoryTree() {
       name,
       parentId,
       linkedIds: [],
-      children: [],
+      children: []
     };
     if (parentId === null) {
       setCategories((prev) => [...prev, newCat]);
@@ -137,7 +69,7 @@ export function useCategoryTree() {
 
   const renameCategory = useCallback((id: string, newName: string) => {
     setCategories((prev) =>
-      findAndUpdate(prev, id, (cat) => ({ ...cat, name: newName }))
+    findAndUpdate(prev, id, (cat) => ({ ...cat, name: newName }))
     );
   }, []);
 
@@ -147,12 +79,12 @@ export function useCategoryTree() {
       if (filtered.length !== prev.length) return filtered;
       return findAndUpdate(prev, id, () => null);
     });
-    setSelectedId((prev) => (prev === id ? null : prev));
+    setSelectedId((prev) => prev === id ? null : prev);
   }, []);
 
   const bulkUpload = useCallback((text: string, parentId: string | null) => {
     const lines = text.split("\n").filter((l) => l.trim());
-    const stack: { id: string; indent: number }[] = [];
+    const stack: {id: string;indent: number;}[] = [];
 
     for (const line of lines) {
       const indent = line.search(/\S/);
@@ -187,15 +119,15 @@ export function useCategoryTree() {
 
       let updated = findAndUpdate(prev, sourceId, (cat) => ({
         ...cat,
-        linkedIds: cat.linkedIds.some((l) => l.id === targetId)
-          ? cat.linkedIds
-          : [...cat.linkedIds, { id: targetId, name }],
+        linkedIds: cat.linkedIds.some((l) => l.id === targetId) ?
+        cat.linkedIds :
+        [...cat.linkedIds, { id: targetId, name }]
       }));
       updated = findAndUpdate(updated, targetId, (cat) => ({
         ...cat,
-        linkedIds: cat.linkedIds.some((l) => l.id === sourceId)
-          ? cat.linkedIds
-          : [...cat.linkedIds, { id: sourceId, name }],
+        linkedIds: cat.linkedIds.some((l) => l.id === sourceId) ?
+        cat.linkedIds :
+        [...cat.linkedIds, { id: sourceId, name }]
       }));
       return updated;
     });
@@ -205,11 +137,11 @@ export function useCategoryTree() {
     setCategories((prev) => {
       let updated = findAndUpdate(prev, sourceId, (cat) => ({
         ...cat,
-        linkedIds: cat.linkedIds.filter((l) => l.id !== targetId),
+        linkedIds: cat.linkedIds.filter((l) => l.id !== targetId)
       }));
       updated = findAndUpdate(updated, targetId, (cat) => ({
         ...cat,
-        linkedIds: cat.linkedIds.filter((l) => l.id !== sourceId),
+        linkedIds: cat.linkedIds.filter((l) => l.id !== sourceId)
       }));
       return updated;
     });
@@ -219,17 +151,17 @@ export function useCategoryTree() {
     setCategories((prev) => {
       let updated = findAndUpdate(prev, sourceId, (cat) => ({
         ...cat,
-        linkedIds: cat.linkedIds.map((l) => l.id === targetId ? { ...l, name: newName } : l),
+        linkedIds: cat.linkedIds.map((l) => l.id === targetId ? { ...l, name: newName } : l)
       }));
       updated = findAndUpdate(updated, targetId, (cat) => ({
         ...cat,
-        linkedIds: cat.linkedIds.map((l) => l.id === sourceId ? { ...l, name: newName } : l),
+        linkedIds: cat.linkedIds.map((l) => l.id === sourceId ? { ...l, name: newName } : l)
       }));
       return updated;
     });
   }, []);
 
-  const getAllTags = useCallback((): { cat: Category; depth: number }[] => {
+  const getAllTags = useCallback((): {cat: Category;depth: number;}[] => {
     return flattenCategories(categories);
   }, [categories]);
 
@@ -244,6 +176,6 @@ export function useCategoryTree() {
     getAllTags,
     linkCategory,
     unlinkCategory,
-    renameLinkCategory,
+    renameLinkCategory
   };
 }

@@ -16,69 +16,69 @@ import { toast } from 'sonner';
 export const SettingsSection = () => {
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
-  const { 
-    nepaliFont, 
-    englishFont, 
-    nepaliFontOptions, 
+  const {
+    nepaliFont,
+    englishFont,
+    nepaliFontOptions,
     englishFontOptions,
     customFonts,
-    setNepaliFont, 
+    setNepaliFont,
     setEnglishFont,
     addCustomFont,
     removeCustomFont
   } = useFont();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
- 
+
   const handleFontUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     const validExtensions = ['.otf', '.ttf', '.woff', '.woff2'];
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    
+
     if (!validExtensions.includes(ext)) {
       toast.error('Invalid font format. Use .otf, .ttf, .woff, or .woff2');
       return;
     }
-    
+
     try {
       // Read file as data URL
       const reader = new FileReader();
       reader.onload = (e) => {
         const url = e.target?.result as string;
         const fontName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
-        
+
         addCustomFont({
           id: Date.now().toString(),
           name: fontName,
           fileName: file.name,
-          url: url,
+          url: url
         });
-        
+
         toast.success(`Font "${fontName}" uploaded successfully`);
       };
       reader.readAsDataURL(file);
     } catch (error) {
       toast.error('Failed to upload font');
     }
-    
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
- 
+
   const themeOptions = [
-    { value: 'light', label: t('theme.light'), icon: Sun },
-    { value: 'dark', label: t('theme.dark'), icon: Moon },
-    { value: 'system', label: t('theme.system'), icon: Monitor },
-  ] as const;
+  { value: 'light', label: t('theme.light'), icon: Sun },
+  { value: 'dark', label: t('theme.dark'), icon: Moon },
+  { value: 'system', label: t('theme.system'), icon: Monitor }] as
+  const;
 
   const languageOptions = [
-    { value: 'en', label: 'English', flag: '🇬🇧' },
-    { value: 'ne', label: 'नेपाली', flag: '🇳🇵' },
-  ] as const;
+  { value: 'en', label: 'English', flag: '🇬🇧' },
+  { value: 'ne', label: 'नेपाली', flag: '🇳🇵' }] as
+  const;
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -103,17 +103,17 @@ export const SettingsSection = () => {
                     onClick={() => setTheme(option.value)}
                     className={cn(
                       'flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all',
-                      theme === option.value
-                        ? 'border-accent bg-accent/10'
-                        : 'border-border hover:border-accent/50'
-                    )}
-                  >
+                      theme === option.value ?
+                      'border-accent bg-accent/10' :
+                      'border-border hover:border-accent/50'
+                    )}>
+
                     <Icon className={cn('h-5 w-5', theme === option.value ? 'text-accent' : 'text-muted-foreground')} />
                     <span className={cn('text-sm font-medium', theme === option.value ? 'text-foreground' : 'text-muted-foreground')}>
                       {option.label}
                     </span>
-                  </button>
-                );
+                  </button>);
+
               })}
             </div>
           </div>
@@ -138,11 +138,11 @@ export const SettingsSection = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {nepaliFontOptions.map(font => (
-                  <SelectItem key={font} value={font}>
+                {nepaliFontOptions.map((font) =>
+                <SelectItem key={font} value={font}>
                     <span style={{ fontFamily: font }}>{font}</span>
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
@@ -158,11 +158,11 @@ export const SettingsSection = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {englishFontOptions.map(font => (
-                  <SelectItem key={font} value={font}>
+                {englishFontOptions.map((font) =>
+                <SelectItem key={font} value={font}>
                     <span style={{ fontFamily: font }}>{font}</span>
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
@@ -182,41 +182,41 @@ export const SettingsSection = () => {
                 type="file"
                 accept=".otf,.ttf,.woff,.woff2"
                 onChange={handleFontUpload}
-                className="flex-1"
-              />
+                className="flex-1" />
+
             </div>
             <p className="text-xs text-muted-foreground">
               Supported formats: .otf, .ttf, .woff, .woff2
             </p>
             
             {/* Custom Fonts List */}
-            {customFonts.length > 0 && (
-              <div className="space-y-2 mt-4">
+            {customFonts.length > 0 &&
+            <div className="space-y-2 mt-4">
                 <Label className="text-xs text-muted-foreground">Custom Fonts:</Label>
                 <div className="flex flex-wrap gap-2">
-                  {customFonts.map(font => (
-                    <Badge 
-                      key={font.id} 
-                      variant="secondary" 
-                      className="gap-1 pr-1"
-                    >
+                  {customFonts.map((font) =>
+                <Badge
+                  key={font.id}
+                  variant="secondary"
+                  className="gap-1 pr-1">
+
                       <span style={{ fontFamily: font.name }}>{font.name}</span>
-                      {(nepaliFont === font.name || englishFont === font.name) && (
-                        <Check className="h-3 w-3 text-accent ml-1" />
-                      )}
+                      {(nepaliFont === font.name || englishFont === font.name) &&
+                  <Check className="h-3 w-3 text-accent ml-1" />
+                  }
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 ml-1 hover:bg-destructive/20"
-                        onClick={() => removeCustomFont(font.id)}
-                      >
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 ml-1 hover:bg-destructive/20"
+                    onClick={() => removeCustomFont(font.id)}>
+
                         <X className="h-3 w-3" />
                       </Button>
                     </Badge>
-                  ))}
+                )}
                 </div>
               </div>
-            )}
+            }
           </div>
         </CardContent>
       </Card>
@@ -232,23 +232,23 @@ export const SettingsSection = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
-            {languageOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setLanguage(option.value)}
-                className={cn(
-                  'flex items-center gap-3 rounded-xl border-2 p-4 transition-all',
-                  language === option.value
-                    ? 'border-accent bg-accent/10'
-                    : 'border-border hover:border-accent/50'
-                )}
-              >
+            {languageOptions.map((option) =>
+            <button
+              key={option.value}
+              onClick={() => setLanguage(option.value)}
+              className={cn(
+                'flex items-center gap-3 rounded-xl border-2 p-4 transition-all',
+                language === option.value ?
+                'border-accent bg-accent/10' :
+                'border-border hover:border-accent/50'
+              )}>
+
                 <span className="text-2xl">{option.flag}</span>
                 <span className={cn('font-medium', language === option.value ? 'text-foreground' : 'text-muted-foreground')}>
                   {option.label}
                 </span>
               </button>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
@@ -271,6 +271,6 @@ export const SettingsSection = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>);
+
 };

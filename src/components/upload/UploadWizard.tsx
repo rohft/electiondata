@@ -37,34 +37,34 @@ export const UploadWizard = () => {
   const [expandedWards, setExpandedWards] = useState<string[]>([]);
 
   const toggleMunicipalityExpand = (id: string) => {
-    setExpandedMunicipalities(prev => 
-      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    setExpandedMunicipalities((prev) =>
+    prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
     );
   };
 
   const toggleWardExpand = (id: string) => {
-    setExpandedWards(prev => 
-      prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id]
+    setExpandedWards((prev) =>
+    prev.includes(id) ? prev.filter((w) => w !== id) : [...prev, id]
     );
   };
 
   // Get current municipality for "Add Ward" dialog
   const currentMunicipalityId = selectedMunicipality || municipalities[0]?.id;
-  const currentMunicipalityData = municipalities.find(m => m.id === currentMunicipalityId);
-  const existingWardNumbers = currentMunicipalityData?.wards.map(w => {
+  const currentMunicipalityData = municipalities.find((m) => m.id === currentMunicipalityId);
+  const existingWardNumbers = currentMunicipalityData?.wards.map((w) => {
     const match = w.name.match(/\d+/);
     return match ? parseInt(match[0]) : 0;
-  }).filter(n => n > 0) || [];
+  }).filter((n) => n > 0) || [];
 
   // Convert municipality data to WardUploadData format for VoterDataTable
   const getWardDataForMunicipality = (municipalityId: string): WardUploadData[] => {
-    const municipality = municipalities.find(m => m.id === municipalityId);
+    const municipality = municipalities.find((m) => m.id === municipalityId);
     if (!municipality) return [];
-    
+
     return municipality.wards.map((ward, idx) => ({
       wardNumber: idx + 1,
       file: null,
-      records: ward.voters.map(voter => ({
+      records: ward.voters.map((voter) => ({
         wardNo: voter.ward,
         centerName: '',
         voterId: voter.id,
@@ -80,7 +80,7 @@ export const UploadWizard = () => {
     }));
   };
 
-  const currentMunicipality = municipalities.find(m => m.id === selectedMunicipality);
+  const currentMunicipality = municipalities.find((m) => m.id === selectedMunicipality);
 
   // If no municipalities, show empty state
   if (municipalities.length === 0) {
@@ -109,8 +109,8 @@ export const UploadWizard = () => {
             </DialogContent>
           </Dialog>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   return (
@@ -139,27 +139,27 @@ export const UploadWizard = () => {
           </div>
 
           <div className="space-y-1">
-            {municipalities.map(municipality => (
-              <Collapsible
-                key={municipality.id}
-                open={expandedMunicipalities.includes(municipality.id)}
-                onOpenChange={() => toggleMunicipalityExpand(municipality.id)}
-              >
+            {municipalities.map((municipality) =>
+            <Collapsible
+              key={municipality.id}
+              open={expandedMunicipalities.includes(municipality.id)}
+              onOpenChange={() => toggleMunicipalityExpand(municipality.id)}>
+
                 <div className="group flex items-center">
                   <CollapsibleTrigger asChild>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "flex-1 justify-start gap-1.5 h-8 px-2 text-sm font-medium",
-                        selectedMunicipality === municipality.id && "bg-accent"
-                      )}
-                      onClick={() => setSelectedMunicipality(municipality.id)}
-                    >
-                      {expandedMunicipalities.includes(municipality.id) 
-                        ? <ChevronDown className="h-4 w-4 shrink-0" />
-                        : <ChevronRight className="h-4 w-4 shrink-0" />
-                      }
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "flex-1 justify-start gap-1.5 h-8 px-2 text-sm font-medium",
+                      selectedMunicipality === municipality.id && "bg-accent"
+                    )}
+                    onClick={() => setSelectedMunicipality(municipality.id)}>
+
+                      {expandedMunicipalities.includes(municipality.id) ?
+                    <ChevronDown className="h-4 w-4 shrink-0" /> :
+                    <ChevronRight className="h-4 w-4 shrink-0" />
+                    }
                       <Building2 className="h-4 w-4 shrink-0 text-primary" />
                       <span className="truncate">{municipality.name}</span>
                       <Badge variant="secondary" className="ml-auto text-xs h-5 px-1.5">
@@ -167,119 +167,119 @@ export const UploadWizard = () => {
                       </Badge>
                     </Button>
                   </CollapsibleTrigger>
-                  <DeleteDataDialog 
-                    type="municipality" 
-                    municipality={municipality}
-                  />
+                  <DeleteDataDialog
+                  type="municipality"
+                  municipality={municipality} />
+
                 </div>
 
                 <CollapsibleContent className="pl-4">
-                  {municipality.wards.map((ward, idx) => (
-                    <Collapsible
-                      key={ward.id}
-                      open={expandedWards.includes(ward.id)}
-                      onOpenChange={() => toggleWardExpand(ward.id)}
-                    >
+                  {municipality.wards.map((ward, idx) =>
+                <Collapsible
+                  key={ward.id}
+                  open={expandedWards.includes(ward.id)}
+                  onOpenChange={() => toggleWardExpand(ward.id)}>
+
                       <div className="group flex items-center">
                         <CollapsibleTrigger asChild>
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn(
-                              "flex-1 justify-start gap-1.5 h-7 px-2 text-sm",
-                              selectedMunicipality === municipality.id && selectedWardIndex === idx && "bg-accent"
-                            )}
-                            onClick={() => {
-                              setSelectedMunicipality(municipality.id);
-                              setSelectedWardIndex(idx);
-                            }}
-                          >
-                            {expandedWards.includes(ward.id)
-                              ? <ChevronDown className="h-3 w-3 shrink-0" />
-                              : <ChevronRight className="h-3 w-3 shrink-0" />
-                            }
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "flex-1 justify-start gap-1.5 h-7 px-2 text-sm",
+                          selectedMunicipality === municipality.id && selectedWardIndex === idx && "bg-accent"
+                        )}
+                        onClick={() => {
+                          setSelectedMunicipality(municipality.id);
+                          setSelectedWardIndex(idx);
+                        }}>
+
+                            {expandedWards.includes(ward.id) ?
+                        <ChevronDown className="h-3 w-3 shrink-0" /> :
+                        <ChevronRight className="h-3 w-3 shrink-0" />
+                        }
                             <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             <span className="truncate">{ward.name}</span>
-                            {(ward.boothCentres?.length || 0) > 0 && (
-                              <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5">
+                            {(ward.boothCentres?.length || 0) > 0 &&
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5">
                                 <MapPin className="h-2.5 w-2.5" />
                                 {ward.boothCentres?.length}
                               </Badge>
-                            )}
+                        }
                             <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1">
                               {ward.voters.length}
                             </Badge>
                           </Button>
                         </CollapsibleTrigger>
-                        <DeleteDataDialog 
-                          type="ward" 
-                          municipality={municipality}
-                          ward={ward}
-                        />
+                        <DeleteDataDialog
+                      type="ward"
+                      municipality={municipality}
+                      ward={ward} />
+
                       </div>
                       <CollapsibleContent className="pl-6">
                         <ExplorerBoothManager
-                          municipalityId={municipality.id}
-                          municipalityName={municipality.name}
-                          wardId={ward.id}
-                          wardName={ward.name}
-                          boothCentres={ward.boothCentres || []}
-                        />
+                      municipalityId={municipality.id}
+                      municipalityName={municipality.name}
+                      wardId={ward.id}
+                      wardName={ward.name}
+                      boothCentres={ward.boothCentres || []} />
+
                       </CollapsibleContent>
                     </Collapsible>
-                  ))}
+                )}
                   
                   {/* Add Ward Button */}
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start gap-1.5 h-7 px-2 text-sm text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      setSelectedMunicipality(municipality.id);
-                      setAddWardDialogOpen(true);
-                    }}
-                  >
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-1.5 h-7 px-2 text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setSelectedMunicipality(municipality.id);
+                    setAddWardDialogOpen(true);
+                  }}>
+
                     <FolderPlus className="h-3.5 w-3.5 shrink-0" />
                     <span>Add Ward...</span>
                   </Button>
                 </CollapsibleContent>
               </Collapsible>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Main Content Area */}
       <div className="flex-1 min-w-0 space-y-6">
-        {currentMunicipalityData ? (
-            <VoterDataTable
-              wards={getWardDataForMunicipality(currentMunicipalityData.id)}
-              municipalityName={currentMunicipalityData.name}
-              selectedWardIndex={selectedWardIndex}
-              onWardSelect={setSelectedWardIndex}
-              onUploadMore={() => setUploadDialogOpen(true)}
-            />
-        ) : municipalities.length > 0 ? (
-            <VoterDataTable
-              wards={getWardDataForMunicipality(municipalities[0].id)}
-              municipalityName={municipalities[0].name}
-              selectedWardIndex={selectedWardIndex}
-              onWardSelect={setSelectedWardIndex}
-              onUploadMore={() => setUploadDialogOpen(true)}
-            />
-        ) : null}
+        {currentMunicipalityData ?
+        <VoterDataTable
+          wards={getWardDataForMunicipality(currentMunicipalityData.id)}
+          municipalityName={currentMunicipalityData.name}
+          selectedWardIndex={selectedWardIndex}
+          onWardSelect={setSelectedWardIndex}
+          onUploadMore={() => setUploadDialogOpen(true)} /> :
+
+        municipalities.length > 0 ?
+        <VoterDataTable
+          wards={getWardDataForMunicipality(municipalities[0].id)}
+          municipalityName={municipalities[0].name}
+          selectedWardIndex={selectedWardIndex}
+          onWardSelect={setSelectedWardIndex}
+          onUploadMore={() => setUploadDialogOpen(true)} /> :
+
+        null}
       </div>
 
       {/* Add Ward Dialog */}
-      {currentMunicipalityData && (
-        <AddWardDialog
-          open={addWardDialogOpen}
-          onOpenChange={setAddWardDialogOpen}
-          municipalityId={currentMunicipalityData.id}
-          municipalityName={currentMunicipalityData.name}
-          existingWardNumbers={existingWardNumbers}
-        />
-      )}
-    </div>
-  );
+      {currentMunicipalityData &&
+      <AddWardDialog
+        open={addWardDialogOpen}
+        onOpenChange={setAddWardDialogOpen}
+        municipalityId={currentMunicipalityData.id}
+        municipalityName={currentMunicipalityData.name}
+        existingWardNumbers={existingWardNumbers} />
+
+      }
+    </div>);
+
 };

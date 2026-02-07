@@ -11,11 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  FileText, Download, Plus, Eye, Settings2, 
+import {
+  FileText, Download, Plus, Eye, Settings2,
   LayoutTemplate, Users, PieChart, BarChart3,
-  Table2, Image, Printer
-} from 'lucide-react';
+  Table2, Image, Printer } from
+'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -30,72 +30,72 @@ interface Template {
 }
 
 const TEMPLATES: Template[] = [
-  {
-    id: 'voter-summary',
-    name: 'Voter Summary Report',
-    nameNe: 'मतदाता सारांश रिपोर्ट',
-    description: 'Overview of voter demographics by ward and municipality',
-    type: 'summary',
-    sections: ['header', 'stats', 'genderChart', 'ageChart'],
-    icon: FileText,
-  },
-  {
-    id: 'detailed-demographics',
-    name: 'Detailed Demographics',
-    nameNe: 'विस्तृत जनसांख्यिकी',
-    description: 'Complete breakdown of voter data with all segments',
-    type: 'detailed',
-    sections: ['header', 'stats', 'genderChart', 'ageChart', 'casteTable', 'surnameTable'],
-    icon: Table2,
-  },
-  {
-    id: 'ward-comparison',
-    name: 'Ward Comparison',
-    nameNe: 'वडा तुलना',
-    description: 'Side-by-side comparison of wards within a municipality',
-    type: 'comparison',
-    sections: ['header', 'wardStats', 'comparisonChart'],
-    icon: BarChart3,
-  },
-  {
-    id: 'infographic-poster',
-    name: 'Infographic Poster',
-    nameNe: 'इन्फोग्राफिक पोस्टर',
-    description: 'Visual poster with key statistics and charts',
-    type: 'infographic',
-    sections: ['header', 'heroStats', 'visualCharts', 'footer'],
-    icon: Image,
-  },
-  {
-    id: 'caste-analysis',
-    name: 'Caste Analysis Report',
-    nameNe: 'जात विश्लेषण रिपोर्ट',
-    description: 'Detailed breakdown by caste categories and surnames',
-    type: 'detailed',
-    sections: ['header', 'castePieChart', 'surnameBreakdown', 'casteTable'],
-    icon: PieChart,
-  },
-  {
-    id: 'family-list',
-    name: 'Family List Report',
-    nameNe: 'परिवार सूची रिपोर्ट',
-    description: 'Grouped list of voters by family relationships',
-    type: 'detailed',
-    sections: ['header', 'familyCards', 'memberTable'],
-    icon: Users,
-  },
-];
+{
+  id: 'voter-summary',
+  name: 'Voter Summary Report',
+  nameNe: 'मतदाता सारांश रिपोर्ट',
+  description: 'Overview of voter demographics by ward and municipality',
+  type: 'summary',
+  sections: ['header', 'stats', 'genderChart', 'ageChart'],
+  icon: FileText
+},
+{
+  id: 'detailed-demographics',
+  name: 'Detailed Demographics',
+  nameNe: 'विस्तृत जनसांख्यिकी',
+  description: 'Complete breakdown of voter data with all segments',
+  type: 'detailed',
+  sections: ['header', 'stats', 'genderChart', 'ageChart', 'casteTable', 'surnameTable'],
+  icon: Table2
+},
+{
+  id: 'ward-comparison',
+  name: 'Ward Comparison',
+  nameNe: 'वडा तुलना',
+  description: 'Side-by-side comparison of wards within a municipality',
+  type: 'comparison',
+  sections: ['header', 'wardStats', 'comparisonChart'],
+  icon: BarChart3
+},
+{
+  id: 'infographic-poster',
+  name: 'Infographic Poster',
+  nameNe: 'इन्फोग्राफिक पोस्टर',
+  description: 'Visual poster with key statistics and charts',
+  type: 'infographic',
+  sections: ['header', 'heroStats', 'visualCharts', 'footer'],
+  icon: Image
+},
+{
+  id: 'caste-analysis',
+  name: 'Caste Analysis Report',
+  nameNe: 'जात विश्लेषण रिपोर्ट',
+  description: 'Detailed breakdown by caste categories and surnames',
+  type: 'detailed',
+  sections: ['header', 'castePieChart', 'surnameBreakdown', 'casteTable'],
+  icon: PieChart
+},
+{
+  id: 'family-list',
+  name: 'Family List Report',
+  nameNe: 'परिवार सूची रिपोर्ट',
+  description: 'Grouped list of voters by family relationships',
+  type: 'detailed',
+  sections: ['header', 'familyCards', 'memberTable'],
+  icon: Users
+}];
+
 
 const SECTION_OPTIONS = [
-  { id: 'header', label: 'Report Header', labelNe: 'रिपोर्ट हेडर' },
-  { id: 'stats', label: 'Summary Statistics', labelNe: 'सारांश तथ्याङ्क' },
-  { id: 'genderChart', label: 'Gender Distribution Chart', labelNe: 'लिङ्ग वितरण चार्ट' },
-  { id: 'ageChart', label: 'Age Distribution Chart', labelNe: 'उमेर वितरण चार्ट' },
-  { id: 'casteTable', label: 'Caste Breakdown Table', labelNe: 'जात तालिका' },
-  { id: 'surnameTable', label: 'Surname Breakdown Table', labelNe: 'थर तालिका' },
-  { id: 'voterList', label: 'Voter List', labelNe: 'मतदाता सूची' },
-  { id: 'footer', label: 'Report Footer', labelNe: 'रिपोर्ट फुटर' },
-];
+{ id: 'header', label: 'Report Header', labelNe: 'रिपोर्ट हेडर' },
+{ id: 'stats', label: 'Summary Statistics', labelNe: 'सारांश तथ्याङ्क' },
+{ id: 'genderChart', label: 'Gender Distribution Chart', labelNe: 'लिङ्ग वितरण चार्ट' },
+{ id: 'ageChart', label: 'Age Distribution Chart', labelNe: 'उमेर वितरण चार्ट' },
+{ id: 'casteTable', label: 'Caste Breakdown Table', labelNe: 'जात तालिका' },
+{ id: 'surnameTable', label: 'Surname Breakdown Table', labelNe: 'थर तालिका' },
+{ id: 'voterList', label: 'Voter List', labelNe: 'मतदाता सूची' },
+{ id: 'footer', label: 'Report Footer', labelNe: 'रिपोर्ट फुटर' }];
+
 
 export const TemplatesSection = () => {
   const { t, language } = useLanguage();
@@ -107,7 +107,7 @@ export const TemplatesSection = () => {
   const [customTemplateName, setCustomTemplateName] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  const currentMunicipality = municipalities.find(m => m.id === selectedMunicipality);
+  const currentMunicipality = municipalities.find((m) => m.id === selectedMunicipality);
   const segments = getSegmentCounts(
     selectedMunicipality !== 'all' ? selectedMunicipality : undefined,
     selectedWard !== 'all' ? selectedWard : undefined
@@ -119,16 +119,16 @@ export const TemplatesSection = () => {
   };
 
   const toggleSection = (sectionId: string) => {
-    setSelectedSections(prev => 
-      prev.includes(sectionId) 
-        ? prev.filter(s => s !== sectionId)
-        : [...prev, sectionId]
+    setSelectedSections((prev) =>
+    prev.includes(sectionId) ?
+    prev.filter((s) => s !== sectionId) :
+    [...prev, sectionId]
     );
   };
 
   const handleExportPDF = () => {
     toast.success('Generating PDF report...', {
-      description: 'Your report will download shortly',
+      description: 'Your report will download shortly'
     });
     // PDF generation would be implemented here
   };
@@ -166,14 +166,14 @@ export const TemplatesSection = () => {
               const Icon = template.icon;
               const isSelected = selectedTemplate?.id === template.id;
               return (
-                <Card 
+                <Card
                   key={template.id}
                   className={cn(
                     "cursor-pointer transition-all hover:shadow-md",
                     isSelected && "ring-2 ring-accent border-accent"
                   )}
-                  onClick={() => handleTemplateSelect(template)}
-                >
+                  onClick={() => handleTemplateSelect(template)}>
+
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className={cn(
@@ -198,26 +198,26 @@ export const TemplatesSection = () => {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="flex flex-wrap gap-1">
-                      {template.sections.slice(0, 3).map(section => (
-                        <Badge key={section} variant="secondary" className="text-xs">
+                      {template.sections.slice(0, 3).map((section) =>
+                      <Badge key={section} variant="secondary" className="text-xs">
                           {section}
                         </Badge>
-                      ))}
-                      {template.sections.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
+                      )}
+                      {template.sections.length > 3 &&
+                      <Badge variant="secondary" className="text-xs">
                           +{template.sections.length - 3} more
                         </Badge>
-                      )}
+                      }
                     </div>
                   </CardContent>
-                </Card>
-              );
+                </Card>);
+
             })}
           </div>
 
           {/* Template Configuration */}
-          {selectedTemplate && (
-            <Card className="card-shadow border-border/50">
+          {selectedTemplate &&
+          <Card className="card-shadow border-border/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <selectedTemplate.icon className="h-5 w-5 text-accent" />
@@ -229,15 +229,15 @@ export const TemplatesSection = () => {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Municipality</Label>
-                    <Select value={selectedMunicipality} onValueChange={(v) => { setSelectedMunicipality(v); setSelectedWard('all'); }}>
+                    <Select value={selectedMunicipality} onValueChange={(v) => {setSelectedMunicipality(v);setSelectedWard('all');}}>
                       <SelectTrigger>
                         <SelectValue placeholder="All Municipalities" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Municipalities</SelectItem>
-                        {municipalities.map(m => (
-                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                        ))}
+                        {municipalities.map((m) =>
+                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -249,9 +249,9 @@ export const TemplatesSection = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Wards</SelectItem>
-                        {currentMunicipality?.wards.map(w => (
-                          <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                        ))}
+                        {currentMunicipality?.wards.map((w) =>
+                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                      )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -261,21 +261,21 @@ export const TemplatesSection = () => {
                 <div className="space-y-3">
                   <Label>Include Sections</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {SECTION_OPTIONS.map((section) => (
-                      <div key={section.id} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={section.id}
-                          checked={selectedSections.includes(section.id)}
-                          onCheckedChange={() => toggleSection(section.id)}
-                        />
-                        <label 
-                          htmlFor={section.id}
-                          className="text-sm cursor-pointer"
-                        >
+                    {SECTION_OPTIONS.map((section) =>
+                  <div key={section.id} className="flex items-center space-x-2">
+                        <Checkbox
+                      id={section.id}
+                      checked={selectedSections.includes(section.id)}
+                      onCheckedChange={() => toggleSection(section.id)} />
+
+                        <label
+                      htmlFor={section.id}
+                      className="text-sm cursor-pointer">
+
                           {language === 'ne' ? section.labelNe : section.label}
                         </label>
                       </div>
-                    ))}
+                  )}
                   </div>
                 </div>
 
@@ -342,24 +342,24 @@ export const TemplatesSection = () => {
                               <span className="text-sm text-gray-500">Total: {segments.total.toLocaleString()}</span>
                             </div>
                             <div className="space-y-2">
-                              {Object.entries(segments.byAge).map(([range, count]) => (
-                                <div key={range} className="flex items-center gap-3">
+                              {Object.entries(segments.byAge).map(([range, count]) =>
+                            <div key={range} className="flex items-center gap-3">
                                   <span className="w-16 text-sm font-medium">{range}</span>
                                   <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
-                                    <div 
-                                      className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
-                                      style={{ width: segments.total > 0 ? `${Math.max((count / segments.total) * 100, 10)}%` : '10%' }}
-                                    >
-                                      {segments.total > 0 && (count / segments.total) * 100 > 15 && (
-                                        <span className="text-xs text-white font-medium">
-                                          {((count / segments.total) * 100).toFixed(1)}%
+                                    <div
+                                  className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
+                                  style={{ width: segments.total > 0 ? `${Math.max(count / segments.total * 100, 10)}%` : '10%' }}>
+
+                                      {segments.total > 0 && count / segments.total * 100 > 15 &&
+                                  <span className="text-xs text-white font-medium">
+                                          {(count / segments.total * 100).toFixed(1)}%
                                         </span>
-                                      )}
+                                  }
                                     </div>
                                   </div>
                                   <span className="w-20 text-sm text-right font-medium">{count.toLocaleString()}</span>
                                 </div>
-                              ))}
+                            )}
                             </div>
                           </div>
 
@@ -372,15 +372,15 @@ export const TemplatesSection = () => {
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                              {Object.entries(segments.byCaste)
-                                .sort((a, b) => b[1] - a[1])
-                                .slice(0, 10)
-                                .map(([caste, count]) => (
-                                  <div key={caste} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                              {Object.entries(segments.byCaste).
+                            sort((a, b) => b[1] - a[1]).
+                            slice(0, 10).
+                            map(([caste, count]) =>
+                            <div key={caste} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                                     <span className="text-sm">{caste}</span>
                                     <span className="text-sm font-medium">{count.toLocaleString()}</span>
                                   </div>
-                                ))}
+                            )}
                             </div>
                           </div>
 
@@ -406,7 +406,7 @@ export const TemplatesSection = () => {
                 </div>
               </CardContent>
             </Card>
-          )}
+          }
         </TabsContent>
 
         <TabsContent value="custom" className="space-y-6">
@@ -423,37 +423,37 @@ export const TemplatesSection = () => {
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label>Template Name</Label>
-                <Input 
+                <Input
                   placeholder="e.g., Ward 4 Monthly Report"
                   value={customTemplateName}
-                  onChange={(e) => setCustomTemplateName(e.target.value)}
-                />
+                  onChange={(e) => setCustomTemplateName(e.target.value)} />
+
               </div>
 
               <div className="space-y-3">
                 <Label>Select Sections to Include</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {SECTION_OPTIONS.map((section) => (
-                    <div 
-                      key={section.id} 
-                      className={cn(
-                        "flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors",
-                        selectedSections.includes(section.id) 
-                          ? "border-accent bg-accent/5" 
-                          : "border-border hover:border-muted-foreground/50"
-                      )}
-                      onClick={() => toggleSection(section.id)}
-                    >
-                      <Checkbox 
-                        checked={selectedSections.includes(section.id)}
-                        onCheckedChange={() => toggleSection(section.id)}
-                      />
+                  {SECTION_OPTIONS.map((section) =>
+                  <div
+                    key={section.id}
+                    className={cn(
+                      "flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                      selectedSections.includes(section.id) ?
+                      "border-accent bg-accent/5" :
+                      "border-border hover:border-muted-foreground/50"
+                    )}
+                    onClick={() => toggleSection(section.id)}>
+
+                      <Checkbox
+                      checked={selectedSections.includes(section.id)}
+                      onCheckedChange={() => toggleSection(section.id)} />
+
                       <div>
                         <p className="font-medium text-sm">{section.label}</p>
                         <p className="text-xs text-muted-foreground">{section.labelNe}</p>
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -470,6 +470,6 @@ export const TemplatesSection = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>);
+
 };

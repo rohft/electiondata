@@ -10,8 +10,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+  AlertDialogTrigger } from
+'@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, FolderOpen, FileText, AlertTriangle } from 'lucide-react';
@@ -35,7 +35,7 @@ export const DeleteDataDialog = ({ type, municipality, ward, trigger }: DeleteDa
       toast.success(`Deleted ${ward.name}`);
     } else if (type === 'municipality') {
       // Delete all wards in municipality
-      municipality.wards.forEach(w => {
+      municipality.wards.forEach((w) => {
         removeWardData(municipality.id, w.id);
       });
       toast.success(`Deleted ${municipality.name} and all wards`);
@@ -44,23 +44,23 @@ export const DeleteDataDialog = ({ type, municipality, ward, trigger }: DeleteDa
   };
 
   const itemName = type === 'ward' ? ward?.name : municipality.name;
-  const voterCount = type === 'ward' 
-    ? ward?.voters.length || 0 
-    : municipality.wards.reduce((sum, w) => sum + w.voters.length, 0);
+  const voterCount = type === 'ward' ?
+  ward?.voters.length || 0 :
+  municipality.wards.reduce((sum, w) => sum + w.voters.length, 0);
   const wardCount = type === 'municipality' ? municipality.wards.length : 0;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        {trigger || (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
+        {trigger ||
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10">
+
             <Trash2 className="h-4 w-4" />
           </Button>
-        )}
+        }
       </AlertDialogTrigger>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
@@ -76,22 +76,22 @@ export const DeleteDataDialog = ({ type, municipality, ward, trigger }: DeleteDa
               </p>
               
               <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 border">
-                {type === 'ward' ? (
-                  <FileText className="h-8 w-8 text-muted-foreground" />
-                ) : (
-                  <FolderOpen className="h-8 w-8 text-muted-foreground" />
-                )}
+                {type === 'ward' ?
+                <FileText className="h-8 w-8 text-muted-foreground" /> :
+
+                <FolderOpen className="h-8 w-8 text-muted-foreground" />
+                }
                 <div className="flex-1">
                   <p className="font-medium">{itemName}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="secondary" className="text-xs">
                       {voterCount.toLocaleString()} voters
                     </Badge>
-                    {type === 'municipality' && (
-                      <Badge variant="outline" className="text-xs">
+                    {type === 'municipality' &&
+                    <Badge variant="outline" className="text-xs">
                         {wardCount} wards
                       </Badge>
-                    )}
+                    }
                   </div>
                 </div>
               </div>
@@ -104,14 +104,14 @@ export const DeleteDataDialog = ({ type, municipality, ward, trigger }: DeleteDa
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
+          <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={handleDelete}
-          >
+            onClick={handleDelete}>
+
             Delete
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
-    </AlertDialog>
-  );
+    </AlertDialog>);
+
 };

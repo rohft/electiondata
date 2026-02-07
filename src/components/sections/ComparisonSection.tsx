@@ -14,42 +14,42 @@ export const ComparisonSection = () => {
   const { municipalities, getSegmentCounts } = useVoterData();
   const [compareType, setCompareType] = useState<'ward' | 'municipality'>('ward');
   const [compareMode, setCompareMode] = useState<CompareMode>('side-by-side');
-  
+
   const [leftMunicipality, setLeftMunicipality] = useState<string>('');
   const [leftWard, setLeftWard] = useState<string>('');
   const [rightMunicipality, setRightMunicipality] = useState<string>('');
   const [rightWard, setRightWard] = useState<string>('');
 
-  const leftMuni = municipalities.find(m => m.id === leftMunicipality);
-  const rightMuni = municipalities.find(m => m.id === rightMunicipality);
+  const leftMuni = municipalities.find((m) => m.id === leftMunicipality);
+  const rightMuni = municipalities.find((m) => m.id === rightMunicipality);
 
-  const leftSegments = compareType === 'ward' 
-    ? getSegmentCounts(leftMunicipality || undefined, leftWard || undefined)
-    : getSegmentCounts(leftMunicipality || undefined);
-  
-  const rightSegments = compareType === 'ward'
-    ? getSegmentCounts(rightMunicipality || undefined, rightWard || undefined)
-    : getSegmentCounts(rightMunicipality || undefined);
+  const leftSegments = compareType === 'ward' ?
+  getSegmentCounts(leftMunicipality || undefined, leftWard || undefined) :
+  getSegmentCounts(leftMunicipality || undefined);
 
-  const leftLabel = compareType === 'ward' 
-    ? (leftMuni?.wards.find(w => w.id === leftWard)?.name || 'Select Ward')
-    : (leftMuni?.name || 'Select Municipality');
-  
-  const rightLabel = compareType === 'ward'
-    ? (rightMuni?.wards.find(w => w.id === rightWard)?.name || 'Select Ward')
-    : (rightMuni?.name || 'Select Municipality');
+  const rightSegments = compareType === 'ward' ?
+  getSegmentCounts(rightMunicipality || undefined, rightWard || undefined) :
+  getSegmentCounts(rightMunicipality || undefined);
+
+  const leftLabel = compareType === 'ward' ?
+  leftMuni?.wards.find((w) => w.id === leftWard)?.name || 'Select Ward' :
+  leftMuni?.name || 'Select Municipality';
+
+  const rightLabel = compareType === 'ward' ?
+  rightMuni?.wards.find((w) => w.id === rightWard)?.name || 'Select Ward' :
+  rightMuni?.name || 'Select Municipality';
 
   // Prepare chart data
-  const ageComparisonData = Object.keys(leftSegments.byAge).map(range => ({
+  const ageComparisonData = Object.keys(leftSegments.byAge).map((range) => ({
     range,
     [leftLabel]: leftSegments.byAge[range] || 0,
-    [rightLabel]: rightSegments.byAge[range] || 0,
+    [rightLabel]: rightSegments.byAge[range] || 0
   }));
 
-  const genderComparisonData = Object.keys(leftSegments.byGender).map(gender => ({
+  const genderComparisonData = Object.keys(leftSegments.byGender).map((gender) => ({
     gender: t(`segments.${gender}`),
     [leftLabel]: leftSegments.byGender[gender] || 0,
-    [rightLabel]: rightSegments.byGender[gender] || 0,
+    [rightLabel]: rightSegments.byGender[gender] || 0
   }));
 
   return (
@@ -75,22 +75,22 @@ export const ComparisonSection = () => {
               <button
                 onClick={() => setCompareMode('side-by-side')}
                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  compareMode === 'side-by-side' 
-                    ? 'bg-accent text-accent-foreground' 
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
+                compareMode === 'side-by-side' ?
+                'bg-accent text-accent-foreground' :
+                'bg-muted text-muted-foreground hover:bg-muted/80'}`
+                }>
+
                 <SplitSquareVertical className="h-4 w-4" />
                 {t('comparison.sideBySide')}
               </button>
               <button
                 onClick={() => setCompareMode('overlay')}
                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  compareMode === 'overlay' 
-                    ? 'bg-accent text-accent-foreground' 
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
+                compareMode === 'overlay' ?
+                'bg-accent text-accent-foreground' :
+                'bg-muted text-muted-foreground hover:bg-muted/80'}`
+                }>
+
                 <Layers className="h-4 w-4" />
                 {t('comparison.overlay')}
               </button>
@@ -101,62 +101,62 @@ export const ComparisonSection = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-3 rounded-lg border border-chart-1/30 bg-chart-1/5 p-4">
               <p className="text-sm font-medium text-chart-1">Left Selection</p>
-              <Select value={leftMunicipality} onValueChange={(v) => { setLeftMunicipality(v); setLeftWard(''); }}>
+              <Select value={leftMunicipality} onValueChange={(v) => {setLeftMunicipality(v);setLeftWard('');}}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Municipality" />
                 </SelectTrigger>
                 <SelectContent>
-                  {municipalities.map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                  ))}
+                  {municipalities.map((m) =>
+                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
-              {compareType === 'ward' && leftMuni && (
-                <Select value={leftWard} onValueChange={setLeftWard}>
+              {compareType === 'ward' && leftMuni &&
+              <Select value={leftWard} onValueChange={setLeftWard}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select Ward" />
                   </SelectTrigger>
                   <SelectContent>
-                    {leftMuni.wards.map(w => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                    ))}
+                    {leftMuni.wards.map((w) =>
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  )}
                   </SelectContent>
                 </Select>
-              )}
+              }
             </div>
 
             <div className="space-y-3 rounded-lg border border-chart-2/30 bg-chart-2/5 p-4">
               <p className="text-sm font-medium text-chart-2">Right Selection</p>
-              <Select value={rightMunicipality} onValueChange={(v) => { setRightMunicipality(v); setRightWard(''); }}>
+              <Select value={rightMunicipality} onValueChange={(v) => {setRightMunicipality(v);setRightWard('');}}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Municipality" />
                 </SelectTrigger>
                 <SelectContent>
-                  {municipalities.map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                  ))}
+                  {municipalities.map((m) =>
+                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
-              {compareType === 'ward' && rightMuni && (
-                <Select value={rightWard} onValueChange={setRightWard}>
+              {compareType === 'ward' && rightMuni &&
+              <Select value={rightWard} onValueChange={setRightWard}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select Ward" />
                   </SelectTrigger>
                   <SelectContent>
-                    {rightMuni.wards.map(w => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                    ))}
+                    {rightMuni.wards.map((w) =>
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  )}
                   </SelectContent>
                 </Select>
-              )}
+              }
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Comparison Results */}
-      {(leftSegments.total > 0 || rightSegments.total > 0) ? (
-        <>
+      {leftSegments.total > 0 || rightSegments.total > 0 ?
+      <>
           {/* Total Comparison */}
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="card-shadow border-chart-1/30 bg-chart-1/5">
@@ -185,20 +185,20 @@ export const ComparisonSection = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={ageComparisonData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="range" 
-                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: 'var(--radius)'
-                      }}
-                    />
+                    <XAxis
+                    dataKey="range"
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+
+                    <YAxis
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+
+                    <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 'var(--radius)'
+                    }} />
+
                     <Legend />
                     <Bar dataKey={leftLabel} fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
                     <Bar dataKey={rightLabel} fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
@@ -219,19 +219,19 @@ export const ComparisonSection = () => {
                   <BarChart data={genderComparisonData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis type="number" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis 
-                      dataKey="gender" 
-                      type="category" 
-                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                      width={80}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: 'var(--radius)'
-                      }}
-                    />
+                    <YAxis
+                    dataKey="gender"
+                    type="category"
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    width={80} />
+
+                    <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 'var(--radius)'
+                    }} />
+
                     <Legend />
                     <Bar dataKey={leftLabel} fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
                     <Bar dataKey={rightLabel} fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
@@ -240,9 +240,9 @@ export const ComparisonSection = () => {
               </div>
             </CardContent>
           </Card>
-        </>
-      ) : (
-        <Card className="card-shadow border-border/50">
+        </> :
+
+      <Card className="card-shadow border-border/50">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <GitCompare className="h-12 w-12 text-muted-foreground" />
             <p className="mt-4 text-center text-muted-foreground">
@@ -250,7 +250,7 @@ export const ComparisonSection = () => {
             </p>
           </CardContent>
         </Card>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };

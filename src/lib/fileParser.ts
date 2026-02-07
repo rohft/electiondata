@@ -29,17 +29,17 @@ export interface ParsedRecord {
 
 // Newar surnames list for detection
 const NEWAR_SURNAMES = [
-  'shrestha', 'shakya', 'maharjan', 'dangol', 'tuladhar', 'tamrakar',
-  'manandhar', 'singh', 'amatya', 'joshi', 'pradhan', 'rajbhandari',
-  'bajracharya', 'sthapit', 'ranjitkar', 'nakarmi', 'chitrakar', 'karmacharya',
-  'श्रेष्ठ', 'शाक्य', 'महर्जन', 'डंगोल', 'तुलाधर', 'ताम्राकार',
-  'मानन्धर', 'अमात्य', 'जोशी', 'प्रधान', 'राजभण्डारी',
-  'बज्राचार्य', 'स्थापित', 'रञ्जितकार', 'नकर्मी', 'चित्रकार', 'कर्माचार्य'
-];
+'shrestha', 'shakya', 'maharjan', 'dangol', 'tuladhar', 'tamrakar',
+'manandhar', 'singh', 'amatya', 'joshi', 'pradhan', 'rajbhandari',
+'bajracharya', 'sthapit', 'ranjitkar', 'nakarmi', 'chitrakar', 'karmacharya',
+'श्रेष्ठ', 'शाक्य', 'महर्जन', 'डंगोल', 'तुलाधर', 'ताम्राकार',
+'मानन्धर', 'अमात्य', 'जोशी', 'प्रधान', 'राजभण्डारी',
+'बज्राचार्य', 'स्थापित', 'रञ्जितकार', 'नकर्मी', 'चित्रकार', 'कर्माचार्य'];
+
 
 export const isNewarName = (name: string): boolean => {
   const lowerName = name.toLowerCase();
-  return NEWAR_SURNAMES.some(s => lowerName.includes(s.toLowerCase()));
+  return NEWAR_SURNAMES.some((s) => lowerName.includes(s.toLowerCase()));
 };
 
 const normalizeGender = (gender: string): 'male' | 'female' | 'other' => {
@@ -51,28 +51,28 @@ const normalizeGender = (gender: string): 'male' | 'female' | 'other' => {
 
 const normalizeHeaders = (headers: string[]): Record<string, number> => {
   const headerMap: Record<string, number> = {};
-  
+
   headers.forEach((h, idx) => {
     const lower = h.toLowerCase().trim();
     const original = h.trim();
-    
+
     // Map common variations to standard keys (English and Nepali)
     // Serial Number - MUST check before other patterns
-    if (original === 'सि.नं.' || original === 'सि.नं' || original === 'क्र.सं.' || 
-        original === 'मतदाता क्र.सं.' || 
-        lower === 'sn' || lower === 's.n' || lower === 's.n.' || lower === 'sn.') {
+    if (original === 'सि.नं.' || original === 'सि.नं' || original === 'क्र.सं.' ||
+    original === 'मतदाता क्र.सं.' ||
+    lower === 'sn' || lower === 's.n' || lower === 's.n.' || lower === 'sn.') {
       headerMap['sn'] = idx;
     }
     // Voter ID - check for various Nepali and English patterns
     else if (original === 'मतदाता परिचयपत्र नं.' || original === 'मतदाता परिचयपत्र नं' ||
-             original === 'मतदाता नं' || original === 'मतदाता नं.' || original === 'मतदाता आईडी' ||
-             original === 'मतदाता नम्बर' ||
-             lower.includes('voter id') || lower.includes('voter no') || lower === 'id' || lower === 'voterid') {
+    original === 'मतदाता नं' || original === 'मतदाता नं.' || original === 'मतदाता आईडी' ||
+    original === 'मतदाता नम्बर' ||
+    lower.includes('voter id') || lower.includes('voter no') || lower === 'id' || lower === 'voterid') {
       headerMap['voterId'] = idx;
     }
     // Voter Name
-    else if (original === 'मतदाताको नाम' || original === 'नाम' || 
-             lower.includes('voter name') || lower === 'name') {
+    else if (original === 'मतदाताको नाम' || original === 'नाम' ||
+    lower.includes('voter name') || lower === 'name') {
       headerMap['voterName'] = idx;
     }
     // Age
@@ -88,8 +88,8 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
       headerMap['spouse'] = idx;
     }
     // Parents / Father-Mother
-    else if (original === 'पिता/माताको नाम' || original === 'आमाबुबाको नाम' || 
-             lower.includes('parent') || lower.includes('father')) {
+    else if (original === 'पिता/माताको नाम' || original === 'आमाबुबाको नाम' ||
+    lower.includes('parent') || lower.includes('father')) {
       headerMap['parents'] = idx;
     }
     // Caste
@@ -141,11 +141,11 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
       headerMap['party'] = idx;
     }
     // Color codes
-    else if (lower === 'green') headerMap['green'] = idx;
-    else if (lower === 'yellow') headerMap['yellow'] = idx;
-    else if (lower === 'red') headerMap['red'] = idx;
+    else if (lower === 'green') headerMap['green'] = idx;else
+    if (lower === 'yellow') headerMap['yellow'] = idx;else
+    if (lower === 'red') headerMap['red'] = idx;
   });
-  
+
   return headerMap;
 };
 
@@ -153,7 +153,7 @@ export const parseCSV = (content: string): ParsedRecord[] => {
   const lines = content.trim().split('\n');
   if (lines.length < 2) return [];
 
-  const headers = lines[0].split(',').map(h => h.trim());
+  const headers = lines[0].split(',').map((h) => h.trim());
   const headerMap = normalizeHeaders(headers);
   const records: ParsedRecord[] = [];
 
@@ -162,7 +162,7 @@ export const parseCSV = (content: string): ParsedRecord[] => {
     const values: string[] = [];
     let current = '';
     let inQuotes = false;
-    
+
     for (const char of lines[i]) {
       if (char === '"') {
         inQuotes = !inQuotes;
@@ -194,7 +194,7 @@ export const parseCSV = (content: string): ParsedRecord[] => {
       green: values[headerMap['green'] ?? 8],
       yellow: values[headerMap['yellow'] ?? 9],
       red: values[headerMap['red'] ?? 10],
-      originalData,
+      originalData
     };
 
     records.push(record);
@@ -206,7 +206,7 @@ export const parseCSV = (content: string): ParsedRecord[] => {
 export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
   const arrayBuffer = await file.arrayBuffer();
   const workbook = new ExcelJS.Workbook();
-  
+
   // Determine file type and load accordingly
   const extension = file.name.split('.').pop()?.toLowerCase();
   if (extension === 'xlsx') {
@@ -216,12 +216,12 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
     // For .xls files, we'll throw a helpful error
     throw new Error('Legacy .xls format is not fully supported. Please convert to .xlsx format.');
   }
-  
+
   const worksheet = workbook.worksheets[0];
   if (!worksheet) {
     throw new Error('No worksheet found in the Excel file');
   }
-  
+
   // Convert worksheet to array of arrays
   const data: (string | number | boolean | null)[][] = [];
   worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
@@ -235,16 +235,16 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
       }
       if (value && typeof value === 'object' && 'richText' in value) {
         // Handle rich text - extract plain text
-        value = (value as { richText: { text: string }[] }).richText.map(rt => rt.text).join('');
+        value = (value as {richText: {text: string;}[];}).richText.map((rt) => rt.text).join('');
       }
       rowData[colNumber - 1] = value as string | number | boolean | null;
     });
     data[rowNumber - 1] = rowData;
   });
-  
+
   if (data.length < 2) return [];
-  
-  const headers = (data[0] as (string | number | boolean | null)[]).map(h => String(h || '').trim());
+
+  const headers = (data[0] as (string | number | boolean | null)[]).map((h) => String(h || '').trim());
   const headerMap = normalizeHeaders(headers);
   const records: ParsedRecord[] = [];
 
@@ -302,7 +302,7 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
       green: String(row[headerMap['green'] ?? -1] ?? ''),
       yellow: String(row[headerMap['yellow'] ?? -1] ?? ''),
       red: String(row[headerMap['red'] ?? -1] ?? ''),
-      originalData,
+      originalData
     };
 
     records.push(record);
@@ -341,45 +341,45 @@ const VoterRecordSchema = z.object({
   yellow: z.string().optional(),
   YELLOW: z.string().optional(),
   red: z.string().optional(),
-  RED: z.string().optional(),
+  RED: z.string().optional()
 }).passthrough(); // Allow additional fields
 
 const JSONDataSchema = z.union([
-  z.array(VoterRecordSchema),
-  z.object({
-    data: z.array(VoterRecordSchema).optional(),
-    records: z.array(VoterRecordSchema).optional(),
-    voters: z.array(VoterRecordSchema).optional(),
-  }).passthrough(),
-]);
+z.array(VoterRecordSchema),
+z.object({
+  data: z.array(VoterRecordSchema).optional(),
+  records: z.array(VoterRecordSchema).optional(),
+  voters: z.array(VoterRecordSchema).optional()
+}).passthrough()]
+);
 
 export const parseJSON = async (file: File): Promise<ParsedRecord[]> => {
   const text = await file.text();
-  
+
   let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
     throw new Error('Invalid JSON format: Unable to parse file content');
   }
-  
+
   // Validate the parsed JSON structure
   const validationResult = JSONDataSchema.safeParse(data);
   if (!validationResult.success) {
-    throw new Error(`Invalid JSON structure: ${validationResult.error.errors.map(e => e.message).join(', ')}`);
+    throw new Error(`Invalid JSON structure: ${validationResult.error.errors.map((e) => e.message).join(', ')}`);
   }
-  
+
   const validatedData = validationResult.data;
-  
+
   // Handle both array and object with data property
-  const rows = Array.isArray(validatedData) 
-    ? validatedData 
-    : (validatedData.data || validatedData.records || validatedData.voters || []);
-  
+  const rows = Array.isArray(validatedData) ?
+  validatedData :
+  validatedData.data || validatedData.records || validatedData.voters || [];
+
   if (!Array.isArray(rows)) {
     throw new Error('Invalid JSON structure: Expected an array of records');
   }
-  
+
   return rows.map((row) => {
     const originalData: Record<string, string> = {};
     Object.entries(row).forEach(([key, value]) => {
@@ -400,7 +400,7 @@ export const parseJSON = async (file: File): Promise<ParsedRecord[]> => {
       green: String(row.green || row.GREEN || ''),
       yellow: String(row.yellow || row.YELLOW || ''),
       red: String(row.red || row.RED || ''),
-      originalData,
+      originalData
     } as ParsedRecord;
   });
 };
@@ -413,7 +413,7 @@ const ALLOWED_MIME_TYPES: Record<string, string[]> = {
   csv: ['text/csv', 'text/plain', 'application/csv'],
   xlsx: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
   xls: ['application/vnd.ms-excel'],
-  json: ['application/json', 'text/plain'],
+  json: ['application/json', 'text/plain']
 };
 
 export class FileValidationError extends Error {
@@ -453,9 +453,9 @@ export const validateFile = (file: File): void => {
 export const parseFile = async (file: File): Promise<ParsedRecord[]> => {
   // Validate file before processing
   validateFile(file);
-  
+
   const extension = file.name.split('.').pop()?.toLowerCase();
-  
+
   switch (extension) {
     case 'csv':
       const csvContent = await file.text();

@@ -7,13 +7,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Badge } from '@/components/ui/badge';
 
 const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  'hsl(var(--chart-6))',
-];
+'hsl(var(--chart-1))',
+'hsl(var(--chart-2))',
+'hsl(var(--chart-3))',
+'hsl(var(--chart-4))',
+'hsl(var(--chart-5))',
+'hsl(var(--chart-6))'];
+
 
 export const DashboardSection = () => {
   const { t } = useLanguage();
@@ -26,51 +26,51 @@ export const DashboardSection = () => {
 
   // Get all ward numbers across all municipalities
   const allWardNumbers = useMemo(() => {
-    return municipalities.flatMap(m => 
-      m.wards.map(w => {
-        const match = w.name.match(/\d+/);
-        return match ? parseInt(match[0]) : 0;
-      }).filter(n => n > 0)
+    return municipalities.flatMap((m) =>
+    m.wards.map((w) => {
+      const match = w.name.match(/\d+/);
+      return match ? parseInt(match[0]) : 0;
+    }).filter((n) => n > 0)
     );
   }, [municipalities]);
 
   const genderData = Object.entries(segments.byGender).map(([name, value]) => ({
     name: t(`segments.${name}`),
-    value,
+    value
   }));
 
   const ageData = Object.entries(segments.byAge).map(([range, count]) => ({
     range,
-    count,
+    count
   }));
 
   const stats = [
-    { 
-      label: t('dashboard.totalVoters'), 
-      value: totalVoters.toLocaleString(), 
-      icon: Users,
-      color: 'bg-chart-1/10 text-chart-1'
-    },
-    { 
-      label: t('dashboard.totalMunicipalities'), 
-      value: municipalities.length, 
-      icon: Building2,
-      color: 'bg-chart-2/10 text-chart-2'
-    },
-    { 
-      label: t('dashboard.totalWards'), 
-      value: totalWards, 
-      icon: Map,
-      color: 'bg-chart-3/10 text-chart-3',
-      tags: allWardNumbers
-    },
-    { 
-      label: t('dashboard.dataFiles'), 
-      value: totalFiles, 
-      icon: FileSpreadsheet,
-      color: 'bg-chart-4/10 text-chart-4'
-    },
-  ];
+  {
+    label: t('dashboard.totalVoters'),
+    value: totalVoters.toLocaleString(),
+    icon: Users,
+    color: 'bg-chart-1/10 text-chart-1'
+  },
+  {
+    label: t('dashboard.totalMunicipalities'),
+    value: municipalities.length,
+    icon: Building2,
+    color: 'bg-chart-2/10 text-chart-2'
+  },
+  {
+    label: t('dashboard.totalWards'),
+    value: totalWards,
+    icon: Map,
+    color: 'bg-chart-3/10 text-chart-3',
+    tags: allWardNumbers
+  },
+  {
+    label: t('dashboard.dataFiles'),
+    value: totalFiles,
+    icon: FileSpreadsheet,
+    color: 'bg-chart-4/10 text-chart-4'
+  }];
+
 
   return (
     <div className="space-y-6">
@@ -86,34 +86,34 @@ export const DashboardSection = () => {
                     <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
                     <p className="mt-1 text-3xl font-bold text-foreground counter-animate">{stat.value}</p>
                     {/* Ward Tags */}
-                    {stat.tags && stat.tags.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {stat.tags.slice(0, 8).map((wardNum, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs px-2 py-0">
+                    {stat.tags && stat.tags.length > 0 &&
+                    <div className="mt-2 flex flex-wrap gap-1">
+                        {stat.tags.slice(0, 8).map((wardNum, i) =>
+                      <Badge key={i} variant="secondary" className="text-xs px-2 py-0">
                             W{wardNum}
                           </Badge>
-                        ))}
-                        {stat.tags.length > 8 && (
-                          <Badge variant="outline" className="text-xs px-2 py-0">
+                      )}
+                        {stat.tags.length > 8 &&
+                      <Badge variant="outline" className="text-xs px-2 py-0">
                             +{stat.tags.length - 8}
                           </Badge>
-                        )}
+                      }
                       </div>
-                    )}
+                    }
                   </div>
                   <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.color}`}>
                     <Icon className="h-6 w-6" />
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          );
+            </Card>);
+
         })}
       </div>
 
       {/* Empty State */}
-      {totalVoters === 0 && (
-        <Card className="card-shadow border-border/50">
+      {totalVoters === 0 &&
+      <Card className="card-shadow border-border/50">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
               <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
@@ -127,11 +127,11 @@ export const DashboardSection = () => {
             </p>
           </CardContent>
         </Card>
-      )}
+      }
 
       {/* Charts Grid */}
-      {totalVoters > 0 && (
-        <div className="grid gap-6 lg:grid-cols-2">
+      {totalVoters > 0 &&
+      <div className="grid gap-6 lg:grid-cols-2">
           {/* Gender Distribution */}
           <Card className="card-shadow border-border/50">
             <CardHeader>
@@ -145,38 +145,38 @@ export const DashboardSection = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={genderData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {genderData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                      ))}
+                    data={genderData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value">
+
+                      {genderData.map((_, index) =>
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    )}
                     </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: 'var(--radius)'
-                      }}
-                    />
+                    <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 'var(--radius)'
+                    }} />
+
                   </PieChart>
                 </ResponsiveContainer>
               </div>
               <div className="mt-4 flex justify-center gap-6">
-                {genderData.map((item, index) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div 
-                      className="h-3 w-3 rounded-full" 
-                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                    />
+                {genderData.map((item, index) =>
+              <div key={item.name} className="flex items-center gap-2">
+                    <div
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
+
                     <span className="text-sm text-muted-foreground">{item.name}: {item.value}</span>
                   </div>
-                ))}
+              )}
               </div>
             </CardContent>
           </Card>
@@ -194,27 +194,27 @@ export const DashboardSection = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={ageData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="range" 
-                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                      axisLine={{ stroke: 'hsl(var(--border))' }}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                      axisLine={{ stroke: 'hsl(var(--border))' }}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: 'var(--radius)'
-                      }}
-                    />
-                    <Bar 
-                      dataKey="count" 
-                      fill="hsl(var(--chart-2))" 
-                      radius={[4, 4, 0, 0]}
-                    />
+                    <XAxis
+                    dataKey="range"
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }} />
+
+                    <YAxis
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }} />
+
+                    <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 'var(--radius)'
+                    }} />
+
+                    <Bar
+                    dataKey="count"
+                    fill="hsl(var(--chart-2))"
+                    radius={[4, 4, 0, 0]} />
+
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -236,14 +236,14 @@ export const DashboardSection = () => {
                     <span className="text-muted-foreground">{segments.newarVsNonNewar.newar}</span>
                   </div>
                   <div className="h-3 overflow-hidden rounded-full bg-muted">
-                    <div 
-                      className="h-full rounded-full bg-chart-2 transition-all duration-500"
-                      style={{ 
-                        width: segments.total > 0 
-                          ? `${(segments.newarVsNonNewar.newar / segments.total) * 100}%` 
-                          : '0%' 
-                      }}
-                    />
+                    <div
+                    className="h-full rounded-full bg-chart-2 transition-all duration-500"
+                    style={{
+                      width: segments.total > 0 ?
+                      `${segments.newarVsNonNewar.newar / segments.total * 100}%` :
+                      '0%'
+                    }} />
+
                   </div>
                 </div>
                 <div className="flex-1">
@@ -252,21 +252,21 @@ export const DashboardSection = () => {
                     <span className="text-muted-foreground">{segments.newarVsNonNewar.nonNewar}</span>
                   </div>
                   <div className="h-3 overflow-hidden rounded-full bg-muted">
-                    <div 
-                      className="h-full rounded-full bg-chart-1 transition-all duration-500"
-                      style={{ 
-                        width: segments.total > 0 
-                          ? `${(segments.newarVsNonNewar.nonNewar / segments.total) * 100}%` 
-                          : '0%' 
-                      }}
-                    />
+                    <div
+                    className="h-full rounded-full bg-chart-1 transition-all duration-500"
+                    style={{
+                      width: segments.total > 0 ?
+                      `${segments.newarVsNonNewar.nonNewar / segments.total * 100}%` :
+                      '0%'
+                    }} />
+
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };

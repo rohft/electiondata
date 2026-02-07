@@ -8,7 +8,7 @@ export const NEPALI_DIGITS_MAP: Record<string, string> = {
   '6': '६',
   '7': '७',
   '8': '८',
-  '9': '९',
+  '9': '९'
 };
 
 /**

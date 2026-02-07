@@ -15,8 +15,8 @@ export function useCategoryData() {
         [categoryId]: {
           ...existing,
           fields: [...existing.fields, newField],
-          data: [...existing.data, { fieldId: newField.id, value: newField.type === "multi-select" ? [] : null }],
-        },
+          data: [...existing.data, { fieldId: newField.id, value: newField.type === "multi-select" ? [] : null }]
+        }
       };
     });
   }, []);
@@ -29,8 +29,8 @@ export function useCategoryData() {
         ...prev,
         [categoryId]: {
           fields: existing.fields.filter((f) => f.id !== fieldId),
-          data: existing.data.filter((d) => d.fieldId !== fieldId),
-        },
+          data: existing.data.filter((d) => d.fieldId !== fieldId)
+        }
       };
     });
   }, []);
@@ -43,8 +43,8 @@ export function useCategoryData() {
         ...prev,
         [categoryId]: {
           ...existing,
-          data: existing.data.map((d) => (d.fieldId === fieldId ? { ...d, value } : d)),
-        },
+          data: existing.data.map((d) => d.fieldId === fieldId ? { ...d, value } : d)
+        }
       };
     });
   }, []);
@@ -59,9 +59,9 @@ export function useCategoryData() {
         [categoryId]: {
           ...existing,
           fields: existing.fields.map((f) =>
-            f.id === fieldId ? { ...f, options: [...(f.options || []), newOption] } : f
-          ),
-        },
+          f.id === fieldId ? { ...f, options: [...(f.options || []), newOption] } : f
+          )
+        }
       };
     });
   }, []);
@@ -75,9 +75,9 @@ export function useCategoryData() {
         [categoryId]: {
           ...existing,
           fields: existing.fields.map((f) =>
-            f.id === fieldId ? { ...f, options: (f.options || []).filter((o) => o.id !== optionId) } : f
-          ),
-        },
+          f.id === fieldId ? { ...f, options: (f.options || []).filter((o) => o.id !== optionId) } : f
+          )
+        }
       };
     });
   }, []);
@@ -94,6 +94,6 @@ export function useCategoryData() {
     updateFieldData,
     addFieldOption,
     removeFieldOption,
-    getFieldsForCategory,
+    getFieldsForCategory
   };
 }

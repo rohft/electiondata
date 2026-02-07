@@ -5,8 +5,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  DropdownMenuTrigger } from
+'@/components/ui/dropdown-menu';
 import { Sun, Moon, Monitor, Languages, Search } from 'lucide-react';
 
 interface HeaderProps {
@@ -32,8 +32,8 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
           <input
             type="text"
             placeholder={t('common.search')}
-            className="h-9 w-64 rounded-lg border border-input bg-background pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-          />
+            className="h-9 w-64 rounded-lg border border-input bg-background pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background" />
+
         </div>
 
         {/* Language Toggle */}
@@ -47,14 +47,14 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               onClick={() => setLanguage('en')}
-              className={language === 'en' ? 'bg-accent' : ''}
-            >
+              className={language === 'en' ? 'bg-accent' : ''}>
+
               {t('language.english')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setLanguage('ne')}
-              className={language === 'ne' ? 'bg-accent' : ''}
-            >
+              className={language === 'ne' ? 'bg-accent' : ''}>
+
               {t('language.nepali')}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -72,28 +72,28 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               onClick={() => setTheme('light')}
-              className={theme === 'light' ? 'bg-accent' : ''}
-            >
+              className={theme === 'light' ? 'bg-accent' : ''}>
+
               <Sun className="mr-2 h-4 w-4" />
               {t('theme.light')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setTheme('dark')}
-              className={theme === 'dark' ? 'bg-accent' : ''}
-            >
+              className={theme === 'dark' ? 'bg-accent' : ''}>
+
               <Moon className="mr-2 h-4 w-4" />
               {t('theme.dark')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setTheme('system')}
-              className={theme === 'system' ? 'bg-accent' : ''}
-            >
+              className={theme === 'system' ? 'bg-accent' : ''}>
+
               <Monitor className="mr-2 h-4 w-4" />
               {t('theme.system')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
-  );
+    </header>);
+
 };

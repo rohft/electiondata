@@ -5,8 +5,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DialogFooter } from
+"@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload } from "lucide-react";
@@ -56,8 +56,8 @@ export function BulkUploadDialog({ open, onClose, onUpload, parentName }: BulkUp
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
-          className="min-h-[200px] font-mono text-sm"
-        />
+          className="min-h-[200px] font-mono text-sm" />
+
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -68,6 +68,6 @@ export function BulkUploadDialog({ open, onClose, onUpload, parentName }: BulkUp
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }

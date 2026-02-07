@@ -37,12 +37,12 @@ const defaultTags: CustomTagsData = {
   castes: [...DEFAULT_CASTES],
   surnames: [],
   deletedDefaultCastes: [],
-  casteHierarchy: {},
+  casteHierarchy: {}
 };
 
 const CustomTagsContext = createContext<CustomTagsContextType | undefined>(undefined);
 
-export const CustomTagsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const CustomTagsProvider: React.FC<{children: React.ReactNode;}> = ({ children }) => {
   const [tags, setTags] = useState<CustomTagsData>(defaultTags);
 
   useEffect(() => {
@@ -68,9 +68,9 @@ export const CustomTagsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const addCaste = useCallback((caste: string) => {
     const trimmed = caste.trim();
     if (!trimmed) return;
-    setTags(prev => {
+    setTags((prev) => {
       if (DEFAULT_CASTES.includes(trimmed) && prev.deletedDefaultCastes.includes(trimmed)) {
-        return { ...prev, deletedDefaultCastes: prev.deletedDefaultCastes.filter(c => c !== trimmed) };
+        return { ...prev, deletedDefaultCastes: prev.deletedDefaultCastes.filter((c) => c !== trimmed) };
       }
       if (prev.castes.includes(trimmed)) return prev;
       return { ...prev, castes: [...prev.castes, trimmed].sort() };
@@ -79,21 +79,21 @@ export const CustomTagsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const removeCaste = useCallback((caste: string) => {
     if (DEFAULT_CASTES.includes(caste)) {
-      setTags(prev => ({
+      setTags((prev) => ({
         ...prev,
         deletedDefaultCastes: prev.deletedDefaultCastes.includes(caste) ? prev.deletedDefaultCastes : [...prev.deletedDefaultCastes, caste]
       }));
     } else {
-      setTags(prev => ({ ...prev, castes: prev.castes.filter(c => c !== caste) }));
+      setTags((prev) => ({ ...prev, castes: prev.castes.filter((c) => c !== caste) }));
     }
   }, []);
 
   const renameCaste = useCallback((oldName: string, newName: string) => {
     const trimmedNew = newName.trim();
     if (!trimmedNew || oldName === trimmedNew) return;
-    setTags(prev => ({
+    setTags((prev) => ({
       ...prev,
-      castes: prev.castes.map(c => c === oldName ? trimmedNew : c),
+      castes: prev.castes.map((c) => c === oldName ? trimmedNew : c),
       casteHierarchy: Object.fromEntries(
         Object.entries(prev.casteHierarchy).map(([key, val]) => [key === oldName ? trimmedNew : key, val])
       )
@@ -103,7 +103,7 @@ export const CustomTagsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const addSubfolder = useCallback((parentCaste: string, subfolderName: string) => {
     const trimmed = subfolderName.trim();
     if (!trimmed) return;
-    setTags(prev => {
+    setTags((prev) => {
       const existing = prev.casteHierarchy[parentCaste] || { subfolders: [], surnames: [] };
       if (existing.subfolders.includes(trimmed)) return prev;
       return {
@@ -117,14 +117,14 @@ export const CustomTagsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const removeSubfolder = useCallback((parentCaste: string, subfolderName: string) => {
-    setTags(prev => {
+    setTags((prev) => {
       const existing = prev.casteHierarchy[parentCaste];
       if (!existing) return prev;
       return {
         ...prev,
         casteHierarchy: {
           ...prev.casteHierarchy,
-          [parentCaste]: { ...existing, subfolders: existing.subfolders.filter(s => s !== subfolderName) }
+          [parentCaste]: { ...existing, subfolders: existing.subfolders.filter((s) => s !== subfolderName) }
         }
       };
     });
@@ -135,13 +135,13 @@ export const CustomTagsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [tags.deletedDefaultCastes]);
 
   const getVisibleCastes = useCallback((): string[] => {
-    const visibleDefaults = DEFAULT_CASTES.filter(c => !tags.deletedDefaultCastes.includes(c));
-    const customCastes = tags.castes.filter(c => !DEFAULT_CASTES.includes(c));
+    const visibleDefaults = DEFAULT_CASTES.filter((c) => !tags.deletedDefaultCastes.includes(c));
+    const customCastes = tags.castes.filter((c) => !DEFAULT_CASTES.includes(c));
     return [...new Set([...visibleDefaults, ...customCastes])].sort();
   }, [tags.castes, tags.deletedDefaultCastes]);
 
   const importCasteData = useCallback((data: Partial<Pick<CustomTagsData, 'castes' | 'deletedDefaultCastes' | 'casteHierarchy'>>) => {
-    setTags(prev => ({
+    setTags((prev) => ({
       ...prev,
       castes: data.castes ? [...new Set([...prev.castes, ...data.castes])] : prev.castes,
       deletedDefaultCastes: data.deletedDefaultCastes ? [...new Set([...prev.deletedDefaultCastes, ...data.deletedDefaultCastes])] : prev.deletedDefaultCastes,
@@ -160,25 +160,25 @@ export const CustomTagsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const addSurname = useCallback((surname: string) => {
     const trimmed = surname.trim();
     if (trimmed && !tags.surnames.includes(trimmed)) {
-      setTags(prev => ({ ...prev, surnames: [...prev.surnames, trimmed].sort() }));
+      setTags((prev) => ({ ...prev, surnames: [...prev.surnames, trimmed].sort() }));
     }
   }, [tags.surnames]);
 
   const removeSurname = useCallback((surname: string) => {
-    setTags(prev => ({ ...prev, surnames: prev.surnames.filter(s => s !== surname) }));
+    setTags((prev) => ({ ...prev, surnames: prev.surnames.filter((s) => s !== surname) }));
   }, []);
 
   const getCasteSuggestions = useCallback((query: string): string[] => {
     const visible = getVisibleCastes();
     if (!query) return visible;
     const lowerQuery = query.toLowerCase();
-    return visible.filter(c => c.toLowerCase().includes(lowerQuery));
+    return visible.filter((c) => c.toLowerCase().includes(lowerQuery));
   }, [getVisibleCastes]);
 
   const getSurnameSuggestions = useCallback((query: string): string[] => {
     if (!query) return tags.surnames;
     const lowerQuery = query.toLowerCase();
-    return tags.surnames.filter(s => s.toLowerCase().includes(lowerQuery));
+    return tags.surnames.filter((s) => s.toLowerCase().includes(lowerQuery));
   }, [tags.surnames]);
 
   return (
@@ -199,8 +199,8 @@ export const CustomTagsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       getSurnameSuggestions
     }}>
       {children}
-    </CustomTagsContext.Provider>
-  );
+    </CustomTagsContext.Provider>);
+
 };
 
 export const useCustomTags = () => {

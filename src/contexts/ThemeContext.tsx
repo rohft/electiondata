@@ -10,10 +10,10 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ThemeProvider: React.FC<{children: React.ReactNode;}> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('theme') as Theme) || 'system';
+      return localStorage.getItem('theme') as Theme || 'system';
     }
     return 'system';
   });
@@ -54,8 +54,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
       {children}
-    </ThemeContext.Provider>
-  );
+    </ThemeContext.Provider>);
+
 };
 
 export const useTheme = () => {

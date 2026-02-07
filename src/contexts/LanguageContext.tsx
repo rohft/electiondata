@@ -30,7 +30,7 @@ const translations: Translations = {
   'map.unmapped': { en: 'Unmapped', ne: 'म्याप नगरिएको' },
   'map.saveMapping': { en: 'Save Mapping', ne: 'म्यापिङ सेभ गर्नुहोस्' },
   'map.resetMapping': { en: 'Reset Mapping', ne: 'म्यापिङ रिसेट गर्नुहोस्' },
-  
+
 
   // Common
   'common.search': { en: 'Search...', ne: 'खोज्नुहोस्...' },
@@ -181,19 +181,19 @@ const translations: Translations = {
 
   // Language
   'language.english': { en: 'English', ne: 'अंग्रेजी' },
-  'language.nepali': { en: 'नेपाली', ne: 'नेपाली' },
+  'language.nepali': { en: 'नेपाली', ne: 'नेपाली' }
 };
 
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
-  getBilingual: (key: string) => { en: string; ne: string };
+  getBilingual: (key: string) => {en: string;ne: string;};
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const LanguageProvider: React.FC<{children: React.ReactNode;}> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('en');
 
   const t = useCallback((key: string): string => {
@@ -205,7 +205,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return translation[language];
   }, [language]);
 
-  const getBilingual = useCallback((key: string): { en: string; ne: string } => {
+  const getBilingual = useCallback((key: string): {en: string;ne: string;} => {
     const translation = translations[key];
     if (!translation) {
       return { en: key, ne: key };
@@ -216,8 +216,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, getBilingual }}>
       {children}
-    </LanguageContext.Provider>
-  );
+    </LanguageContext.Provider>);
+
 };
 
 export const useLanguage = () => {

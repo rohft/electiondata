@@ -6,16 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Search, 
-  Users, 
-  User, 
+import {
+  Search,
+  Users,
+  User,
   UserCheck,
   ChevronLeft,
   ChevronRight,
   Filter,
-  X
-} from 'lucide-react';
+  X } from
+'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParsedRecord, isNewarName } from '@/lib/fileParser';
 import {
@@ -24,8 +24,8 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  TableRow } from
+'@/components/ui/table';
 
 interface WardUploadData {
   wardNumber: number;
@@ -49,11 +49,11 @@ interface WardStats {
   newar: number;
 }
 
-export const WardDataViewer = ({ 
-  wards, 
-  municipalityName, 
-  selectedWardIndex, 
-  onWardSelect 
+export const WardDataViewer = ({
+  wards,
+  municipalityName,
+  selectedWardIndex,
+  onWardSelect
 }: WardDataViewerProps) => {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,9 +62,9 @@ export const WardDataViewer = ({
   const itemsPerPage = 20;
 
   // Get only wards with data
-  const uploadedWards = useMemo(() => 
-    wards.filter(w => w.status === 'uploaded' && w.records.length > 0),
-    [wards]
+  const uploadedWards = useMemo(() =>
+  wards.filter((w) => w.status === 'uploaded' && w.records.length > 0),
+  [wards]
   );
 
   const currentWard = uploadedWards[selectedWardIndex];
@@ -73,21 +73,21 @@ export const WardDataViewer = ({
   // Calculate stats
   const stats: WardStats = useMemo(() => {
     const total = records.length;
-    const male = records.filter(r => r.gender === 'male').length;
-    const female = records.filter(r => r.gender === 'female').length;
-    const newar = records.filter(r => isNewarName(r.voterName)).length;
+    const male = records.filter((r) => r.gender === 'male').length;
+    const female = records.filter((r) => r.gender === 'female').length;
+    const newar = records.filter((r) => isNewarName(r.voterName)).length;
     return { total, male, female, newar };
   }, [records]);
 
   // Filter records
   const filteredRecords = useMemo(() => {
-    return records.filter(record => {
-      const matchesSearch = searchQuery === '' || 
-        record.voterName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        record.voterId.includes(searchQuery);
-      
+    return records.filter((record) => {
+      const matchesSearch = searchQuery === '' ||
+      record.voterName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.voterId.includes(searchQuery);
+
       const matchesGender = genderFilter === 'all' || record.gender === genderFilter;
-      
+
       return matchesSearch && matchesGender;
     });
   }, [records, searchQuery, genderFilter]);
@@ -100,9 +100,9 @@ export const WardDataViewer = ({
   );
 
   const handleWardChange = (direction: 'prev' | 'next') => {
-    const newIndex = direction === 'prev' 
-      ? Math.max(0, selectedWardIndex - 1)
-      : Math.min(uploadedWards.length - 1, selectedWardIndex + 1);
+    const newIndex = direction === 'prev' ?
+    Math.max(0, selectedWardIndex - 1) :
+    Math.min(uploadedWards.length - 1, selectedWardIndex + 1);
     onWardSelect(newIndex);
     setCurrentPage(1);
     setSearchQuery('');
@@ -123,8 +123,8 @@ export const WardDataViewer = ({
         <p className="text-sm text-muted-foreground mt-1">
           Please go back and upload files for at least one ward
         </p>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -136,8 +136,8 @@ export const WardDataViewer = ({
             variant="outline"
             size="icon"
             onClick={() => handleWardChange('prev')}
-            disabled={selectedWardIndex === 0}
-          >
+            disabled={selectedWardIndex === 0}>
+
             <ChevronLeft className="h-4 w-4" />
           </Button>
           
@@ -154,29 +154,29 @@ export const WardDataViewer = ({
             variant="outline"
             size="icon"
             onClick={() => handleWardChange('next')}
-            disabled={selectedWardIndex === uploadedWards.length - 1}
-          >
+            disabled={selectedWardIndex === uploadedWards.length - 1}>
+
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Quick Ward Jump */}
-        <Select 
-          value={selectedWardIndex.toString()} 
+        <Select
+          value={selectedWardIndex.toString()}
           onValueChange={(v) => {
             onWardSelect(parseInt(v));
             setCurrentPage(1);
-          }}
-        >
+          }}>
+
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Jump to ward" />
           </SelectTrigger>
           <SelectContent>
-            {uploadedWards.map((ward, idx) => (
-              <SelectItem key={ward.wardNumber} value={idx.toString()}>
+            {uploadedWards.map((ward, idx) =>
+            <SelectItem key={ward.wardNumber} value={idx.toString()}>
                 Ward {ward.wardNumber}
               </SelectItem>
-            ))}
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -245,8 +245,8 @@ export const WardDataViewer = ({
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-9"
-              />
+                className="pl-9" />
+
             </div>
             
             <Select value={genderFilter} onValueChange={(v) => {
@@ -264,12 +264,12 @@ export const WardDataViewer = ({
               </SelectContent>
             </Select>
 
-            {(searchQuery || genderFilter !== 'all') && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
+            {(searchQuery || genderFilter !== 'all') &&
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
                 <X className="h-4 w-4 mr-1" />
                 Clear
               </Button>
-            )}
+            }
           </div>
           
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
@@ -298,93 +298,93 @@ export const WardDataViewer = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedRecords.map((record, idx) => (
-                <TableRow key={record.voterId || idx}>
+              {paginatedRecords.map((record, idx) =>
+              <TableRow key={record.voterId || idx}>
                   <TableCell className="font-mono text-xs">{record.voterId || '-'}</TableCell>
                   <TableCell className="font-medium">{record.voterName}</TableCell>
                   <TableCell>{record.age || '-'}</TableCell>
                   <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        'text-xs',
-                        record.gender === 'male' && 'border-blue-500/50 text-blue-500',
-                        record.gender === 'female' && 'border-pink-500/50 text-pink-500'
-                      )}
-                    >
+                    <Badge
+                    variant="outline"
+                    className={cn(
+                      'text-xs',
+                      record.gender === 'male' && 'border-blue-500/50 text-blue-500',
+                      record.gender === 'female' && 'border-pink-500/50 text-pink-500'
+                    )}>
+
                       {record.gender === 'male' ? 'M' : record.gender === 'female' ? 'F' : 'O'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {isNewarName(record.voterName) ? (
-                      <Badge className="bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30">
+                    {isNewarName(record.voterName) ?
+                  <Badge className="bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30">
                         Newar
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-xs">Non-Newar</Badge>
-                    )}
+                      </Badge> :
+
+                  <Badge variant="secondary" className="text-xs">Non-Newar</Badge>
+                  }
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                     {record.spouse || record.parents || '-'}
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </ScrollArea>
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+      {totalPages > 1 &&
+      <div className="flex items-center justify-center gap-2">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}>
+
             <ChevronLeft className="h-4 w-4" />
             Previous
           </Button>
           
           <div className="flex items-center gap-1">
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let pageNum: number;
-              if (totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (currentPage <= 3) {
-                pageNum = i + 1;
-              } else if (currentPage >= totalPages - 2) {
-                pageNum = totalPages - 4 + i;
-              } else {
-                pageNum = currentPage - 2 + i;
-              }
-              
-              return (
-                <Button
-                  key={pageNum}
-                  variant={currentPage === pageNum ? 'default' : 'outline'}
-                  size="sm"
-                  className="w-8 h-8 p-0"
-                  onClick={() => setCurrentPage(pageNum)}
-                >
+            let pageNum: number;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? 'default' : 'outline'}
+                size="sm"
+                className="w-8 h-8 p-0"
+                onClick={() => setCurrentPage(pageNum)}>
+
                   {pageNum}
-                </Button>
-              );
-            })}
+                </Button>);
+
+          })}
           </div>
           
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}>
+
             Next
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };

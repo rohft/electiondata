@@ -18,8 +18,8 @@ import {
   Tags,
   GitBranch,
   Trash2,
-  LayoutList,
-} from "lucide-react";
+  LayoutList } from
+"lucide-react";
 import { toast } from "sonner";
 import { Category } from "@/types/category";
 
@@ -44,7 +44,7 @@ export const CategorySection = () => {
     getAllTags,
     linkCategory,
     unlinkCategory,
-    renameLinkCategory,
+    renameLinkCategory
   } = useCategoryTree();
 
   const {
@@ -54,17 +54,17 @@ export const CategorySection = () => {
     updateFieldData,
     addFieldOption,
     removeFieldOption,
-    getFieldsForCategory,
+    getFieldsForCategory
   } = useCategoryData();
 
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkParentId, setBulkParentId] = useState<string | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(null);
+  const [renameTarget, setRenameTarget] = useState<{id: string;name: string;} | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkTargetId, setLinkTargetId] = useState<string | null>(null);
   const [renameLinkOpen, setRenameLinkOpen] = useState(false);
-  const [renameLinkTarget, setRenameLinkTarget] = useState<{ sourceId: string; targetId: string; currentName: string } | null>(null);
+  const [renameLinkTarget, setRenameLinkTarget] = useState<{sourceId: string;targetId: string;currentName: string;} | null>(null);
   const [newCatName, setNewCatName] = useState("");
   const [view, setView] = useState<"flowchart" | "tags">("flowchart");
 
@@ -120,7 +120,7 @@ export const CategorySection = () => {
 
   const handleSave = () => {
     toast.success("Categories saved successfully!", {
-      description: `${getAllTags().length} categories stored.`,
+      description: `${getAllTags().length} categories stored.`
     });
   };
 
@@ -164,8 +164,8 @@ export const CategorySection = () => {
                 placeholder="New root category..."
                 value={newCatName}
                 onChange={(e) => setNewCatName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddRoot()}
-              />
+                onKeyDown={(e) => e.key === "Enter" && handleAddRoot()} />
+
               <Button onClick={handleAddRoot} size="icon" variant="outline" disabled={!newCatName.trim()}>
                 <Plus className="w-4 h-4" />
               </Button>
@@ -177,38 +177,38 @@ export const CategorySection = () => {
                 Bulk Upload
               </Button>
 
-              {selectedId && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleDelete(selectedId)}
-                  className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                >
+              {selectedId &&
+              <Button
+                variant="outline"
+                onClick={() => handleDelete(selectedId)}
+                className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground">
+
                   <Trash2 className="w-4 h-4" />
                   Delete Selected
                 </Button>
-              )}
+              }
             </div>
 
             <div className="ml-auto flex items-center bg-card border rounded-lg p-1">
               <button
                 onClick={() => setView("flowchart")}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  view === "flowchart"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
+                view === "flowchart" ?
+                "bg-primary text-primary-foreground" :
+                "text-muted-foreground hover:text-foreground"}`
+                }>
+
                 <GitBranch className="w-4 h-4 inline mr-1.5" />
                 Flowchart
               </button>
               <button
                 onClick={() => setView("tags")}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  view === "tags"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
+                view === "tags" ?
+                "bg-primary text-primary-foreground" :
+                "text-muted-foreground hover:text-foreground"}`
+                }>
+
                 <Tags className="w-4 h-4 inline mr-1.5" />
                 Cloud Tags
               </button>
@@ -217,41 +217,41 @@ export const CategorySection = () => {
 
           {/* View */}
           <div className="bg-card rounded-xl border min-h-[500px] overflow-auto">
-            {view === "flowchart" ? (
-              <FlowchartTree
-                categories={categories}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                onAdd={(parentId) => handleAdd(parentId)}
-                onDelete={handleDelete}
-                onRename={handleRenameInit}
-                onBulkUpload={(parentId) => openBulkUpload(parentId)}
-                onLink={handleLinkInit}
-                onUnlink={(sourceId, targetId) => {
-                  unlinkCategory(sourceId, targetId);
-                  toast.success("Link removed");
-                }}
-                onRenameLink={handleRenameLinkInit}
-              />
-            ) : (
-              <CloudTagView
-                tags={getAllTags()}
-                onDelete={handleDelete}
-                onSelect={setSelectedId}
-                selectedId={selectedId}
-              />
-            )}
+            {view === "flowchart" ?
+            <FlowchartTree
+              categories={categories}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onAdd={(parentId) => handleAdd(parentId)}
+              onDelete={handleDelete}
+              onRename={handleRenameInit}
+              onBulkUpload={(parentId) => openBulkUpload(parentId)}
+              onLink={handleLinkInit}
+              onUnlink={(sourceId, targetId) => {
+                unlinkCategory(sourceId, targetId);
+                toast.success("Link removed");
+              }}
+              onRenameLink={handleRenameLinkInit} /> :
+
+
+            <CloudTagView
+              tags={getAllTags()}
+              onDelete={handleDelete}
+              onSelect={setSelectedId}
+              selectedId={selectedId} />
+
+            }
           </div>
 
           {/* Linked categories panel */}
-          {selectedId && findCategoryById(categories, selectedId)?.linkedIds.length! > 0 && (
-            <LinkedCategoryView
-              category={findCategoryById(categories, selectedId)!}
-              allCategories={categories}
-              onClose={() => setSelectedId(null)}
-              onSelectCategory={(id) => setSelectedId(id)}
-            />
-          )}
+          {selectedId && findCategoryById(categories, selectedId)?.linkedIds.length! > 0 &&
+          <LinkedCategoryView
+            category={findCategoryById(categories, selectedId)!}
+            allCategories={categories}
+            onClose={() => setSelectedId(null)}
+            onSelectCategory={(id) => setSelectedId(id)} />
+
+          }
 
           {/* Stats */}
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
@@ -261,11 +261,11 @@ export const CategorySection = () => {
             <span>
               <strong className="text-foreground">{categories.length}</strong> root categories
             </span>
-            {selectedId && (
-              <span className="text-primary font-medium">
+            {selectedId &&
+            <span className="text-primary font-medium">
                 Selected: {findCategoryById(categories, selectedId)?.name}
               </span>
-            )}
+            }
           </div>
         </TabsContent>
 
@@ -281,8 +281,8 @@ export const CategorySection = () => {
               updateFieldData={updateFieldData}
               addFieldOption={addFieldOption}
               removeFieldOption={removeFieldOption}
-              getFieldsForCategory={getFieldsForCategory}
-            />
+              getFieldsForCategory={getFieldsForCategory} />
+
           </div>
         </TabsContent>
       </Tabs>
@@ -292,14 +292,14 @@ export const CategorySection = () => {
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
         onUpload={handleBulkUpload}
-        parentName={bulkParentId ? findCategoryById(categories, bulkParentId)?.name : null}
-      />
+        parentName={bulkParentId ? findCategoryById(categories, bulkParentId)?.name : null} />
+
       <RenameDialog
         open={renameOpen}
         currentName={renameTarget?.name ?? ""}
         onClose={() => setRenameOpen(false)}
-        onRename={handleRename}
-      />
+        onRename={handleRename} />
+
       <LinkDialog
         open={linkOpen}
         onClose={() => setLinkOpen(false)}
@@ -312,8 +312,8 @@ export const CategorySection = () => {
         onUnlink={(sourceId, targetId) => {
           unlinkCategory(sourceId, targetId);
           toast.success("Link removed");
-        }}
-      />
+        }} />
+
       <RenameDialog
         open={renameLinkOpen}
         currentName={renameLinkTarget?.currentName ?? ""}
@@ -323,8 +323,8 @@ export const CategorySection = () => {
             renameLinkCategory(renameLinkTarget.sourceId, renameLinkTarget.targetId, newName);
             toast.success(`Link renamed to "${newName}"`);
           }
-        }}
-      />
-    </div>
-  );
+        }} />
+
+    </div>);
+
 };

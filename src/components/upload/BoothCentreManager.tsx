@@ -11,8 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+  DialogClose } from
+'@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,8 +21,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  AlertDialogTitle } from
+'@/components/ui/alert-dialog';
 import { Plus, Edit3, Trash2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -35,10 +35,10 @@ interface BoothCentreManagerProps {
 export const BoothCentreManager: React.FC<BoothCentreManagerProps> = ({
   municipalityId,
   wardId,
-  boothCentres,
+  boothCentres
 }) => {
   const { addBoothCentre, updateBoothCentre, removeBoothCentre } = useVoterData();
-  
+
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -102,25 +102,25 @@ export const BoothCentreManager: React.FC<BoothCentreManagerProps> = ({
               setBoothName('');
               setShowAddDialog(true);
             }}
-            className="gap-1"
-          >
+            className="gap-1">
+
             <Plus className="h-3 w-3" />
             Add Booth
           </Button>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {boothCentres.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
+        {boothCentres.length === 0 ?
+        <p className="text-sm text-muted-foreground text-center py-4">
             No booth centres added yet. Click "Add Booth" to create one.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {boothCentres.map((booth, index) => (
-              <div
-                key={booth.id}
-                className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-              >
+          </p> :
+
+        <div className="space-y-2">
+            {boothCentres.map((booth, index) =>
+          <div
+            key={booth.id}
+            className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
                     #{index + 1}
@@ -129,26 +129,26 @@ export const BoothCentreManager: React.FC<BoothCentreManagerProps> = ({
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => openRenameDialog(booth)}
-                  >
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => openRenameDialog(booth)}>
+
                     <Edit3 className="h-3 w-3" />
                   </Button>
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => openDeleteDialog(booth)}
-                  >
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive"
+                onClick={() => openDeleteDialog(booth)}>
+
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
-            ))}
+          )}
           </div>
-        )}
+        }
       </CardContent>
 
       {/* Add Dialog */}
@@ -164,8 +164,8 @@ export const BoothCentreManager: React.FC<BoothCentreManagerProps> = ({
                 value={boothName}
                 onChange={(e) => setBoothName(e.target.value)}
                 placeholder="e.g., Primary School Hall"
-                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-              />
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
+
             </div>
           </div>
           <DialogFooter>
@@ -190,8 +190,8 @@ export const BoothCentreManager: React.FC<BoothCentreManagerProps> = ({
                 value={boothName}
                 onChange={(e) => setBoothName(e.target.value)}
                 placeholder={selectedBooth?.name || ''}
-                onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-              />
+                onKeyDown={(e) => e.key === 'Enter' && handleRename()} />
+
             </div>
           </div>
           <DialogFooter>
@@ -217,13 +217,13 @@ export const BoothCentreManager: React.FC<BoothCentreManagerProps> = ({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
-  );
+    </Card>);
+
 };

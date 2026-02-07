@@ -4,8 +4,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DialogFooter } from
+"@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -42,8 +42,8 @@ export function RenameDialog({ open, currentName, onClose, onRename }: RenameDia
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
-            placeholder="Category name"
-          />
+            placeholder="Category name" />
+
           <DialogFooter className="mt-4">
             <Button variant="outline" type="button" onClick={onClose}>
               Cancel
@@ -54,6 +54,6 @@ export function RenameDialog({ open, currentName, onClose, onRename }: RenameDia
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }

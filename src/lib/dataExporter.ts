@@ -29,7 +29,7 @@ const voterToExportRow = (voter: VoterRecord, index: number) => ({
   'पिता/माताको नाम': voter.originalData?.['पिता/माताको नाम'] || '',
   'Parents': voter.originalData?.['Parents'] || voter.originalData?.['पिता/माताको नाम'] || '',
   'स्थिति': voter.voterStatus || 'available',
-  'Status': voter.voterStatus || 'available',
+  'Status': voter.voterStatus || 'available'
 });
 
 // Convert ParsedRecord to exportable format
@@ -54,23 +54,23 @@ const parsedRecordToExportRow = (record: ParsedRecord, index: number) => ({
   'Parents': record.parents || '',
   'स्थिति': record.status || '',
   'Status': record.status || '',
-  ...record.originalData,
+  ...record.originalData
 });
 
 export const exportToExcel = async (
-  data: VoterRecord[] | ParsedRecord[],
-  fileName: string = 'voter_data'
-): Promise<void> => {
+data: VoterRecord[] | ParsedRecord[],
+fileName: string = 'voter_data')
+: Promise<void> => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Voter Data');
 
   // Determine if data is VoterRecord or ParsedRecord
   const isVoterRecord = data.length > 0 && 'fullName' in data[0];
-  
-  const rows = data.map((record, idx) => 
-    isVoterRecord 
-      ? voterToExportRow(record as VoterRecord, idx)
-      : parsedRecordToExportRow(record as ParsedRecord, idx)
+
+  const rows = data.map((record, idx) =>
+  isVoterRecord ?
+  voterToExportRow(record as VoterRecord, idx) :
+  parsedRecordToExportRow(record as ParsedRecord, idx)
   );
 
   if (rows.length === 0) return;
@@ -89,14 +89,14 @@ export const exportToExcel = async (
   };
 
   // Add data rows
-  rows.forEach(row => {
+  rows.forEach((row) => {
     worksheet.addRow(Object.values(row));
   });
 
   // Auto-fit columns
-  worksheet.columns.forEach(column => {
+  worksheet.columns.forEach((column) => {
     let maxLength = 0;
-    column.eachCell?.({ includeEmpty: true }, cell => {
+    column.eachCell?.({ includeEmpty: true }, (cell) => {
       const cellLength = cell.value ? String(cell.value).length : 0;
       maxLength = Math.max(maxLength, cellLength);
     });
@@ -105,10 +105,10 @@ export const exportToExcel = async (
 
   // Generate and download
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { 
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
-  
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -120,28 +120,28 @@ export const exportToExcel = async (
 };
 
 export const exportToCSV = (
-  data: VoterRecord[] | ParsedRecord[],
-  fileName: string = 'voter_data'
-): void => {
+data: VoterRecord[] | ParsedRecord[],
+fileName: string = 'voter_data')
+: void => {
   const isVoterRecord = data.length > 0 && 'fullName' in data[0];
-  
-  const rows = data.map((record, idx) => 
-    isVoterRecord 
-      ? voterToExportRow(record as VoterRecord, idx)
-      : parsedRecordToExportRow(record as ParsedRecord, idx)
+
+  const rows = data.map((record, idx) =>
+  isVoterRecord ?
+  voterToExportRow(record as VoterRecord, idx) :
+  parsedRecordToExportRow(record as ParsedRecord, idx)
   );
 
   if (rows.length === 0) return;
 
   const headers = Object.keys(rows[0]);
   const csvContent = [
-    headers.join(','),
-    ...rows.map(row => 
-      Object.values(row).map(val => 
-        `"${String(val).replace(/"/g, '""')}"`
-      ).join(',')
-    )
-  ].join('\n');
+  headers.join(','),
+  ...rows.map((row) =>
+  Object.values(row).map((val) =>
+  `"${String(val).replace(/"/g, '""')}"`
+  ).join(',')
+  )].
+  join('\n');
 
   const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -155,9 +155,9 @@ export const exportToCSV = (
 };
 
 export const exportToJSON = (
-  data: VoterRecord[] | ParsedRecord[],
-  fileName: string = 'voter_data'
-): void => {
+data: VoterRecord[] | ParsedRecord[],
+fileName: string = 'voter_data')
+: void => {
   const jsonContent = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonContent], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -172,9 +172,9 @@ export const exportToJSON = (
 
 // Export municipality data for backup
 export const exportMunicipalityBackup = async (
-  municipalities: MunicipalityData[],
-  fileName: string = 'voter_data_backup'
-): Promise<void> => {
+municipalities: MunicipalityData[],
+fileName: string = 'voter_data_backup')
+: Promise<void> => {
   const workbook = new ExcelJS.Workbook();
 
   for (const municipality of municipalities) {
@@ -183,7 +183,7 @@ export const exportMunicipalityBackup = async (
       const worksheet = workbook.addWorksheet(sheetName);
 
       const rows = ward.voters.map((voter, idx) => voterToExportRow(voter, idx));
-      
+
       if (rows.length === 0) continue;
 
       const headers = Object.keys(rows[0]);
@@ -197,13 +197,13 @@ export const exportMunicipalityBackup = async (
         fgColor: { argb: 'FFE0E0E0' }
       };
 
-      rows.forEach(row => {
+      rows.forEach((row) => {
         worksheet.addRow(Object.values(row));
       });
 
-      worksheet.columns.forEach(column => {
+      worksheet.columns.forEach((column) => {
         let maxLength = 0;
-        column.eachCell?.({ includeEmpty: true }, cell => {
+        column.eachCell?.({ includeEmpty: true }, (cell) => {
           const cellLength = cell.value ? String(cell.value).length : 0;
           maxLength = Math.max(maxLength, cellLength);
         });
@@ -213,10 +213,10 @@ export const exportMunicipalityBackup = async (
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { 
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
-  
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

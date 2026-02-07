@@ -29,7 +29,7 @@ export interface VoterRecord {
   isMainFamilyMember?: boolean;
   originalData: Record<string, string>;
   isEdited?: boolean;
-  editHistory?: Array<{ field: string; oldValue: string; newValue: string; timestamp: Date }>;
+  editHistory?: Array<{field: string;oldValue: string;newValue: string;timestamp: Date;}>;
 }
 
 export interface BoothCentre {
@@ -81,7 +81,7 @@ export interface SegmentCounts {
   byGender: Record<string, number>;
   byCaste: Record<string, number>;
   bySurname: Record<string, number>;
-  newarVsNonNewar: { newar: number; nonNewar: number };
+  newarVsNonNewar: {newar: number;nonNewar: number;};
   total: number;
 }
 
@@ -109,7 +109,7 @@ const deserializeData = (data: string): MunicipalityData[] => {
   });
 };
 
-export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ children }) => {
   const [municipalities, setMunicipalities] = useState<MunicipalityData[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
@@ -131,7 +131,7 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Auto-save to localStorage when data changes (debounced)
   useEffect(() => {
     if (!isDataLoaded) return;
-    
+
     const timeoutId = setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, serializeData(municipalities));
@@ -157,14 +157,14 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const addWardData = useCallback((municipalityName: string, wardData: WardData) => {
-    setMunicipalities(prev => {
-      const existingMunicipality = prev.find(m => m.name === municipalityName);
-      
+    setMunicipalities((prev) => {
+      const existingMunicipality = prev.find((m) => m.name === municipalityName);
+
       if (existingMunicipality) {
-        return prev.map(m => 
-          m.name === municipalityName 
-            ? { ...m, wards: [...m.wards, wardData] }
-            : m
+        return prev.map((m) =>
+        m.name === municipalityName ?
+        { ...m, wards: [...m.wards, wardData] } :
+        m
         );
       } else {
         return [...prev, {
@@ -177,25 +177,25 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const removeWardData = useCallback((municipalityId: string, wardId: string) => {
-    setMunicipalities(prev => {
-      return prev.map(m => {
+    setMunicipalities((prev) => {
+      return prev.map((m) => {
         if (m.id === municipalityId) {
-          const updatedWards = m.wards.filter(w => w.id !== wardId);
+          const updatedWards = m.wards.filter((w) => w.id !== wardId);
           return { ...m, wards: updatedWards };
         }
         return m;
-      }).filter(m => m.wards.length > 0);
+      }).filter((m) => m.wards.length > 0);
     });
   }, []);
 
   const updateVoterRecord = useCallback((
-    municipalityId: string, 
-    wardId: string, 
-    voterId: string, 
-    updates: Partial<VoterRecord>
-  ) => {
+  municipalityId: string,
+  wardId: string,
+  voterId: string,
+  updates: Partial<VoterRecord>) =>
+  {
     const updateVoterInList = (voters: VoterRecord[]) => {
-      return voters.map(v => {
+      return voters.map((v) => {
         if (v.id === voterId) {
           const editHistory = v.editHistory || [];
           Object.entries(updates).forEach(([key, value]) => {
@@ -214,20 +214,20 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
     };
 
-    setMunicipalities(prev => {
-      return prev.map(m => {
+    setMunicipalities((prev) => {
+      return prev.map((m) => {
         if (m.id === municipalityId) {
           return {
             ...m,
-            wards: m.wards.map(w => {
+            wards: m.wards.map((w) => {
               if (w.id === wardId) {
-                const updatedBooths = w.boothCentres?.map(b => ({
+                const updatedBooths = w.boothCentres?.map((b) => ({
                   ...b,
                   voters: updateVoterInList(b.voters || [])
                 }));
-                const allVoters = updatedBooths
-                  ? updatedBooths.flatMap(b => b.voters || [])
-                  : updateVoterInList(w.voters);
+                const allVoters = updatedBooths ?
+                updatedBooths.flatMap((b) => b.voters || []) :
+                updateVoterInList(w.voters);
                 return { ...w, voters: allVoters, boothCentres: updatedBooths || w.boothCentres };
               }
               return w;
@@ -241,7 +241,7 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const revertVoterRecord = useCallback((municipalityId: string, wardId: string, voterId: string) => {
     const revertVoterInList = (voters: VoterRecord[]) => {
-      return voters.map(v => {
+      return voters.map((v) => {
         if (v.id === voterId && v.editHistory && v.editHistory.length > 0) {
           const lastEdit = v.editHistory[v.editHistory.length - 1];
           const newEditHistory = v.editHistory.slice(0, -1);
@@ -256,20 +256,20 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
     };
 
-    setMunicipalities(prev => {
-      return prev.map(m => {
+    setMunicipalities((prev) => {
+      return prev.map((m) => {
         if (m.id === municipalityId) {
           return {
             ...m,
-            wards: m.wards.map(w => {
+            wards: m.wards.map((w) => {
               if (w.id === wardId) {
-                const updatedBooths = w.boothCentres?.map(b => ({
+                const updatedBooths = w.boothCentres?.map((b) => ({
                   ...b,
                   voters: revertVoterInList(b.voters || [])
                 }));
-                const allVoters = updatedBooths
-                  ? updatedBooths.flatMap(b => b.voters || [])
-                  : revertVoterInList(w.voters);
+                const allVoters = updatedBooths ?
+                updatedBooths.flatMap((b) => b.voters || []) :
+                revertVoterInList(w.voters);
                 return { ...w, voters: allVoters, boothCentres: updatedBooths || w.boothCentres };
               }
               return w;
@@ -282,12 +282,12 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const addBoothCentre = useCallback((municipalityId: string, wardId: string, name: string) => {
-    setMunicipalities(prev => {
-      return prev.map(m => {
+    setMunicipalities((prev) => {
+      return prev.map((m) => {
         if (m.id === municipalityId) {
           return {
             ...m,
-            wards: m.wards.map(w => {
+            wards: m.wards.map((w) => {
               if (w.id === wardId) {
                 const newBooth: BoothCentre = {
                   id: crypto.randomUUID(),
@@ -307,17 +307,17 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const updateBoothCentre = useCallback((municipalityId: string, wardId: string, boothId: string, name: string) => {
-    setMunicipalities(prev => {
-      return prev.map(m => {
+    setMunicipalities((prev) => {
+      return prev.map((m) => {
         if (m.id === municipalityId) {
           return {
             ...m,
-            wards: m.wards.map(w => {
+            wards: m.wards.map((w) => {
               if (w.id === wardId && w.boothCentres) {
                 return {
                   ...w,
-                  boothCentres: w.boothCentres.map(b => 
-                    b.id === boothId ? { ...b, name: name.trim() } : b
+                  boothCentres: w.boothCentres.map((b) =>
+                  b.id === boothId ? { ...b, name: name.trim() } : b
                   )
                 };
               }
@@ -331,15 +331,15 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const removeBoothCentre = useCallback((municipalityId: string, wardId: string, boothId: string) => {
-    setMunicipalities(prev => {
-      return prev.map(m => {
+    setMunicipalities((prev) => {
+      return prev.map((m) => {
         if (m.id === municipalityId) {
           return {
             ...m,
-            wards: m.wards.map(w => {
+            wards: m.wards.map((w) => {
               if (w.id === wardId && w.boothCentres) {
-                const updatedBooths = w.boothCentres.filter(b => b.id !== boothId);
-                const allVoters = updatedBooths.flatMap(b => b.voters || []);
+                const updatedBooths = w.boothCentres.filter((b) => b.id !== boothId);
+                const allVoters = updatedBooths.flatMap((b) => b.voters || []);
                 return { ...w, boothCentres: updatedBooths, voters: allVoters };
               }
               return w;
@@ -354,7 +354,7 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Sync ward.voters from booth centres
   const syncWardVoters = (ward: WardData): VoterRecord[] => {
     if (ward.boothCentres && ward.boothCentres.length > 0) {
-      return ward.boothCentres.flatMap(b => b.voters || []);
+      return ward.boothCentres.flatMap((b) => b.voters || []);
     }
     return ward.voters || [];
   };
@@ -364,20 +364,20 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const addBoothVoters = useCallback((municipalityId: string, wardId: string, boothId: string, voters: VoterRecord[], fileName: string) => {
-    setMunicipalities(prev => {
-      return prev.map(m => {
+    setMunicipalities((prev) => {
+      return prev.map((m) => {
         if (m.id === municipalityId) {
           return {
             ...m,
-            wards: m.wards.map(w => {
+            wards: m.wards.map((w) => {
               if (w.id === wardId && w.boothCentres) {
-                const updatedBooths = w.boothCentres.map(b =>
-                  b.id === boothId
-                    ? { ...b, voters, fileName, uploadedAt: new Date() }
-                    : b
+                const updatedBooths = w.boothCentres.map((b) =>
+                b.id === boothId ?
+                { ...b, voters, fileName, uploadedAt: new Date() } :
+                b
                 );
                 // Sync ward.voters from booths
-                const allVoters = updatedBooths.flatMap(b => b.voters || []);
+                const allVoters = updatedBooths.flatMap((b) => b.voters || []);
                 return { ...w, boothCentres: updatedBooths, voters: allVoters };
               }
               return w;
@@ -390,11 +390,11 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const getTotalVoters = useCallback(() => {
-    return municipalities.reduce((total, m) => 
-      total + m.wards.reduce((wTotal, w) => {
-        const voters = syncWardVoters(w);
-        return wTotal + voters.length;
-      }, 0), 0
+    return municipalities.reduce((total, m) =>
+    total + m.wards.reduce((wTotal, w) => {
+      const voters = syncWardVoters(w);
+      return wTotal + voters.length;
+    }, 0), 0
     );
   }, [municipalities]);
 
@@ -406,14 +406,14 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let voters: VoterRecord[] = [];
 
     if (municipalityId && wardId) {
-      const municipality = municipalities.find(m => m.id === municipalityId);
-      const ward = municipality?.wards.find(w => w.id === wardId);
+      const municipality = municipalities.find((m) => m.id === municipalityId);
+      const ward = municipality?.wards.find((w) => w.id === wardId);
       voters = ward?.voters || [];
     } else if (municipalityId) {
-      const municipality = municipalities.find(m => m.id === municipalityId);
-      voters = municipality?.wards.flatMap(w => w.voters) || [];
+      const municipality = municipalities.find((m) => m.id === municipalityId);
+      voters = municipality?.wards.flatMap((w) => w.voters) || [];
     } else {
-      voters = municipalities.flatMap(m => m.wards.flatMap(w => w.voters));
+      voters = municipalities.flatMap((m) => m.wards.flatMap((w) => w.voters));
     }
 
     const byAge: Record<string, number> = {
@@ -436,14 +436,14 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let newar = 0;
     let nonNewar = 0;
 
-    voters.forEach(voter => {
+    voters.forEach((voter) => {
       // Age
-      if (voter.age >= 18 && voter.age <= 25) byAge['18-25']++;
-      else if (voter.age <= 35) byAge['26-35']++;
-      else if (voter.age <= 45) byAge['36-45']++;
-      else if (voter.age <= 55) byAge['46-55']++;
-      else if (voter.age <= 65) byAge['56-65']++;
-      else byAge['65+']++;
+      if (voter.age >= 18 && voter.age <= 25) byAge['18-25']++;else
+      if (voter.age <= 35) byAge['26-35']++;else
+      if (voter.age <= 45) byAge['36-45']++;else
+      if (voter.age <= 55) byAge['46-55']++;else
+      if (voter.age <= 65) byAge['56-65']++;else
+      byAge['65+']++;
 
       // Gender
       byGender[voter.gender]++;
@@ -455,8 +455,8 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       bySurname[voter.surname] = (bySurname[voter.surname] || 0) + 1;
 
       // Newar
-      if (voter.isNewar) newar++;
-      else nonNewar++;
+      if (voter.isNewar) newar++;else
+      nonNewar++;
     });
 
     return {
@@ -489,8 +489,8 @@ export const VoterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       isDataLoaded
     }}>
       {children}
-    </VoterDataContext.Provider>
-  );
+    </VoterDataContext.Provider>);
+
 };
 
 export const useVoterData = () => {

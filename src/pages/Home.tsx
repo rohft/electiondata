@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  BarChart3, Users, PieChart, TrendingUp, Upload, Shield, 
-  Zap, Globe2, ArrowRight, Play, CheckCircle2, Sparkles
-} from 'lucide-react';
+import {
+  BarChart3, Users, PieChart, TrendingUp, Upload, Shield,
+  Zap, Globe2, ArrowRight, Play, CheckCircle2, Sparkles } from
+'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface HomePageProps {
@@ -13,33 +13,33 @@ interface HomePageProps {
 }
 
 const features = [
-  {
-    icon: Upload,
-    title: 'Easy Data Upload',
-    description: 'Upload CSV, Excel, or JSON files with automatic field detection and validation.',
-  },
-  {
-    icon: PieChart,
-    title: 'Smart Segmentation',
-    description: 'Automatic categorization by age, gender, caste, and surname with AI-powered detection.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Advanced Analytics',
-    description: 'Interactive charts, widgets, and customizable visualizations for deep insights.',
-  },
-  {
-    icon: Globe2,
-    title: 'Bilingual Support',
-    description: 'Full English and Nepali language support for all data views and exports.',
-  },
-];
+{
+  icon: Upload,
+  title: 'Easy Data Upload',
+  description: 'Upload CSV, Excel, or JSON files with automatic field detection and validation.'
+},
+{
+  icon: PieChart,
+  title: 'Smart Segmentation',
+  description: 'Automatic categorization by age, gender, caste, and surname with AI-powered detection.'
+},
+{
+  icon: BarChart3,
+  title: 'Advanced Analytics',
+  description: 'Interactive charts, widgets, and customizable visualizations for deep insights.'
+},
+{
+  icon: Globe2,
+  title: 'Bilingual Support',
+  description: 'Full English and Nepali language support for all data views and exports.'
+}];
+
 
 const stats = [
-  { value: '100K+', label: 'Records Processed' },
-  { value: '50+', label: 'Municipalities' },
-  { value: '99.9%', label: 'Accuracy Rate' },
-];
+{ value: '100K+', label: 'Records Processed' },
+{ value: '50+', label: 'Municipalities' },
+{ value: '99.9%', label: 'Accuracy Rate' }];
+
 
 export const HomePage = ({ onEnterDashboard }: HomePageProps) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -48,7 +48,7 @@ export const HomePage = ({ onEnterDashboard }: HomePageProps) => {
   useEffect(() => {
     setIsVisible(true);
     const interval = setInterval(() => {
-      setActiveFeature(prev => (prev + 1) % features.length);
+      setActiveFeature((prev) => (prev + 1) % features.length);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -127,12 +127,12 @@ export const HomePage = ({ onEnterDashboard }: HomePageProps) => {
             "mt-20 grid grid-cols-3 gap-8 max-w-2xl mx-auto transition-all duration-1000 delay-300",
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
           )}>
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
+            {stats.map((stat, index) =>
+            <div key={index} className="text-center">
                 <p className="text-3xl sm:text-4xl font-bold text-gradient">{stat.value}</p>
                 <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
@@ -154,14 +154,14 @@ export const HomePage = ({ onEnterDashboard }: HomePageProps) => {
               const Icon = feature.icon;
               const isActive = index === activeFeature;
               return (
-                <Card 
+                <Card
                   key={index}
                   className={cn(
                     "card-shadow border-border/50 transition-all duration-500 cursor-pointer",
                     isActive && "border-accent shadow-lg scale-105"
                   )}
-                  onMouseEnter={() => setActiveFeature(index)}
-                >
+                  onMouseEnter={() => setActiveFeature(index)}>
+
                   <CardContent className="p-6">
                     <div className={cn(
                       "flex h-12 w-12 items-center justify-center rounded-xl mb-4 transition-colors",
@@ -175,8 +175,8 @@ export const HomePage = ({ onEnterDashboard }: HomePageProps) => {
                     <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
                     <p className="text-sm text-muted-foreground">{feature.description}</p>
                   </CardContent>
-                </Card>
-              );
+                </Card>);
+
             })}
           </div>
         </div>
@@ -197,12 +197,12 @@ export const HomePage = ({ onEnterDashboard }: HomePageProps) => {
                 powerful visualization tools and export options.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   variant="secondary"
                   onClick={onEnterDashboard}
-                  className="gap-2"
-                >
+                  className="gap-2">
+
                   <CheckCircle2 className="h-5 w-5" />
                   Enter Dashboard
                 </Button>
@@ -224,8 +224,8 @@ export const HomePage = ({ onEnterDashboard }: HomePageProps) => {
           </p>
         </div>
       </footer>
-    </div>
-  );
+    </div>);
+
 };
 
 export default HomePage;
