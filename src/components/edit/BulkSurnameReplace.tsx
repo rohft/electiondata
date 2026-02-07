@@ -10,7 +10,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Replace, Search, Check, AlertCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { detectCasteFromName, CASTE_CATEGORIES } from '@/lib/casteData';
 
 interface BulkSurnameReplaceProps {
   municipalityId: string;
@@ -47,45 +46,16 @@ export const BulkSurnameReplace = ({
     return str.split(find).join(replace);
   };
 
-  // Detect caste and isNewar status from surname
-  const detectCasteFromSurname = (surname: string): {caste: string;isNewar: boolean;} => {
-    const surnameLower = surname.toLowerCase().trim();
 
-    for (const category of CASTE_CATEGORIES) {
-      // Check English surnames
-      for (const catSurname of category.surnames) {
-        if (surnameLower === catSurname.toLowerCase() || surnameLower.includes(catSurname.toLowerCase())) {
-          return {
-            caste: category.name,
-            isNewar: category.name === 'Newar'
-          };
-        }
-      }
-      // Check Nepali surnames
-      for (const catSurnameNe of category.surnamesNe) {
-        if (surname.includes(catSurnameNe)) {
-          return {
-            caste: category.name,
-            isNewar: category.name === 'Newar'
-          };
-        }
-      }
-    }
-
-    return { caste: 'Other', isNewar: false };
-  };
 
   // Preview the replacement results
   const previewResults = useMemo(() => {
     return matchingVoters.map((voter) => {
       const newSurname = safeReplaceAll(voter.surname || '', findText, replaceText);
-      const casteInfo = detectCasteFromSurname(newSurname);
       return {
         voter,
         oldSurname: voter.surname || '',
-        newSurname,
-        newCaste: casteInfo.caste,
-        isNewar: casteInfo.isNewar
+        newSurname
       };
     });
   }, [matchingVoters, findText, replaceText]);
@@ -108,14 +78,9 @@ export const BulkSurnameReplace = ({
       const newSurname = safeReplaceAll(oldSurname, findText, replaceText);
 
       if (oldSurname !== newSurname) {
-        // Detect caste and isNewar from the new surname
-        const casteInfo = detectCasteFromSurname(newSurname);
-
-        // Update surname, caste, and isNewar flag
+        // Update surname only
         onReplace(municipalityId, wardId, voter.id, {
-          surname: newSurname,
-          caste: casteInfo.caste,
-          isNewar: casteInfo.isNewar
+          surname: newSurname
         });
         replacedCount++;
       }
@@ -247,14 +212,6 @@ export const BulkSurnameReplace = ({
                             {result.newSurname || '(empty)'}
                           </Badge>
                         </div>
-                        {result.newCaste !== result.voter.caste &&
-                    <div className="flex items-center gap-1 ml-2">
-                            <span className="text-xs text-muted-foreground">Caste:</span>
-                            <Badge variant="outline" className="text-xs">
-                              {result.voter.caste || 'Other'} → {result.newCaste}
-                            </Badge>
-                          </div>
-                    }
                       </div>
                     </div>
                 )}

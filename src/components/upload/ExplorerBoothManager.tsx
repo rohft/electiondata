@@ -21,7 +21,6 @@ import {
 import { Plus, MapPin, MoreHorizontal, Edit3, Trash2, Check, X, Upload, Loader2, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseFile, getSupportedFormats, ParsedRecord } from '@/lib/fileParser';
-import { isNewarName } from '@/lib/surnameUtils';
 
 interface ExplorerBoothManagerProps {
   municipalityId: string;
@@ -98,9 +97,7 @@ export const ExplorerBoothManager: React.FC<ExplorerBoothManagerProps> = ({
           fullName: record.voterName,
           age: record.age,
           gender: record.gender as 'male' | 'female' | 'other',
-          caste: record.caste || '',
           surname: surname,
-          isNewar: isNewarName(record.voterName),
           originalData: record.originalData
         };
       });

@@ -1,21 +1,11 @@
-// Caste detection and categorization utilities for Nepali names
+// DEPRECATED: Caste detection and categorization has been disabled
+// This file is kept for backward compatibility but returns empty/null values
 
 export const CASTE_CATEGORIES = {
-  BRAHMIN: 'Brahmin',
-  CHHETRI: 'Chhetri',
-  NEWAR: 'Newar',
-  TAMANG: 'Tamang',
-  MAGAR: 'Magar',
-  THARU: 'Tharu',
-  SHERPA: 'Sherpa',
-  GURUNG: 'Gurung',
-  RAI: 'Rai',
-  LIMBU: 'Limbu',
-  DALIT: 'Dalit',
   OTHER: 'Other'
 } as const;
 
-// Common surname to caste mapping
+// DEPRECATED: Caste surname mapping disabled
 const CASTE_SURNAME_MAP: Record<string, string> = {
   // Brahmin surnames
   'पौडेल': CASTE_CATEGORIES.BRAHMIN,
@@ -127,64 +117,26 @@ const CASTE_SURNAME_MAP: Record<string, string> = {
 };
 
 /**
- * Detects caste category from a voter's full name
+ * DEPRECATED: Caste detection has been disabled
+ * Always returns null
  */
 export function detectCasteFromName(fullName: string): {
   caste: string | null;
   confidence: 'high' | 'medium' | 'low';
 } {
-  if (!fullName) {
-    return { caste: null, confidence: 'low' };
-  }
-
-  // Split name into parts
-  const nameParts = fullName.trim().split(/\s+/);
-
-  // Check each part against the caste map
-  for (const part of nameParts) {
-    const normalized = part.trim();
-    if (CASTE_SURNAME_MAP[normalized]) {
-      return {
-        caste: CASTE_SURNAME_MAP[normalized],
-        confidence: 'high'
-      };
-    }
-  }
-
-  // Check for partial matches (case insensitive for English names)
-  for (const part of nameParts) {
-    const normalized = part.trim().toLowerCase();
-    for (const [surname, caste] of Object.entries(CASTE_SURNAME_MAP)) {
-      if (surname.toLowerCase() === normalized) {
-        return {
-          caste,
-          confidence: 'medium'
-        };
-      }
-    }
-  }
-
   return { caste: null, confidence: 'low' };
 }
 
 /**
- * Get all caste categories
+ * DEPRECATED: Returns empty array
  */
 export function getAllCasteCategories(): string[] {
-  return Object.values(CASTE_CATEGORIES);
+  return [];
 }
 
 /**
- * Get statistics about caste distribution
+ * DEPRECATED: Returns empty object
  */
 export function getCasteStats(names: string[]): Record<string, number> {
-  const stats: Record<string, number> = {};
-
-  names.forEach((name) => {
-    const { caste } = detectCasteFromName(name);
-    const category = caste || CASTE_CATEGORIES.OTHER;
-    stats[category] = (stats[category] || 0) + 1;
-  });
-
-  return stats;
+  return {};
 }

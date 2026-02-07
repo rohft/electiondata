@@ -11,9 +11,7 @@ export interface ParsedRecord {
   gender: 'male' | 'female' | 'other';
   spouse?: string;
   parents?: string;
-  caste?: string;
   surname?: string;
-  subCaste?: string;
   phone?: string;
   email?: string;
   occupation?: string;
@@ -27,20 +25,7 @@ export interface ParsedRecord {
   originalData: Record<string, string>;
 }
 
-// Newar surnames list for detection
-const NEWAR_SURNAMES = [
-'shrestha', 'shakya', 'maharjan', 'dangol', 'tuladhar', 'tamrakar',
-'manandhar', 'singh', 'amatya', 'joshi', 'pradhan', 'rajbhandari',
-'bajracharya', 'sthapit', 'ranjitkar', 'nakarmi', 'chitrakar', 'karmacharya',
-'श्रेष्ठ', 'शाक्य', 'महर्जन', 'डंगोल', 'तुलाधर', 'ताम्राकार',
-'मानन्धर', 'अमात्य', 'जोशी', 'प्रधान', 'राजभण्डारी',
-'बज्राचार्य', 'स्थापित', 'रञ्जितकार', 'नकर्मी', 'चित्रकार', 'कर्माचार्य'];
 
-
-export const isNewarName = (name: string): boolean => {
-  const lowerName = name.toLowerCase();
-  return NEWAR_SURNAMES.some((s) => lowerName.includes(s.toLowerCase()));
-};
 
 const normalizeGender = (gender: string): 'male' | 'female' | 'other' => {
   const g = gender.toLowerCase().trim();
@@ -91,14 +76,6 @@ const normalizeHeaders = (headers: string[]): Record<string, number> => {
     else if (original === 'पिता/माताको नाम' || original === 'आमाबुबाको नाम' ||
     lower.includes('parent') || lower.includes('father')) {
       headerMap['parents'] = idx;
-    }
-    // Caste
-    else if (original === 'जात' || lower === 'caste') {
-      headerMap['caste'] = idx;
-    }
-    // Sub-caste / Jati
-    else if (original === 'जाति' || lower === 'sub-caste' || lower === 'subcaste') {
-      headerMap['subCaste'] = idx;
     }
     // Surname
     else if (original === 'थर' || lower === 'surname') {
@@ -289,9 +266,7 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
       gender: normalizeGender(String(row[headerMap['gender'] ?? 4] ?? '')),
       spouse: String(row[headerMap['spouse'] ?? -1] ?? ''),
       parents: String(row[headerMap['parents'] ?? -1] ?? ''),
-      caste: String(row[headerMap['caste'] ?? -1] ?? ''),
       surname: String(row[headerMap['surname'] ?? -1] ?? ''),
-      subCaste: String(row[headerMap['subCaste'] ?? -1] ?? ''),
       phone: String(row[headerMap['phone'] ?? -1] ?? ''),
       email: String(row[headerMap['email'] ?? -1] ?? ''),
       occupation: String(row[headerMap['occupation'] ?? -1] ?? ''),
@@ -395,7 +370,6 @@ export const parseJSON = async (file: File): Promise<ParsedRecord[]> => {
       gender: normalizeGender(String(row.gender || row.GENDER || '')),
       spouse: String(row.spouse || row.SPOUSE || ''),
       parents: String(row.parents || row.PARENTS || ''),
-      caste: String(row.caste || ''),
       surname: String(row.surname || ''),
       green: String(row.green || row.GREEN || ''),
       yellow: String(row.yellow || row.YELLOW || ''),

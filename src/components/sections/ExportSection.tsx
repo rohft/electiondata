@@ -18,16 +18,14 @@ export const ExportSection = () => {
       return;
     }
 
-    const headers = ['Municipality', 'Ward', 'Full Name', 'Age', 'Gender', 'Caste', 'Surname', 'Is Newar', 'Phone', 'Email'];
+    const headers = ['Municipality', 'Ward', 'Full Name', 'Age', 'Gender', 'Surname', 'Phone', 'Email'];
     const rows = allVoters.map((v) => [
     v.municipality,
     v.ward,
     v.fullName,
     v.age,
     v.gender,
-    v.caste,
     v.surname,
-    v.isNewar ? 'Yes' : 'No',
     v.phone || '',
     v.email || '']
     );
@@ -116,8 +114,8 @@ export const ExportSection = () => {
         <div class="stat-label">Wards</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value">${Object.keys(segments.byCaste).length}</div>
-        <div class="stat-label">Unique Castes</div>
+        <div class="stat-value">${Object.keys(segments.bySurname).length}</div>
+        <div class="stat-label">Unique Surnames</div>
       </div>
     </div>
 
@@ -145,31 +143,16 @@ export const ExportSection = () => {
       `).join('')}
     </table>
 
-    <h2>Newar vs Non-Newar</h2>
+    <h2>Top 10 Surnames</h2>
     <table>
-      <tr><th>Category</th><th>Count</th><th>Percentage</th></tr>
-      <tr>
-        <td>Newar</td>
-        <td>${segments.newarVsNonNewar.newar.toLocaleString()}</td>
-        <td>${segments.total > 0 ? (segments.newarVsNonNewar.newar / segments.total * 100).toFixed(1) : 0}%</td>
-      </tr>
-      <tr>
-        <td>Non-Newar</td>
-        <td>${segments.newarVsNonNewar.nonNewar.toLocaleString()}</td>
-        <td>${segments.total > 0 ? (segments.newarVsNonNewar.nonNewar / segments.total * 100).toFixed(1) : 0}%</td>
-      </tr>
-    </table>
-
-    <h2>Top 10 Castes</h2>
-    <table>
-      <tr><th>Rank</th><th>Caste</th><th>Count</th></tr>
-      ${Object.entries(segments.byCaste).
+      <tr><th>Rank</th><th>Surname</th><th>Count</th></tr>
+      ${Object.entries(segments.bySurname).
     sort((a, b) => b[1] - a[1]).
     slice(0, 10).
-    map(([caste, count], i) => `
+    map(([surname, count], i) => `
           <tr>
             <td>${i + 1}</td>
-            <td>${escapeHtml(caste || 'Unknown')}</td>
+            <td>${escapeHtml(surname || 'Unknown')}</td>
             <td>${count.toLocaleString()}</td>
           </tr>
         `).join('')}

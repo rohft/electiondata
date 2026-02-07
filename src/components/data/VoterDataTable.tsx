@@ -11,8 +11,7 @@ import {
 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParsedRecord } from '@/lib/fileParser';
-import { extractSurname, isNewarName } from '@/lib/surnameUtils';
-import { detectCasteFromName, CASTE_CATEGORIES } from '@/lib/casteData';
+import { extractSurname } from '@/lib/surnameUtils';
 import { SpreadsheetTable, DEFAULT_SPREADSHEET_COLUMNS } from './SpreadsheetTable';
 import { exportToExcel, exportToCSV } from '@/lib/dataExporter';
 import { toast } from 'sonner';
@@ -66,17 +65,14 @@ export const VoterDataTable = ({
   const currentWard = uploadedWards[selectedWardIndex];
   const records = currentWard?.records || [];
 
-  // Enrich records with surname/caste data
+  // Enrich records with surname data
   const enrichedRecords = useMemo(() => {
     return records.map((record, idx) => {
-      const { surname, subCaste } = extractSurname(record.voterName);
-      const detected = detectCasteFromName(record.voterName);
+      const { surname } = extractSurname(record.voterName);
       return {
         ...record,
         sn: idx + 1,
-        surname: record.surname || surname,
-        subCaste: record.caste || detected.caste || subCaste,
-        isNewar: isNewarName(record.voterName)
+        surname: record.surname || surname
       };
     });
   }, [records]);
@@ -87,14 +83,8 @@ export const VoterDataTable = ({
     const male = records.filter((r) => r.gender === 'male').length;
     const female = records.filter((r) => r.gender === 'female').length;
 
-    const byCaste: Record<string, number> = {};
-    enrichedRecords.forEach((r) => {
-      const caste = r.subCaste || 'Other';
-      byCaste[caste] = (byCaste[caste] || 0) + 1;
-    });
-
-    return { total, male, female, byCaste };
-  }, [records, enrichedRecords]);
+    return { total, male, female };
+  }, [records]);
 
   const handleWardChange = (direction: 'prev' | 'next') => {
     const newIndex = direction === 'prev' ?
@@ -130,8 +120,6 @@ export const VoterDataTable = ({
       case 'age':return row.age;
       case 'spouse':return row.spouse || row.originalData?.['पति/पत्नीको नाम'] || '';
       case 'parents':return row.parents || row.originalData?.['आमाबुबाको नाम'] || '';
-      case 'caste':return row.subCaste || '';
-      case 'subCaste':return row.originalData?.['जाति'] || '';
       case 'phone':return row.phone || row.originalData?.['मोबाइल नम्बर'] || '';
       case 'email':return row.email || row.originalData?.['इमेल'] || '';
       case 'occupation':return row.occupation || row.originalData?.['व्यवसाय'] || '';
@@ -214,15 +202,6 @@ export const VoterDataTable = ({
              <User className="h-3 w-3" />
              {stats.female.toLocaleString()} {t('segments.female')}
            </Badge>
-           {Object.entries(stats.byCaste).
-          sort((a, b) => b[1] - a[1]).
-          slice(0, 3).
-          map(([caste, count]) =>
-          <Badge key={caste} variant="outline" className="gap-1">
-                 <UserCheck className="h-3 w-3" />
-                 {count.toLocaleString()} {caste}
-               </Badge>
-          )}
          </div>
  
          {/* Version & Update Options */}

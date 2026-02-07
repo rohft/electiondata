@@ -131,7 +131,7 @@ export const DashboardSection = () => {
 
       {/* Charts Grid */}
       {totalVoters > 0 &&
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
           {/* Gender Distribution */}
           <Card className="card-shadow border-border/50">
             <CardHeader>
@@ -217,51 +217,6 @@ export const DashboardSection = () => {
 
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Newar vs Non-Newar */}
-          <Card className="card-shadow border-border/50 lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">
-                {t('segments.newar')} vs {t('segments.nonNewar')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="mb-2 flex justify-between text-sm">
-                    <span className="font-medium text-foreground">{t('segments.newar')}</span>
-                    <span className="text-muted-foreground">{segments.newarVsNonNewar.newar}</span>
-                  </div>
-                  <div className="h-3 overflow-hidden rounded-full bg-muted">
-                    <div
-                    className="h-full rounded-full bg-chart-2 transition-all duration-500"
-                    style={{
-                      width: segments.total > 0 ?
-                      `${segments.newarVsNonNewar.newar / segments.total * 100}%` :
-                      '0%'
-                    }} />
-
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <div className="mb-2 flex justify-between text-sm">
-                    <span className="font-medium text-foreground">{t('segments.nonNewar')}</span>
-                    <span className="text-muted-foreground">{segments.newarVsNonNewar.nonNewar}</span>
-                  </div>
-                  <div className="h-3 overflow-hidden rounded-full bg-muted">
-                    <div
-                    className="h-full rounded-full bg-chart-1 transition-all duration-500"
-                    style={{
-                      width: segments.total > 0 ?
-                      `${segments.newarVsNonNewar.nonNewar / segments.total * 100}%` :
-                      '0%'
-                    }} />
-
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>

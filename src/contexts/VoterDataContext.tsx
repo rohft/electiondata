@@ -9,11 +9,9 @@ export interface VoterRecord {
   fullName: string;
   age: number;
   gender: 'male' | 'female' | 'other';
-  caste: string;
   surname: string;
   familyName?: string;
   lastName?: string;
-  isNewar: boolean;
   phone?: string;
   email?: string;
   socialHandles?: string;
@@ -79,9 +77,7 @@ interface VoterDataContextType {
 export interface SegmentCounts {
   byAge: Record<string, number>;
   byGender: Record<string, number>;
-  byCaste: Record<string, number>;
   bySurname: Record<string, number>;
-  newarVsNonNewar: {newar: number;nonNewar: number;};
   total: number;
 }
 
@@ -431,10 +427,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       other: 0
     };
 
-    const byCaste: Record<string, number> = {};
     const bySurname: Record<string, number> = {};
-    let newar = 0;
-    let nonNewar = 0;
 
     voters.forEach((voter) => {
       // Age
@@ -448,23 +441,14 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       // Gender
       byGender[voter.gender]++;
 
-      // Caste
-      byCaste[voter.caste] = (byCaste[voter.caste] || 0) + 1;
-
       // Surname
       bySurname[voter.surname] = (bySurname[voter.surname] || 0) + 1;
-
-      // Newar
-      if (voter.isNewar) newar++;else
-      nonNewar++;
     });
 
     return {
       byAge,
       byGender,
-      byCaste,
       bySurname,
-      newarVsNonNewar: { newar, nonNewar },
       total: voters.length
     };
   }, [municipalities]);

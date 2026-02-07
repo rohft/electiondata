@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight, Building2, Hash, MapPin, Check, ImagePlus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
-import { isNewarName } from '@/lib/surnameUtils';
+import { } from '@/lib/surnameUtils';
 import { BoothSetupStep, WardBoothConfig } from './BoothSetupStep';
 import { BoothFileUploader, BoothUploadData } from './BoothFileUploader';
 import { ParsedRecord } from '@/lib/fileParser';
@@ -118,9 +118,7 @@ export const DashboardUploadWizard = ({ onComplete }: DashboardUploadWizardProps
               fullName: record.voterName,
               age: record.age,
               gender: record.gender,
-              caste: record.caste || '',
               surname,
-              isNewar: isNewarName(record.voterName),
               originalData: record.originalData
             };
           });

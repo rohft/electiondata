@@ -17,7 +17,7 @@ import {
   X } from
 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ParsedRecord, isNewarName } from '@/lib/fileParser';
+import { ParsedRecord } from '@/lib/fileParser';
 import {
   Table,
   TableBody,
@@ -46,7 +46,6 @@ interface WardStats {
   total: number;
   male: number;
   female: number;
-  newar: number;
 }
 
 export const WardDataViewer = ({
@@ -75,8 +74,7 @@ export const WardDataViewer = ({
     const total = records.length;
     const male = records.filter((r) => r.gender === 'male').length;
     const female = records.filter((r) => r.gender === 'female').length;
-    const newar = records.filter((r) => isNewarName(r.voterName)).length;
-    return { total, male, female, newar };
+    return { total, male, female };
   }, [records]);
 
   // Filter records
@@ -182,7 +180,7 @@ export const WardDataViewer = ({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card className="bg-muted/30 border-border/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -214,18 +212,6 @@ export const WardDataViewer = ({
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.female.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">{t('segments.female')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-muted/30 border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <UserCheck className="h-5 w-5 text-cyan-500" />
-              <div>
-                <p className="text-2xl font-bold text-foreground">{stats.newar.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">{t('segments.newar')}</p>
               </div>
             </div>
           </CardContent>
@@ -293,7 +279,6 @@ export const WardDataViewer = ({
                 <TableHead>Name</TableHead>
                 <TableHead className="w-[60px]">Age</TableHead>
                 <TableHead className="w-[80px]">Gender</TableHead>
-                <TableHead>Caste</TableHead>
                 <TableHead>Spouse/Parents</TableHead>
               </TableRow>
             </TableHeader>
@@ -314,15 +299,6 @@ export const WardDataViewer = ({
 
                       {record.gender === 'male' ? 'M' : record.gender === 'female' ? 'F' : 'O'}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {isNewarName(record.voterName) ?
-                  <Badge className="bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30">
-                        Newar
-                      </Badge> :
-
-                  <Badge variant="secondary" className="text-xs">Non-Newar</Badge>
-                  }
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                     {record.spouse || record.parents || '-'}
