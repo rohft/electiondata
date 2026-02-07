@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export type VoterStatus = 'available' | 'dead' | 'out_of_country' | 'married' | 'older_citizen' | 'disabled';
 
@@ -57,14 +58,14 @@ export interface MunicipalityData {
 
 interface VoterDataContextType {
   municipalities: MunicipalityData[];
-  addWardData: (municipalityName: string, wardData: WardData) => void;
-  removeWardData: (municipalityId: string, wardId: string) => void;
+  addWardData: (municipalityName: string, wardData: WardData) => Promise<void>;
+  removeWardData: (municipalityId: string, wardId: string) => Promise<void>;
   updateVoterRecord: (municipalityId: string, wardId: string, voterId: string, updates: Partial<VoterRecord>) => void;
   revertVoterRecord: (municipalityId: string, wardId: string, voterId: string) => void;
-  addBoothCentre: (municipalityId: string, wardId: string, name: string) => void;
-  updateBoothCentre: (municipalityId: string, wardId: string, boothId: string, name: string) => void;
-  removeBoothCentre: (municipalityId: string, wardId: string, boothId: string) => void;
-  addBoothVoters: (municipalityId: string, wardId: string, boothId: string, voters: VoterRecord[], fileName: string) => void;
+  addBoothCentre: (municipalityId: string, wardId: string, name: string) => Promise<void>;
+  updateBoothCentre: (municipalityId: string, wardId: string, boothId: string, name: string) => Promise<void>;
+  removeBoothCentre: (municipalityId: string, wardId: string, boothId: string) => Promise<void>;
+  addBoothVoters: (municipalityId: string, wardId: string, boothId: string, voters: VoterRecord[], fileName: string) => Promise<void>;
   getWardVoters: (ward: WardData) => VoterRecord[];
   getTotalVoters: () => number;
   getTotalWards: () => number;
@@ -82,6 +83,9 @@ export interface SegmentCounts {
 }
 
 const STORAGE_KEY = 'voter_data_municipalities';
+const WARDS_TABLE_ID = 74769;
+const BOOTHS_TABLE_ID = 74770;
+const VOTERS_TABLE_ID = 74771;
 
 const VoterDataContext = createContext<VoterDataContextType | undefined>(undefined);
 
@@ -105,23 +109,167 @@ const deserializeData = (data: string): MunicipalityData[] => {
   });
 };
 
+// Extract ward number from ward name (e.g., "Ward 1" -> 1)
+const extractWardNumber = (wardName: string): number => {
+  const match = wardName.match(/\d+/);
+  return match ? parseInt(match[0]) : 0;
+};
+
 export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ children }) => {
   const [municipalities, setMunicipalities] = useState<MunicipalityData[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // Load data from localStorage on mount
+  // Load data from database on mount
   useEffect(() => {
-    try {
-      const savedData = localStorage.getItem(STORAGE_KEY);
-      if (savedData) {
-        const parsedData = deserializeData(savedData);
-        setMunicipalities(parsedData);
+    const loadFromDatabase = async () => {
+      try {
+        // Load wards
+        const { data: wardsData, error: wardsError } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+          PageNo: 1,
+          PageSize: 1000,
+          OrderByField: 'ward_number',
+          IsAsc: true,
+          Filters: []
+        });
+
+        if (wardsError) {
+          console.error('Error loading wards from database:', wardsError);
+          // Fall back to localStorage
+          const savedData = localStorage.getItem(STORAGE_KEY);
+          if (savedData) {
+            const parsedData = deserializeData(savedData);
+            setMunicipalities(parsedData);
+          }
+          setIsDataLoaded(true);
+          return;
+        }
+
+        if (!wardsData?.List || wardsData.List.length === 0) {
+          // No data in database, try localStorage
+          const savedData = localStorage.getItem(STORAGE_KEY);
+          if (savedData) {
+            const parsedData = deserializeData(savedData);
+            setMunicipalities(parsedData);
+          }
+          setIsDataLoaded(true);
+          return;
+        }
+
+        // Load booths
+        const { data: boothsData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+          PageNo: 1,
+          PageSize: 10000,
+          OrderByField: 'id',
+          IsAsc: true,
+          Filters: []
+        });
+
+        // Load voters
+        const { data: votersData } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+          PageNo: 1,
+          PageSize: 100000,
+          OrderByField: 'id',
+          IsAsc: true,
+          Filters: []
+        });
+
+        // Reconstruct municipalities structure from database
+        const municipalitiesMap = new Map<string, MunicipalityData>();
+
+        for (const wardRow of wardsData.List) {
+          const municipalityName = wardRow.municipality_name;
+          const wardNumber = wardRow.ward_number;
+          const wardName = `Ward ${wardNumber}`;
+          const wardId = `ward-${wardRow.id}`;
+
+          // Get municipality or create new one
+          if (!municipalitiesMap.has(municipalityName)) {
+            municipalitiesMap.set(municipalityName, {
+              id: `municipality-${municipalityName}`,
+              name: municipalityName,
+              wards: []
+            });
+          }
+
+          const municipality = municipalitiesMap.get(municipalityName)!;
+
+          // Get voters for this ward
+          const wardVoters: VoterRecord[] = [];
+          if (votersData?.List) {
+            for (const voterRow of votersData.List) {
+              if (voterRow.ward_id === wardRow.id) {
+                try {
+                  const voterData = JSON.parse(voterRow.voter_data);
+                  wardVoters.push(voterData);
+                } catch (e) {
+                  console.error('Error parsing voter data:', e);
+                }
+              }
+            }
+          }
+
+          // Get booths for this ward
+          const wardBooths: BoothCentre[] = [];
+          if (boothsData?.List) {
+            for (const boothRow of boothsData.List) {
+              if (boothRow.ward_id === wardRow.id) {
+                // Get voters for this booth
+                const boothVoters: VoterRecord[] = [];
+                if (votersData?.List) {
+                  for (const voterRow of votersData.List) {
+                    if (voterRow.ward_id === wardRow.id && voterRow.booth_number === boothRow.booth_number) {
+                      try {
+                        const voterData = JSON.parse(voterRow.voter_data);
+                        boothVoters.push(voterData);
+                      } catch (e) {
+                        console.error('Error parsing voter data:', e);
+                      }
+                    }
+                  }
+                }
+
+                wardBooths.push({
+                  id: `booth-${boothRow.id}`,
+                  name: boothRow.booth_centre,
+                  createdAt: new Date(),
+                  voters: boothVoters,
+                  fileName: '',
+                  uploadedAt: new Date()
+                });
+              }
+            }
+          }
+
+          municipality.wards.push({
+            id: wardId,
+            name: wardName,
+            municipality: municipalityName,
+            voters: wardVoters,
+            uploadedAt: new Date(wardRow.upload_date),
+            fileName: '',
+            boothCentres: wardBooths.length > 0 ? wardBooths : undefined
+          });
+        }
+
+        const loadedMunicipalities = Array.from(municipalitiesMap.values());
+        setMunicipalities(loadedMunicipalities);
+        
+        // Also save to localStorage as backup
+        localStorage.setItem(STORAGE_KEY, serializeData(loadedMunicipalities));
+      } catch (error) {
+        console.error('Error loading data from database:', error);
+        // Fall back to localStorage
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        if (savedData) {
+          const parsedData = deserializeData(savedData);
+          setMunicipalities(parsedData);
+        }
+      } finally {
+        setIsDataLoaded(true);
       }
-    } catch (error) {
-      console.error('Error loading voter data from localStorage:', error);
-    } finally {
-      setIsDataLoaded(true);
-    }
+    };
+
+    loadFromDatabase();
   }, []);
 
   // Auto-save to localStorage when data changes (debounced)
@@ -152,27 +300,179 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  const addWardData = useCallback((municipalityName: string, wardData: WardData) => {
-    setMunicipalities((prev) => {
-      const existingMunicipality = prev.find((m) => m.name === municipalityName);
+  const addWardData = useCallback(async (municipalityName: string, wardData: WardData) => {
+    // Extract ward number from ward name
+    const wardNumber = extractWardNumber(wardData.name);
 
-      if (existingMunicipality) {
-        return prev.map((m) =>
-        m.name === municipalityName ?
-        { ...m, wards: [...m.wards, wardData] } :
-        m
-        );
-      } else {
-        return [...prev, {
-          id: crypto.randomUUID(),
-          name: municipalityName,
-          wards: [wardData]
-        }];
+    try {
+      // Save ward to database
+      const { error: wardError } = await window.ezsite.apis.tableCreate(WARDS_TABLE_ID, {
+        ward_number: wardNumber,
+        municipality_name: municipalityName,
+        upload_date: new Date().toISOString()
+      });
+
+      if (wardError) {
+        toast.error(`Failed to save ward to database: ${wardError}`);
+        throw new Error(wardError);
       }
-    });
+
+      // Get the created ward's database ID
+      const { data: createdWard } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+        PageNo: 1,
+        PageSize: 1,
+        OrderByField: 'id',
+        IsAsc: false,
+        Filters: [
+          { name: 'municipality_name', op: 'Equal', value: municipalityName },
+          { name: 'ward_number', op: 'Equal', value: wardNumber }
+        ]
+      });
+
+      const dbWardId = createdWard?.List?.[0]?.id;
+
+      if (!dbWardId) {
+        console.error('Failed to get created ward ID');
+      } else {
+        // Save booth centres to database
+        if (wardData.boothCentres && wardData.boothCentres.length > 0) {
+          for (const booth of wardData.boothCentres) {
+            const boothNumber = booth.id;
+            
+            const { error: boothError } = await window.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
+              ward_id: dbWardId,
+              booth_number: boothNumber,
+              booth_centre: booth.name
+            });
+
+            if (boothError) {
+              console.error('Error saving booth:', boothError);
+              continue;
+            }
+
+            // Save voters for this booth
+            if (booth.voters && booth.voters.length > 0) {
+              for (const voter of booth.voters) {
+                const { error: voterError } = await window.ezsite.apis.tableCreate(VOTERS_TABLE_ID, {
+                  ward_id: dbWardId,
+                  booth_number: boothNumber,
+                  voter_data: JSON.stringify(voter),
+                  upload_date: new Date().toISOString()
+                });
+
+                if (voterError) {
+                  console.error('Error saving voter:', voterError);
+                }
+              }
+            }
+          }
+        } else {
+          // Save voters directly to ward (no booths)
+          if (wardData.voters && wardData.voters.length > 0) {
+            for (const voter of wardData.voters) {
+              const { error: voterError } = await window.ezsite.apis.tableCreate(VOTERS_TABLE_ID, {
+                ward_id: dbWardId,
+                booth_number: '',
+                voter_data: JSON.stringify(voter),
+                upload_date: new Date().toISOString()
+              });
+
+              if (voterError) {
+                console.error('Error saving voter:', voterError);
+              }
+            }
+          }
+        }
+      }
+
+      // Update local state
+      setMunicipalities((prev) => {
+        const existingMunicipality = prev.find((m) => m.name === municipalityName);
+
+        if (existingMunicipality) {
+          return prev.map((m) =>
+          m.name === municipalityName ?
+          { ...m, wards: [...m.wards, wardData] } :
+          m
+          );
+        } else {
+          return [...prev, {
+            id: crypto.randomUUID(),
+            name: municipalityName,
+            wards: [wardData]
+          }];
+        }
+      });
+
+      toast.success(`Ward data saved to database successfully`);
+    } catch (error) {
+      console.error('Error saving ward data:', error);
+      toast.error('Failed to save ward data to database');
+    }
   }, []);
 
-  const removeWardData = useCallback((municipalityId: string, wardId: string) => {
+  const removeWardData = useCallback(async (municipalityId: string, wardId: string) => {
+    const municipality = municipalities.find(m => m.id === municipalityId);
+    const ward = municipality?.wards.find(w => w.id === wardId);
+    
+    if (!ward) return;
+
+    const wardNumber = extractWardNumber(ward.name);
+
+    try {
+      // Get ward from database
+      const { data: wardData } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+        PageNo: 1,
+        PageSize: 1,
+        OrderByField: 'id',
+        IsAsc: true,
+        Filters: [
+          { name: 'municipality_name', op: 'Equal', value: municipality.name },
+          { name: 'ward_number', op: 'Equal', value: wardNumber }
+        ]
+      });
+
+      const dbWardId = wardData?.List?.[0]?.id;
+
+      if (dbWardId) {
+        // Delete voters for this ward
+        const { data: votersData } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+          PageNo: 1,
+          PageSize: 100000,
+          OrderByField: 'id',
+          IsAsc: true,
+          Filters: [{ name: 'ward_id', op: 'Equal', value: dbWardId }]
+        });
+
+        if (votersData?.List) {
+          for (const voter of votersData.List) {
+            await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+          }
+        }
+
+        // Delete booths for this ward
+        const { data: boothsData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+          PageNo: 1,
+          PageSize: 1000,
+          OrderByField: 'id',
+          IsAsc: true,
+          Filters: [{ name: 'ward_id', op: 'Equal', value: dbWardId }]
+        });
+
+        if (boothsData?.List) {
+          for (const booth of boothsData.List) {
+            await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
+          }
+        }
+
+        // Delete ward
+        await window.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: dbWardId });
+      }
+    } catch (error) {
+      console.error('Error deleting ward from database:', error);
+    }
+
+    // Update local state
     setMunicipalities((prev) => {
       return prev.map((m) => {
         if (m.id === municipalityId) {
@@ -182,7 +482,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         return m;
       }).filter((m) => m.wards.length > 0);
     });
-  }, []);
+  }, [municipalities]);
 
   const updateVoterRecord = useCallback((
   municipalityId: string,
@@ -277,7 +577,48 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     });
   }, []);
 
-  const addBoothCentre = useCallback((municipalityId: string, wardId: string, name: string) => {
+  const addBoothCentre = useCallback(async (municipalityId: string, wardId: string, name: string) => {
+    const municipality = municipalities.find(m => m.id === municipalityId);
+    const ward = municipality?.wards.find(w => w.id === wardId);
+    
+    if (!ward) return;
+
+    const wardNumber = extractWardNumber(ward.name);
+
+    try {
+      // Get ward from database
+      const { data: wardData } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+        PageNo: 1,
+        PageSize: 1,
+        OrderByField: 'id',
+        IsAsc: true,
+        Filters: [
+          { name: 'municipality_name', op: 'Equal', value: municipality.name },
+          { name: 'ward_number', op: 'Equal', value: wardNumber }
+        ]
+      });
+
+      const dbWardId = wardData?.List?.[0]?.id;
+
+      if (dbWardId) {
+        const boothId = crypto.randomUUID();
+        
+        const { error: boothError } = await window.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
+          ward_id: dbWardId,
+          booth_number: boothId,
+          booth_centre: name
+        });
+
+        if (boothError) {
+          toast.error(`Failed to save booth to database: ${boothError}`);
+          throw new Error(boothError);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving booth:', error);
+    }
+
+    // Update local state
     setMunicipalities((prev) => {
       return prev.map((m) => {
         if (m.id === municipalityId) {
@@ -300,9 +641,10 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         return m;
       });
     });
-  }, []);
+  }, [municipalities]);
 
-  const updateBoothCentre = useCallback((municipalityId: string, wardId: string, boothId: string, name: string) => {
+  const updateBoothCentre = useCallback(async (municipalityId: string, wardId: string, boothId: string, name: string) => {
+    // Update local state first
     setMunicipalities((prev) => {
       return prev.map((m) => {
         if (m.id === municipalityId) {
@@ -324,9 +666,71 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         return m;
       });
     });
+
+    // Update database
+    try {
+      const { data: boothData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+        PageNo: 1,
+        PageSize: 1,
+        OrderByField: 'id',
+        IsAsc: true,
+        Filters: [{ name: 'booth_number', op: 'Equal', value: boothId }]
+      });
+
+      const dbBoothId = boothData?.List?.[0]?.id;
+
+      if (dbBoothId) {
+        await window.ezsite.apis.tableUpdate(BOOTHS_TABLE_ID, {
+          ID: dbBoothId,
+          booth_centre: name
+        });
+      }
+    } catch (error) {
+      console.error('Error updating booth in database:', error);
+    }
   }, []);
 
-  const removeBoothCentre = useCallback((municipalityId: string, wardId: string, boothId: string) => {
+  const removeBoothCentre = useCallback(async (municipalityId: string, wardId: string, boothId: string) => {
+    // Delete from database
+    try {
+      const { data: boothData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+        PageNo: 1,
+        PageSize: 1,
+        OrderByField: 'id',
+        IsAsc: true,
+        Filters: [{ name: 'booth_number', op: 'Equal', value: boothId }]
+      });
+
+      const dbBoothId = boothData?.List?.[0]?.id;
+      const dbWardId = boothData?.List?.[0]?.ward_id;
+
+      if (dbBoothId) {
+        // Delete voters for this booth
+        const { data: votersData } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+          PageNo: 1,
+          PageSize: 100000,
+          OrderByField: 'id',
+          IsAsc: true,
+          Filters: [
+            { name: 'ward_id', op: 'Equal', value: dbWardId },
+            { name: 'booth_number', op: 'Equal', value: boothId }
+          ]
+        });
+
+        if (votersData?.List) {
+          for (const voter of votersData.List) {
+            await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+          }
+        }
+
+        // Delete booth
+        await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: dbBoothId });
+      }
+    } catch (error) {
+      console.error('Error deleting booth from database:', error);
+    }
+
+    // Update local state
     setMunicipalities((prev) => {
       return prev.map((m) => {
         if (m.id === municipalityId) {
@@ -359,7 +763,52 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     return syncWardVoters(ward);
   }, []);
 
-  const addBoothVoters = useCallback((municipalityId: string, wardId: string, boothId: string, voters: VoterRecord[], fileName: string) => {
+  const addBoothVoters = useCallback(async (municipalityId: string, wardId: string, boothId: string, voters: VoterRecord[], fileName: string) => {
+    const municipality = municipalities.find(m => m.id === municipalityId);
+    const ward = municipality?.wards.find(w => w.id === wardId);
+    
+    if (!ward) return;
+
+    const wardNumber = extractWardNumber(ward.name);
+
+    try {
+      // Get ward from database
+      const { data: wardData } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+        PageNo: 1,
+        PageSize: 1,
+        OrderByField: 'id',
+        IsAsc: true,
+        Filters: [
+          { name: 'municipality_name', op: 'Equal', value: municipality.name },
+          { name: 'ward_number', op: 'Equal', value: wardNumber }
+        ]
+      });
+
+      const dbWardId = wardData?.List?.[0]?.id;
+
+      if (dbWardId && voters.length > 0) {
+        // Save voters to database
+        for (const voter of voters) {
+          const { error: voterError } = await window.ezsite.apis.tableCreate(VOTERS_TABLE_ID, {
+            ward_id: dbWardId,
+            booth_number: boothId,
+            voter_data: JSON.stringify(voter),
+            upload_date: new Date().toISOString()
+          });
+
+          if (voterError) {
+            console.error('Error saving voter:', voterError);
+          }
+        }
+
+        toast.success(`${voters.length} voters saved to database`);
+      }
+    } catch (error) {
+      console.error('Error saving booth voters:', error);
+      toast.error('Failed to save voters to database');
+    }
+
+    // Update local state
     setMunicipalities((prev) => {
       return prev.map((m) => {
         if (m.id === municipalityId) {
@@ -383,7 +832,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         return m;
       });
     });
-  }, []);
+  }, [municipalities]);
 
   const getTotalVoters = useCallback(() => {
     return municipalities.reduce((total, m) =>
