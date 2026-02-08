@@ -156,18 +156,18 @@ export const parseCSV = (content: string): ParsedRecord[] => {
 
     const originalData: Record<string, string> = {};
     headers.forEach((h, idx) => {
-      originalData[h] = values[idx] || '';
+      originalData[h] = sanitizeFieldValue(values[idx] || '');
     });
 
     const record: ParsedRecord = {
-      wardNo: values[headerMap['wardNo'] ?? 0] || '',
-      centerName: values[headerMap['centerName'] ?? 1] || '',
-      voterId: values[headerMap['voterId'] ?? 2] || '',
-      voterName: values[headerMap['voterName'] ?? 3] || '',
+      wardNo: sanitizeFieldValue(values[headerMap['wardNo'] ?? 0] || ''),
+      centerName: sanitizeFieldValue(values[headerMap['centerName'] ?? 1] || ''),
+      voterId: sanitizeFieldValue(values[headerMap['voterId'] ?? 2] || ''),
+      voterName: sanitizeFieldValue(values[headerMap['voterName'] ?? 3] || ''),
       age: parseInt(values[headerMap['age'] ?? 4]) || 0,
       gender: normalizeGender(values[headerMap['gender'] ?? 5] || ''),
-      spouse: values[headerMap['spouse'] ?? 6],
-      parents: values[headerMap['parents'] ?? 7],
+      spouse: sanitizeFieldValue(values[headerMap['spouse'] ?? 6] || ''),
+      parents: sanitizeFieldValue(values[headerMap['parents'] ?? 7] || ''),
       green: values[headerMap['green'] ?? 8],
       yellow: values[headerMap['yellow'] ?? 9],
       red: values[headerMap['red'] ?? 10],
@@ -177,6 +177,7 @@ export const parseCSV = (content: string): ParsedRecord[] => {
     records.push(record);
   }
 
+  validateRecordCount(records.length);
   return records;
 };
 
@@ -207,12 +208,19 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
       // Handle different cell value types
       let value = cell.value;
       if (value && typeof value === 'object' && 'result' in value) {
-        // Handle formula cells - use the result
+        // Handle formula cells - use the result, sanitize to prevent formula injection
         value = value.result;
+        if (typeof value === 'string') {
+          value = sanitizeFieldValue(value);
+        }
       }
       if (value && typeof value === 'object' && 'richText' in value) {
         // Handle rich text - extract plain text
         value = (value as {richText: {text: string;}[];}).richText.map((rt) => rt.text).join('');
+      }
+      // Sanitize string cell values
+      if (typeof value === 'string') {
+        value = sanitizeFieldValue(value);
       }
       rowData[colNumber - 1] = value as string | number | boolean | null;
     });
@@ -283,6 +291,7 @@ export const parseExcel = async (file: File): Promise<ParsedRecord[]> => {
     records.push(record);
   }
 
+  validateRecordCount(records.length);
   return records;
 };
 
@@ -355,22 +364,24 @@ export const parseJSON = async (file: File): Promise<ParsedRecord[]> => {
     throw new Error('Invalid JSON structure: Expected an array of records');
   }
 
+  validateRecordCount(rows.length);
+
   return rows.map((row) => {
     const originalData: Record<string, string> = {};
     Object.entries(row).forEach(([key, value]) => {
-      originalData[key] = String(value || '');
+      originalData[key] = sanitizeFieldValue(String(value || ''));
     });
 
     return {
-      wardNo: String(row.wardNo || row.ward_no || row['WARD NO'] || ''),
-      centerName: String(row.centerName || row.center_name || row['CENTER NAME'] || ''),
-      voterId: String(row.voterId || row.voter_id || row['VOTER ID'] || ''),
-      voterName: String(row.voterName || row.voter_name || row.name || row['VOTER NAME'] || ''),
+      wardNo: sanitizeFieldValue(String(row.wardNo || row.ward_no || row['WARD NO'] || '')),
+      centerName: sanitizeFieldValue(String(row.centerName || row.center_name || row['CENTER NAME'] || '')),
+      voterId: sanitizeFieldValue(String(row.voterId || row.voter_id || row['VOTER ID'] || '')),
+      voterName: sanitizeFieldValue(String(row.voterName || row.voter_name || row.name || row['VOTER NAME'] || '')),
       age: parseInt(String(row.age || row.AGE || 0)) || 0,
       gender: normalizeGender(String(row.gender || row.GENDER || '')),
-      spouse: String(row.spouse || row.SPOUSE || ''),
-      parents: String(row.parents || row.PARENTS || ''),
-      surname: String(row.surname || ''),
+      spouse: sanitizeFieldValue(String(row.spouse || row.SPOUSE || '')),
+      parents: sanitizeFieldValue(String(row.parents || row.PARENTS || '')),
+      surname: sanitizeFieldValue(String(row.surname || '')),
       green: String(row.green || row.GREEN || ''),
       yellow: String(row.yellow || row.YELLOW || ''),
       red: String(row.red || row.RED || ''),
@@ -382,6 +393,8 @@ export const parseJSON = async (file: File): Promise<ParsedRecord[]> => {
 // File validation constants
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const MAX_RECORDS = 50000;
+const MAX_FIELD_LENGTH = 500;
 
 const ALLOWED_MIME_TYPES: Record<string, string[]> = {
   csv: ['text/csv', 'text/plain', 'application/csv'],
@@ -391,13 +404,102 @@ const ALLOWED_MIME_TYPES: Record<string, string[]> = {
 };
 
 export class FileValidationError extends Error {
-  constructor(message: string, public code: 'SIZE_EXCEEDED' | 'INVALID_TYPE' | 'INVALID_MIME' | 'UNSUPPORTED_FORMAT') {
+  constructor(message: string, public code: 'SIZE_EXCEEDED' | 'INVALID_TYPE' | 'INVALID_MIME' | 'UNSUPPORTED_FORMAT' | 'INVALID_CONTENT' | 'TOO_MANY_RECORDS') {
     super(message);
     this.name = 'FileValidationError';
   }
 }
 
-export const validateFile = (file: File): void => {
+/**
+ * Validate file name for suspicious patterns (e.g., double extensions)
+ */
+const validateFileName = (fileName: string): void => {
+  const parts = fileName.split('.');
+  if (parts.length > 2) {
+    // Check if any intermediate parts are suspicious executable extensions
+    const suspiciousExtensions = ['exe', 'bat', 'cmd', 'ps1', 'sh', 'msi', 'dll', 'com', 'vbs', 'js', 'ws', 'wsf'];
+    for (let i = 1; i < parts.length - 1; i++) {
+      if (suspiciousExtensions.includes(parts[i].toLowerCase())) {
+        throw new FileValidationError(
+          'File name contains suspicious extension patterns. Please rename the file.',
+          'INVALID_TYPE'
+        );
+      }
+    }
+  }
+};
+
+/**
+ * Verify file content matches the expected format via magic number / signature check
+ */
+const validateFileSignature = async (file: File): Promise<void> => {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const buffer = await file.slice(0, 8).arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  if (extension === 'xlsx') {
+    // XLSX files are ZIP archives: signature 50 4B 03 04
+    if (!(bytes[0] === 0x50 && bytes[1] === 0x4B)) {
+      throw new FileValidationError(
+        'File content does not match XLSX format (invalid file signature)',
+        'INVALID_CONTENT'
+      );
+    }
+  } else if (extension === 'json') {
+    // JSON should start with { or [ (after optional whitespace/BOM)
+    let startByte = bytes[0];
+    // Skip UTF-8 BOM if present
+    if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+      startByte = bytes[3];
+    }
+    // Skip whitespace
+    const textStart = String.fromCharCode(startByte).trim();
+    if (textStart && textStart !== '{' && textStart !== '[') {
+      throw new FileValidationError(
+        'File content does not appear to be valid JSON',
+        'INVALID_CONTENT'
+      );
+    }
+  } else if (extension === 'csv') {
+    // CSV should be text-like: check first bytes are printable ASCII or common Unicode
+    const hasNullBytes = bytes.some(b => b === 0x00);
+    if (hasNullBytes) {
+      throw new FileValidationError(
+        'File content does not appear to be valid CSV (contains binary data)',
+        'INVALID_CONTENT'
+      );
+    }
+  }
+};
+
+/**
+ * Validate record count doesn't exceed safety limits
+ */
+const validateRecordCount = (count: number): void => {
+  if (count > MAX_RECORDS) {
+    throw new FileValidationError(
+      `File contains too many records (${count.toLocaleString()}). Maximum allowed: ${MAX_RECORDS.toLocaleString()}`,
+      'TOO_MANY_RECORDS'
+    );
+  }
+};
+
+/**
+ * Sanitize a string value from file input to prevent injection
+ */
+const sanitizeFieldValue = (value: string): string => {
+  if (!value) return value;
+  // Truncate overly long fields
+  if (value.length > MAX_FIELD_LENGTH) {
+    return value.slice(0, MAX_FIELD_LENGTH);
+  }
+  // Strip formula injection characters at the start (=, +, -, @)
+  // These can be dangerous in CSV/Excel contexts
+  const stripped = value.replace(/^[=+\-@\t\r]+/, '');
+  return stripped;
+};
+
+export const validateFile = async (file: File): Promise<void> => {
   // Check file size
   if (file.size > MAX_FILE_SIZE_BYTES) {
     throw new FileValidationError(
@@ -405,6 +507,9 @@ export const validateFile = (file: File): void => {
       'SIZE_EXCEEDED'
     );
   }
+
+  // Validate filename for suspicious patterns
+  validateFileName(file.name);
 
   // Check file extension
   const extension = file.name.split('.').pop()?.toLowerCase();
@@ -415,18 +520,19 @@ export const validateFile = (file: File): void => {
     );
   }
 
-  // Check MIME type
+  // Check MIME type - warn but allow through due to browser inconsistencies
   const allowedMimes = ALLOWED_MIME_TYPES[extension];
-  // Allow empty MIME type as some browsers don't set it correctly
   if (file.type && !allowedMimes.includes(file.type)) {
     console.warn(`MIME type mismatch: expected ${allowedMimes.join(' or ')}, got ${file.type}`);
-    // Don't throw - some browsers report incorrect MIME types, especially for CSV
   }
+
+  // Verify file content signature (magic numbers)
+  await validateFileSignature(file);
 };
 
 export const parseFile = async (file: File): Promise<ParsedRecord[]> => {
-  // Validate file before processing
-  validateFile(file);
+  // Validate file before processing (async - includes signature check)
+  await validateFile(file);
 
   const extension = file.name.split('.').pop()?.toLowerCase();
 

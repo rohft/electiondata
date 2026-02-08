@@ -58,10 +58,14 @@ export const WardFileUploader = ({ wards, municipalityName, onWardDataUpdate }: 
             break;
           case 'INVALID_TYPE':
           case 'INVALID_MIME':
+          case 'INVALID_CONTENT':
             toast.error(`Invalid file type: ${file.name}. Please upload CSV, Excel, or JSON files`);
             break;
           case 'UNSUPPORTED_FORMAT':
             toast.error(`Unsupported format: ${file.name}. Use CSV, Excel (.xlsx, .xls), or JSON`);
+            break;
+          case 'TOO_MANY_RECORDS':
+            toast.error(`Too many records in ${file.name}. Maximum: 50,000 records`);
             break;
           default:
             toast.error(error.message);

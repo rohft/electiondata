@@ -90,7 +90,7 @@ const VOTERS_TABLE_ID = 74771;
 
 const VoterDataContext = createContext<VoterDataContextType | undefined>(undefined);
 
-// Helper to serialize data for localStorage (handle Date objects)
+// Helper to serialize data for sessionStorage (handle Date objects)
 const serializeData = (municipalities: MunicipalityData[]): string => {
   return JSON.stringify(municipalities, (key, value) => {
     if (value instanceof Date) {
@@ -100,7 +100,7 @@ const serializeData = (municipalities: MunicipalityData[]): string => {
   });
 };
 
-// Helper to deserialize data from localStorage (restore Date objects)
+// Helper to deserialize data from sessionStorage (restore Date objects)
 const deserializeData = (data: string): MunicipalityData[] => {
   return JSON.parse(data, (key, value) => {
     if (value && typeof value === 'object' && value.__type === 'Date') {
@@ -135,8 +135,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
         if (wardsError) {
           console.error('Error loading wards from database:', wardsError);
-          // Fall back to localStorage
-          const savedData = localStorage.getItem(STORAGE_KEY);
+          // Fall back to sessionStorage
+          const savedData = sessionStorage.getItem(STORAGE_KEY);
           if (savedData) {
             const parsedData = deserializeData(savedData);
             setMunicipalities(parsedData);
@@ -146,8 +146,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         }
 
         if (!wardsData?.List || wardsData.List.length === 0) {
-          // No data in database, try localStorage
-          const savedData = localStorage.getItem(STORAGE_KEY);
+          // No data in database, try sessionStorage
+          const savedData = sessionStorage.getItem(STORAGE_KEY);
           if (savedData) {
             const parsedData = deserializeData(savedData);
             setMunicipalities(parsedData);
@@ -255,12 +255,12 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         const loadedMunicipalities = Array.from(municipalitiesMap.values());
         setMunicipalities(loadedMunicipalities);
 
-        // Also save to localStorage as backup
-        localStorage.setItem(STORAGE_KEY, serializeData(loadedMunicipalities));
+        // Also save to sessionStorage as backup
+        sessionStorage.setItem(STORAGE_KEY, serializeData(loadedMunicipalities));
       } catch (error) {
         console.error('Error loading data from database:', error);
-        // Fall back to localStorage
-        const savedData = localStorage.getItem(STORAGE_KEY);
+        // Fall back to sessionStorage
+        const savedData = sessionStorage.getItem(STORAGE_KEY);
         if (savedData) {
           const parsedData = deserializeData(savedData);
           setMunicipalities(parsedData);
@@ -273,15 +273,15 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     loadFromDatabase();
   }, []);
 
-  // Auto-save to localStorage when data changes (debounced)
+  // Auto-save to sessionStorage when data changes (debounced)
   useEffect(() => {
     if (!isDataLoaded) return;
 
     const timeoutId = setTimeout(() => {
       try {
-        localStorage.setItem(STORAGE_KEY, serializeData(municipalities));
+        sessionStorage.setItem(STORAGE_KEY, serializeData(municipalities));
       } catch (error) {
-        console.error('Error saving voter data to localStorage:', error);
+        console.error('Error saving voter data to sessionStorage:', error);
       }
     }, 500);
 
@@ -290,7 +290,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
   const saveData = useCallback(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, serializeData(municipalities));
+      sessionStorage.setItem(STORAGE_KEY, serializeData(municipalities));
     } catch (error) {
       console.error('Error saving voter data:', error);
     }
@@ -350,9 +350,9 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       toast.error('Failed to clear some data from database');
     }
 
-    // Clear local state and localStorage
+    // Clear local state and sessionStorage
     setMunicipalities([]);
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
   const addWardData = useCallback(async (municipalityName: string, wardData: WardData) => {
@@ -568,11 +568,11 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           return m;
         }).filter((m) => m.wards.length > 0);
 
-        // Immediately save to localStorage after successful deletion
+        // Immediately save to sessionStorage after successful deletion
         try {
-          localStorage.setItem(STORAGE_KEY, serializeData(updated));
+          sessionStorage.setItem(STORAGE_KEY, serializeData(updated));
         } catch (error) {
-          console.error('Error saving to localStorage after deletion:', error);
+          console.error('Error saving to sessionStorage after deletion:', error);
         }
 
         return updated;
@@ -869,11 +869,11 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           return m;
         });
 
-        // Immediately save to localStorage after successful deletion
+        // Immediately save to sessionStorage after successful deletion
         try {
-          localStorage.setItem(STORAGE_KEY, serializeData(updated));
+          sessionStorage.setItem(STORAGE_KEY, serializeData(updated));
         } catch (error) {
-          console.error('Error saving to localStorage after deletion:', error);
+          console.error('Error saving to sessionStorage after deletion:', error);
         }
 
         return updated;
