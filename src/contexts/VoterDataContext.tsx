@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
+import { logError } from '@/lib/errorLogger';
 const _w = window as any;
 
 export type VoterStatus = 'available' | 'dead' | 'out_of_country' | 'married' | 'older_citizen' | 'disabled';
@@ -134,7 +135,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         });
 
         if (wardsError) {
-          console.error('Error loading wards from database:', wardsError);
+          logError('LoadWards', wardsError);
           // Fall back to sessionStorage
           const savedData = sessionStorage.getItem(STORAGE_KEY);
           if (savedData) {
@@ -203,7 +204,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
                   const voterData = JSON.parse(voterRow.voter_data);
                   wardVoters.push(voterData);
                 } catch (e) {
-                  console.error('Error parsing voter data:', e);
+                  logError('ParseVoterData', e);
                 }
               }
             }
@@ -223,7 +224,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
                         const voterData = JSON.parse(voterRow.voter_data);
                         boothVoters.push(voterData);
                       } catch (e) {
-                        console.error('Error parsing voter data:', e);
+                        logError('ParseBoothVoterData', e);
                       }
                     }
                   }
@@ -258,7 +259,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         // Also save to sessionStorage as backup
         sessionStorage.setItem(STORAGE_KEY, serializeData(loadedMunicipalities));
       } catch (error) {
-        console.error('Error loading data from database:', error);
+        logError('LoadDatabase', error);
         // Fall back to sessionStorage
         const savedData = sessionStorage.getItem(STORAGE_KEY);
         if (savedData) {
@@ -281,7 +282,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       try {
         sessionStorage.setItem(STORAGE_KEY, serializeData(municipalities));
       } catch (error) {
-        console.error('Error saving voter data to sessionStorage:', error);
+        logError('AutoSaveSession', error);
       }
     }, 500);
 
@@ -292,7 +293,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     try {
       sessionStorage.setItem(STORAGE_KEY, serializeData(municipalities));
     } catch (error) {
-      console.error('Error saving voter data:', error);
+      logError('SaveData', error);
     }
   }, [municipalities]);
 
@@ -346,7 +347,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
       toast.success('All data cleared from database');
     } catch (error) {
-      console.error('Error clearing data from database:', error);
+      logError('ClearDatabase', error);
       toast.error('Failed to clear some data from database');
     }
 
@@ -368,7 +369,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       });
 
       if (wardError) {
-        toast.error(`Failed to save ward to database: ${wardError}`);
+        toast.error('Failed to save ward to database. Please try again.');
         throw new Error(wardError);
       }
 
@@ -387,7 +388,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       const dbWardId = createdWard?.List?.[0]?.id;
 
       if (!dbWardId) {
-        console.error('Failed to get created ward ID');
+        logError('GetCreatedWardId');
       } else {
         // Save booth centres to database
         if (wardData.boothCentres && wardData.boothCentres.length > 0) {
@@ -401,7 +402,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
             });
 
             if (boothError) {
-              console.error('Error saving booth:', boothError);
+              logError('SaveBooth', boothError);
               continue;
             }
 
@@ -416,7 +417,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
                 });
 
                 if (voterError) {
-                  console.error('Error saving voter:', voterError);
+                  logError('SaveBoothVoter', voterError);
                 }
               }
             }
@@ -433,7 +434,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
               });
 
               if (voterError) {
-                console.error('Error saving voter:', voterError);
+                logError('SaveWardVoter', voterError);
               }
             }
           }
@@ -461,7 +462,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
       toast.success(`Ward data saved to database successfully`);
     } catch (error) {
-      console.error('Error saving ward data:', error);
+      logError('SaveWardData', error);
       toast.error('Failed to save ward data to database');
     }
   }, []);
@@ -551,8 +552,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         deletionSuccessful = true;
       }
     } catch (error) {
-      console.error('Error deleting ward from database:', error);
-      toast.error(`Failed to delete ward: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logError('DeleteWard', error);
+      toast.error('Failed to delete ward. Please try again.');
       // Don't update local state if database deletion failed
       return;
     }
@@ -572,7 +573,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         try {
           sessionStorage.setItem(STORAGE_KEY, serializeData(updated));
         } catch (error) {
-          console.error('Error saving to sessionStorage after deletion:', error);
+           logError('SaveSessionAfterDelete', error);
         }
 
         return updated;
@@ -706,12 +707,12 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         });
 
         if (boothError) {
-          toast.error(`Failed to save booth to database: ${boothError}`);
+          toast.error('Failed to save booth. Please try again.');
           throw new Error(boothError);
         }
       }
     } catch (error) {
-      console.error('Error saving booth:', error);
+      logError('SaveBoothCentre', error);
     }
 
     // Update local state
@@ -782,7 +783,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         });
       }
     } catch (error) {
-      console.error('Error updating booth in database:', error);
+      logError('UpdateBoothDB', error);
     }
   }, []);
 
@@ -844,8 +845,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         deletionSuccessful = true;
       }
     } catch (error) {
-      console.error('Error deleting booth from database:', error);
-      toast.error(`Failed to delete booth: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logError('DeleteBoothDB', error);
+      toast.error('Failed to delete booth. Please try again.');
       return;
     }
 
@@ -873,7 +874,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         try {
           sessionStorage.setItem(STORAGE_KEY, serializeData(updated));
         } catch (error) {
-          console.error('Error saving to sessionStorage after deletion:', error);
+          logError('SaveSessionAfterBoothDelete', error);
         }
 
         return updated;
@@ -927,14 +928,14 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           });
 
           if (voterError) {
-            console.error('Error saving voter:', voterError);
+            logError('SaveBoothVoterDB', voterError);
           }
         }
 
         toast.success(`${voters.length} voters saved to database`);
       }
     } catch (error) {
-      console.error('Error saving booth voters:', error);
+      logError('SaveBoothVoters', error);
       toast.error('Failed to save voters to database');
     }
 

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { logError } from '@/lib/errorLogger';
 
 interface CasteHierarchyNode {
   subfolders: string[];
@@ -53,7 +54,7 @@ export const CustomTagsProvider: React.FC<{children: React.ReactNode;}> = ({ chi
         setTags({ ...defaultTags, ...parsed });
       }
     } catch (error) {
-      console.error('Error loading custom tags:', error);
+      logError('LoadCustomTags', error);
     }
   }, []);
 
@@ -61,7 +62,7 @@ export const CustomTagsProvider: React.FC<{children: React.ReactNode;}> = ({ chi
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tags));
     } catch (error) {
-      console.error('Error saving custom tags:', error);
+      logError('SaveCustomTags', error);
     }
   }, [tags]);
 

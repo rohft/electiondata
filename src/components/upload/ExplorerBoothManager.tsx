@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { logError } from '@/lib/errorLogger';
 import { useVoterData, BoothCentre } from '@/contexts/VoterDataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,7 +106,7 @@ export const ExplorerBoothManager: React.FC<ExplorerBoothManagerProps> = ({
       addBoothVoters(municipalityId, wardId, boothId, voters, file.name);
       toast.success(`${records.length} records uploaded to booth`);
     } catch (error) {
-      console.error('File parsing error:', error);
+      logError('ExplorerFileUpload', error);
       toast.error(`Failed to parse ${file.name}`);
     } finally {
       setUploadingBoothId(null);

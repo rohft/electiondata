@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { logError } from '@/lib/errorLogger';
 
 export interface CustomFont {
   id: string;
@@ -51,7 +52,7 @@ export const FontProvider = ({ children }: {children: ReactNode;}) => {
         if (data.englishFont) setEnglishFont(data.englishFont);
         if (data.customFonts) setCustomFonts(data.customFonts);
       } catch (e) {
-        console.error('Failed to parse stored fonts:', e);
+        logError('ParseStoredFonts', e);
       }
     }
   }, []);

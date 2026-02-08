@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { logError } from '@/lib/errorLogger';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +65,7 @@ export const BoothFileUploader = ({
           `${records.length} records loaded for ${booth.boothName} (Ward ${booth.wardNumber})`
         );
       } catch (error) {
-        console.error('File parsing error:', error);
+        logError('BoothFileUpload', error);
         onBoothDataUpdate(index, file, [], 'error');
         if (error instanceof FileValidationError) {
           toast.error(error.message);
