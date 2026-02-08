@@ -26,7 +26,7 @@ interface WardUploadData {
 
 export const UploadWizard = () => {
   const { t } = useLanguage();
-  const { municipalities } = useVoterData();
+  const { municipalities, getWardVoters } = useVoterData();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [addWardDialogOpen, setAddWardDialogOpen] = useState(false);
   const [selectedMunicipality, setSelectedMunicipality] = useState<string | null>(null);
@@ -61,23 +61,33 @@ export const UploadWizard = () => {
     const municipality = municipalities.find((m) => m.id === municipalityId);
     if (!municipality) return [];
 
-    return municipality.wards.map((ward, idx) => ({
-      wardNumber: idx + 1,
-      file: null,
-      records: ward.voters.map((voter) => ({
-        wardNo: voter.ward,
-        centerName: '',
-        voterId: voter.id,
-        voterName: voter.fullName,
-        age: voter.age,
-        gender: voter.gender,
-        spouse: '',
-        parents: '',
-        originalData: voter.originalData
-      })) as ParsedRecord[],
-      status: 'uploaded' as const,
-      fileName: ward.fileName
-    }));
+    return municipality.wards.map((ward) => {
+      // Extract actual ward number from name (e.g., "Ward 3" -> 3)
+      const match = ward.name.match(/\d+/);
+      const wardNumber = match ? parseInt(match[0]) : 1;
+
+      // Use getWardVoters to properly aggregate voters from booth centres
+      const voters = getWardVoters(ward);
+
+      return {
+        wardNumber,
+        file: null,
+        records: voters.map((voter) => ({
+          wardNo: voter.ward,
+          centerName: '',
+          voterId: voter.id,
+          voterName: voter.fullName,
+          age: voter.age,
+          gender: voter.gender,
+          spouse: '',
+          parents: '',
+          surname: voter.surname,
+          originalData: voter.originalData
+        })) as ParsedRecord[],
+        status: 'uploaded' as const,
+        fileName: ward.fileName
+      };
+    });
   };
 
   const currentMunicipality = municipalities.find((m) => m.id === selectedMunicipality);
