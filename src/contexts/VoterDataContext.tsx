@@ -117,6 +117,45 @@ const extractWardNumber = (wardName: string): number => {
   return match ? parseInt(match[0]) : 0;
 };
 
+// Helper to fetch all pages from the database API
+const fetchAllPages = async (
+  tableId: number,
+  orderByField: string,
+  filters: Array<{ name: string; op: string; value: any }> = [],
+  pageSize = 500
+): Promise<any[]> => {
+  const allItems: any[] = [];
+  let pageNo = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await _w.ezsite.apis.tablePage(tableId, {
+      PageNo: pageNo,
+      PageSize: pageSize,
+      OrderByField: orderByField,
+      IsAsc: true,
+      Filters: filters
+    });
+
+    if (error) {
+      logError(`FetchPage_${tableId}_${pageNo}`, error);
+      break;
+    }
+
+    const items = data?.List || [];
+    allItems.push(...items);
+
+    // If we got fewer items than requested, we've reached the end
+    if (items.length < pageSize) {
+      hasMore = false;
+    } else {
+      pageNo++;
+    }
+  }
+
+  return allItems;
+};
+
 export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ children }) => {
   const [municipalities, setMunicipalities] = useState<MunicipalityData[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -125,28 +164,10 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
   useEffect(() => {
     const loadFromDatabase = async () => {
       try {
-        // Load wards
-        const { data: wardsData, error: wardsError } = await _w.ezsite.apis.tablePage(WARDS_TABLE_ID, {
-          PageNo: 1,
-          PageSize: 1000,
-          OrderByField: 'ward_number',
-          IsAsc: true,
-          Filters: []
-        });
+        // Load wards using paginated fetcher
+        const wardsList = await fetchAllPages(WARDS_TABLE_ID, 'ward_number');
 
-        if (wardsError) {
-          logError('LoadWards', wardsError);
-          // Fall back to sessionStorage
-          const savedData = sessionStorage.getItem(STORAGE_KEY);
-          if (savedData) {
-            const parsedData = deserializeData(savedData);
-            setMunicipalities(parsedData);
-          }
-          setIsDataLoaded(true);
-          return;
-        }
-
-        if (!wardsData?.List || wardsData.List.length === 0) {
+        if (wardsList.length === 0) {
           // No data in database, try sessionStorage
           const savedData = sessionStorage.getItem(STORAGE_KEY);
           if (savedData) {
@@ -157,28 +178,16 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           return;
         }
 
-        // Load booths
-        const { data: boothsData } = await _w.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
-          PageNo: 1,
-          PageSize: 10000,
-          OrderByField: 'id',
-          IsAsc: true,
-          Filters: []
-        });
+        // Load booths using paginated fetcher
+        const boothsList = await fetchAllPages(BOOTHS_TABLE_ID, 'id');
 
-        // Load voters
-        const { data: votersData } = await _w.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
-          PageNo: 1,
-          PageSize: 100000,
-          OrderByField: 'id',
-          IsAsc: true,
-          Filters: []
-        });
+        // Load ALL voters using paginated fetcher (handles large datasets)
+        const votersList = await fetchAllPages(VOTERS_TABLE_ID, 'id');
 
         // Reconstruct municipalities structure from database
         const municipalitiesMap = new Map<string, MunicipalityData>();
 
-        for (const wardRow of wardsData.List) {
+        for (const wardRow of wardsList) {
           const municipalityName = wardRow.municipality_name;
           const wardNumber = wardRow.ward_number;
           const wardName = `Ward ${wardNumber}`;
@@ -197,48 +206,42 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
           // Get voters for this ward
           const wardVoters: VoterRecord[] = [];
-          if (votersData?.List) {
-            for (const voterRow of votersData.List) {
-              if (voterRow.ward_id === wardRow.id) {
-                try {
-                  const voterData = JSON.parse(voterRow.voter_data);
-                  wardVoters.push(voterData);
-                } catch (e) {
-                  logError('ParseVoterData', e);
-                }
+          for (const voterRow of votersList) {
+            if (voterRow.ward_id === wardRow.id) {
+              try {
+                const voterData = JSON.parse(voterRow.voter_data);
+                wardVoters.push(voterData);
+              } catch (e) {
+                logError('ParseVoterData', e);
               }
             }
           }
 
           // Get booths for this ward
           const wardBooths: BoothCentre[] = [];
-          if (boothsData?.List) {
-            for (const boothRow of boothsData.List) {
-              if (boothRow.ward_id === wardRow.id) {
-                // Get voters for this booth
-                const boothVoters: VoterRecord[] = [];
-                if (votersData?.List) {
-                  for (const voterRow of votersData.List) {
-                    if (voterRow.ward_id === wardRow.id && voterRow.booth_number === boothRow.booth_number) {
-                      try {
-                        const voterData = JSON.parse(voterRow.voter_data);
-                        boothVoters.push(voterData);
-                      } catch (e) {
-                        logError('ParseBoothVoterData', e);
-                      }
-                    }
+          for (const boothRow of boothsList) {
+            if (boothRow.ward_id === wardRow.id) {
+              // Get voters for this booth
+              const boothVoters: VoterRecord[] = [];
+              for (const voterRow of votersList) {
+                if (voterRow.ward_id === wardRow.id && voterRow.booth_number === boothRow.booth_number) {
+                  try {
+                    const voterData = JSON.parse(voterRow.voter_data);
+                    boothVoters.push(voterData);
+                  } catch (e) {
+                    logError('ParseBoothVoterData', e);
                   }
                 }
-
-                wardBooths.push({
-                  id: `booth-${boothRow.id}`,
-                  name: boothRow.booth_centre,
-                  createdAt: new Date(),
-                  voters: boothVoters,
-                  fileName: '',
-                  uploadedAt: new Date()
-                });
               }
+
+              wardBooths.push({
+                id: `booth-${boothRow.id}`,
+                name: boothRow.booth_centre,
+                createdAt: new Date(),
+                voters: boothVoters,
+                fileName: '',
+                uploadedAt: new Date()
+              });
             }
           }
 
@@ -300,49 +303,29 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
   const clearAllData = useCallback(async () => {
     try {
       // Clear from database
-      const { data: wardsData } = await _w.ezsite.apis.tablePage(WARDS_TABLE_ID, {
-        PageNo: 1,
-        PageSize: 1000,
-        OrderByField: 'id',
-        IsAsc: true,
-        Filters: []
-      });
+      const wardsList = await fetchAllPages(WARDS_TABLE_ID, 'id');
 
-      if (wardsData?.List) {
-        for (const ward of wardsData.List) {
-          // Delete all voters for this ward
-          const { data: votersData } = await _w.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
-            PageNo: 1,
-            PageSize: 100000,
-            OrderByField: 'id',
-            IsAsc: true,
-            Filters: [{ name: 'ward_id', op: 'Equal', value: ward.id }]
-          });
+      for (const ward of wardsList) {
+        // Delete all voters for this ward
+        const votersList = await fetchAllPages(VOTERS_TABLE_ID, 'id', [
+          { name: 'ward_id', op: 'Equal', value: ward.id }
+        ]);
 
-          if (votersData?.List) {
-            for (const voter of votersData.List) {
-              await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
-            }
-          }
-
-          // Delete all booths for this ward
-          const { data: boothsData } = await _w.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
-            PageNo: 1,
-            PageSize: 1000,
-            OrderByField: 'id',
-            IsAsc: true,
-            Filters: [{ name: 'ward_id', op: 'Equal', value: ward.id }]
-          });
-
-          if (boothsData?.List) {
-            for (const booth of boothsData.List) {
-              await _w.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
-            }
-          }
-
-          // Delete ward
-          await _w.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: ward.id });
+        for (const voter of votersList) {
+          await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
         }
+
+        // Delete all booths for this ward
+        const boothsList = await fetchAllPages(BOOTHS_TABLE_ID, 'id', [
+          { name: 'ward_id', op: 'Equal', value: ward.id }
+        ]);
+
+        for (const booth of boothsList) {
+          await _w.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
+        }
+
+        // Delete ward
+        await _w.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: ward.id });
       }
 
       toast.success('All data cleared from database');
@@ -496,47 +479,27 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       const dbWardId = wardData?.List?.[0]?.id;
 
       if (dbWardId) {
-        // Delete voters for this ward
-        const { data: votersData, error: votersError } = await _w.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
-          PageNo: 1,
-          PageSize: 100000,
-          OrderByField: 'id',
-          IsAsc: true,
-          Filters: [{ name: 'ward_id', op: 'Equal', value: dbWardId }]
-        });
+        // Delete voters for this ward (paginated)
+        const votersList = await fetchAllPages(VOTERS_TABLE_ID, 'id', [
+          { name: 'ward_id', op: 'Equal', value: dbWardId }
+        ]);
 
-        if (votersError) {
-          throw new Error(`Failed to fetch voters: ${votersError}`);
-        }
-
-        if (votersData?.List) {
-          for (const voter of votersData.List) {
-            const { error: deleteError } = await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
-            if (deleteError) {
-              throw new Error(`Failed to delete voter ${voter.id}: ${deleteError}`);
-            }
+        for (const voter of votersList) {
+          const { error: deleteError } = await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+          if (deleteError) {
+            throw new Error(`Failed to delete voter ${voter.id}: ${deleteError}`);
           }
         }
 
-        // Delete booths for this ward
-        const { data: boothsData, error: boothsError } = await _w.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
-          PageNo: 1,
-          PageSize: 1000,
-          OrderByField: 'id',
-          IsAsc: true,
-          Filters: [{ name: 'ward_id', op: 'Equal', value: dbWardId }]
-        });
+        // Delete booths for this ward (paginated)
+        const boothsList = await fetchAllPages(BOOTHS_TABLE_ID, 'id', [
+          { name: 'ward_id', op: 'Equal', value: dbWardId }
+        ]);
 
-        if (boothsError) {
-          throw new Error(`Failed to fetch booths: ${boothsError}`);
-        }
-
-        if (boothsData?.List) {
-          for (const booth of boothsData.List) {
-            const { error: deleteError } = await _w.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
-            if (deleteError) {
-              throw new Error(`Failed to delete booth ${booth.id}: ${deleteError}`);
-            }
+        for (const booth of boothsList) {
+          const { error: deleteError } = await _w.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
+          if (deleteError) {
+            throw new Error(`Failed to delete booth ${booth.id}: ${deleteError}`);
           }
         }
 
@@ -808,28 +771,16 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       const dbWardId = boothData?.List?.[0]?.ward_id;
 
       if (dbBoothId) {
-        // Delete voters for this booth
-        const { data: votersData, error: votersError } = await _w.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
-          PageNo: 1,
-          PageSize: 100000,
-          OrderByField: 'id',
-          IsAsc: true,
-          Filters: [
+        // Delete voters for this booth (paginated)
+        const votersList = await fetchAllPages(VOTERS_TABLE_ID, 'id', [
           { name: 'ward_id', op: 'Equal', value: dbWardId },
-          { name: 'booth_number', op: 'Equal', value: boothId }]
+          { name: 'booth_number', op: 'Equal', value: boothId }
+        ]);
 
-        });
-
-        if (votersError) {
-          throw new Error(`Failed to fetch voters: ${votersError}`);
-        }
-
-        if (votersData?.List) {
-          for (const voter of votersData.List) {
-            const { error: deleteError } = await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
-            if (deleteError) {
-              throw new Error(`Failed to delete voter ${voter.id}: ${deleteError}`);
-            }
+        for (const voter of votersList) {
+          const { error: deleteError } = await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+          if (deleteError) {
+            throw new Error(`Failed to delete voter ${voter.id}: ${deleteError}`);
           }
         }
 
