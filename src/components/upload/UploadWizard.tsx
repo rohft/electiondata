@@ -4,10 +4,11 @@ import { useVoterData } from '@/contexts/VoterDataContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Database, Building2, FolderPlus, ChevronDown, ChevronRight, FileText, MapPin } from 'lucide-react';
+import { Plus, Database, Building2, FolderPlus, ChevronDown, ChevronRight, FileText, MapPin, Table, LayoutDashboard } from 'lucide-react';
 import { VoterDataTable } from '@/components/data/VoterDataTable';
 import { DashboardUploadWizard } from './DashboardUploadWizard';
 import { AddWardDialog } from './AddWardDialog';
@@ -260,24 +261,70 @@ export const UploadWizard = () => {
       </Card>
 
       {/* Main Content Area */}
-      <div className="flex-1 min-w-0 space-y-6">
-        {currentMunicipalityData ?
-        <VoterDataTable
-          wards={getWardDataForMunicipality(currentMunicipalityData.id)}
-          municipalityName={currentMunicipalityData.name}
-          selectedWardIndex={selectedWardIndex}
-          onWardSelect={setSelectedWardIndex}
-          onUploadMore={() => setUploadDialogOpen(true)} /> :
+      <div className="flex-1 min-w-0 space-y-4">
+        <Tabs defaultValue="table-view" className="w-full">
+          <TabsList>
+            <TabsTrigger value="overview" className="gap-1.5">
+              <LayoutDashboard className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="table-view" className="gap-1.5">
+              <Table className="h-4 w-4" />
+              Table View
+            </TabsTrigger>
+          </TabsList>
 
-        municipalities.length > 0 ?
-        <VoterDataTable
-          wards={getWardDataForMunicipality(municipalities[0].id)}
-          municipalityName={municipalities[0].name}
-          selectedWardIndex={selectedWardIndex}
-          onWardSelect={setSelectedWardIndex}
-          onUploadMore={() => setUploadDialogOpen(true)} /> :
+          <TabsContent value="overview" className="mt-4">
+            <Card className="card-shadow border-border/50">
+              <CardContent className="p-6">
+                {(() => {
+                  const muni = currentMunicipalityData || municipalities[0];
+                  if (!muni) return null;
+                  const wardData = getWardDataForMunicipality(muni.id);
+                  const totalVoters = wardData.reduce((sum, w) => sum + w.records.length, 0);
+                  const uploadedWards = wardData.filter(w => w.records.length > 0).length;
+                  return (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">{muni.name}</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-2xl font-bold text-foreground">{wardData.length}</p>
+                          <p className="text-xs text-muted-foreground">Total Wards</p>
+                        </div>
+                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-2xl font-bold text-foreground">{uploadedWards}</p>
+                          <p className="text-xs text-muted-foreground">Wards with Data</p>
+                        </div>
+                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-2xl font-bold text-foreground">{totalVoters.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">Total Voters</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        null}
+          <TabsContent value="table-view" className="mt-4">
+            {currentMunicipalityData ?
+              <VoterDataTable
+                wards={getWardDataForMunicipality(currentMunicipalityData.id)}
+                municipalityName={currentMunicipalityData.name}
+                selectedWardIndex={selectedWardIndex}
+                onWardSelect={setSelectedWardIndex}
+                onUploadMore={() => setUploadDialogOpen(true)} /> :
+              municipalities.length > 0 ?
+              <VoterDataTable
+                wards={getWardDataForMunicipality(municipalities[0].id)}
+                municipalityName={municipalities[0].name}
+                selectedWardIndex={selectedWardIndex}
+                onWardSelect={setSelectedWardIndex}
+                onUploadMore={() => setUploadDialogOpen(true)} /> :
+              null}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Add Ward Dialog */}
