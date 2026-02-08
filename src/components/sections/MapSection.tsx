@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useVoterData } from '@/contexts/VoterDataContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCustomTags } from '@/contexts/CustomTagsContext';
+import { Category } from '@/types/category';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -149,6 +150,27 @@ export const MapSection = () => {
 
     return categories;
   }, [getVisibleCastes, tags.casteHierarchy]);
+
+  // Load category management categories from localStorage
+  const categoryMgmtCategories = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('voter_category_tree');
+      if (!saved) return [];
+      const cats: Category[] = JSON.parse(saved);
+      const flatten = (categories: Category[], parentPath = ''): { id: string; label: string; depth: number }[] => {
+        const result: { id: string; label: string; depth: number }[] = [];
+        for (const cat of categories) {
+          const path = parentPath ? `${parentPath} > ${cat.name}` : cat.name;
+          result.push({ id: `catmgmt_${cat.id}`, label: path, depth: parentPath ? 1 : 0 });
+          result.push(...flatten(cat.children, path));
+        }
+        return result;
+      };
+      return flatten(cats);
+    } catch {
+      return [];
+    }
+  }, []);
 
   // Combined target fields (default + custom + ethnic groups)
   const allTargetFields = useMemo(() => {
@@ -678,6 +700,19 @@ export const MapSection = () => {
                               <SelectItem key={cat.id} value={cat.id}>
                                     <span className={cat.parentGroup ? 'pl-2 text-muted-foreground' : ''}>
                                       {cat.labelEn}
+                                    </span>
+                                  </SelectItem>
+                              )}
+                              </SelectGroup>
+                            }
+                            
+                            {categoryMgmtCategories.length > 0 &&
+                            <SelectGroup>
+                                <SelectLabel>{language === 'ne' ? 'श्रेणी व्यवस्थापन' : 'Category Management'}</SelectLabel>
+                                {categoryMgmtCategories.map((cat) =>
+                              <SelectItem key={cat.id} value={cat.id}>
+                                    <span className={cat.depth > 0 ? 'pl-2 text-muted-foreground' : ''}>
+                                      {cat.label}
                                     </span>
                                   </SelectItem>
                               )}
