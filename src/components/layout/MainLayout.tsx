@@ -24,7 +24,7 @@ const sectionTitles: Record<string, {titleKey: string;subtitleKey?: string;}> = 
   dashboard: { titleKey: 'dashboard.title', subtitleKey: 'dashboard.subtitle' },
   upload: { titleKey: 'upload.title', subtitleKey: 'upload.description' },
   map: { titleKey: 'map.title', subtitleKey: 'map.description' },
-
+  caste: { titleKey: 'nav.ethnicGroup' },
   'category-mgmt': { titleKey: 'nav.categoryMgmt' },
   segments: { titleKey: 'segments.title' },
   comparison: { titleKey: 'comparison.title' },
