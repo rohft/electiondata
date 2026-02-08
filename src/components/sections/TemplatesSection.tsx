@@ -363,21 +363,21 @@ export const TemplatesSection = () => {
                             </div>
                           </div>
 
-                          {/* Caste Distribution with Totals */}
+                          {/* Surname Distribution with Totals */}
                           <div className="border rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h3 className="text-lg font-semibold">Caste Distribution (जात वितरण)</h3>
-                              <span className="text-sm text-gray-500">
-                                {Object.keys(segments.byCaste).length} castes | Total: {segments.total.toLocaleString()}
+                              <h3 className="text-lg font-semibold">Surname Distribution (थर वितरण)</h3>
+                              <span className="text-sm text-muted-foreground">
+                                {Object.keys(segments.bySurname).length} surnames | Total: {segments.total.toLocaleString()}
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                              {Object.entries(segments.byCaste).
-                            sort((a, b) => b[1] - a[1]).
-                            slice(0, 10).
-                            map(([caste, count]) =>
-                            <div key={caste} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                    <span className="text-sm">{caste}</span>
+                              {Object.entries(segments.bySurname)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 10)
+                            .map(([surname, count]) =>
+                            <div key={surname} className="flex items-center justify-between p-2 bg-muted rounded">
+                                    <span className="text-sm">{surname}</span>
                                     <span className="text-sm font-medium">{count.toLocaleString()}</span>
                                   </div>
                             )}
