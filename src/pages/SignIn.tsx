@@ -1,4 +1,5 @@
 import { useState } from 'react';
+const _w = window as any;
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,7 +37,7 @@ export default function SignIn() {
   const onSubmit = async (data: SigninFormData) => {
     setIsLoading(true);
     try {
-      const { error } = await window.ezsite.apis.login({
+      const { error } = await _w.ezsite.apis.login({
         email: data.email,
         password: data.password
       });

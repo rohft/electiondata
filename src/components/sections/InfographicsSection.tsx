@@ -80,18 +80,16 @@ export const InfographicsSection = () => {
           size: value
         }));
       case 'caste':
-        return Object.entries(segments.byCaste).
-        sort((a, b) => b[1] - a[1]).
-        slice(0, 8).
-        map(([name, value]) => ({
+        return Object.entries(segments.bySurname)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([name, value]) => ({
           name: name || 'Unknown',
           value,
           size: value
         }));
       case 'newar':
-        return [
-        { name: t('segments.newar'), value: segments.newarVsNonNewar.newar, size: segments.newarVsNonNewar.newar },
-        { name: t('segments.nonNewar'), value: segments.newarVsNonNewar.nonNewar, size: segments.newarVsNonNewar.nonNewar }];
+        return [];
 
       default:
         return [];

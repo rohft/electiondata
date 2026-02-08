@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
+const _w = window as any;
 
 export type VoterStatus = 'available' | 'dead' | 'out_of_country' | 'married' | 'older_citizen' | 'disabled';
 
@@ -124,7 +125,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     const loadFromDatabase = async () => {
       try {
         // Load wards
-        const { data: wardsData, error: wardsError } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+        const { data: wardsData, error: wardsError } = await _w.ezsite.apis.tablePage(WARDS_TABLE_ID, {
           PageNo: 1,
           PageSize: 1000,
           OrderByField: 'ward_number',
@@ -156,7 +157,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         }
 
         // Load booths
-        const { data: boothsData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+        const { data: boothsData } = await _w.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
           PageNo: 1,
           PageSize: 10000,
           OrderByField: 'id',
@@ -165,7 +166,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         });
 
         // Load voters
-        const { data: votersData } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+        const { data: votersData } = await _w.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
           PageNo: 1,
           PageSize: 100000,
           OrderByField: 'id',
@@ -298,7 +299,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
   const clearAllData = useCallback(async () => {
     try {
       // Clear from database
-      const { data: wardsData } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+      const { data: wardsData } = await _w.ezsite.apis.tablePage(WARDS_TABLE_ID, {
         PageNo: 1,
         PageSize: 1000,
         OrderByField: 'id',
@@ -309,7 +310,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       if (wardsData?.List) {
         for (const ward of wardsData.List) {
           // Delete all voters for this ward
-          const { data: votersData } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+          const { data: votersData } = await _w.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
             PageNo: 1,
             PageSize: 100000,
             OrderByField: 'id',
@@ -319,12 +320,12 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
           if (votersData?.List) {
             for (const voter of votersData.List) {
-              await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+              await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
             }
           }
 
           // Delete all booths for this ward
-          const { data: boothsData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+          const { data: boothsData } = await _w.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
             PageNo: 1,
             PageSize: 1000,
             OrderByField: 'id',
@@ -334,12 +335,12 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
           if (boothsData?.List) {
             for (const booth of boothsData.List) {
-              await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
+              await _w.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
             }
           }
 
           // Delete ward
-          await window.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: ward.id });
+          await _w.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: ward.id });
         }
       }
 
@@ -360,7 +361,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
     try {
       // Save ward to database
-      const { error: wardError } = await window.ezsite.apis.tableCreate(WARDS_TABLE_ID, {
+      const { error: wardError } = await _w.ezsite.apis.tableCreate(WARDS_TABLE_ID, {
         ward_number: wardNumber,
         municipality_name: municipalityName,
         upload_date: new Date().toISOString()
@@ -372,7 +373,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       }
 
       // Get the created ward's database ID
-      const { data: createdWard } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+      const { data: createdWard } = await _w.ezsite.apis.tablePage(WARDS_TABLE_ID, {
         PageNo: 1,
         PageSize: 1,
         OrderByField: 'id',
@@ -393,7 +394,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           for (const booth of wardData.boothCentres) {
             const boothNumber = booth.id;
 
-            const { error: boothError } = await window.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
+            const { error: boothError } = await _w.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
               ward_id: dbWardId,
               booth_number: boothNumber,
               booth_centre: booth.name
@@ -407,7 +408,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
             // Save voters for this booth
             if (booth.voters && booth.voters.length > 0) {
               for (const voter of booth.voters) {
-                const { error: voterError } = await window.ezsite.apis.tableCreate(VOTERS_TABLE_ID, {
+                const { error: voterError } = await _w.ezsite.apis.tableCreate(VOTERS_TABLE_ID, {
                   ward_id: dbWardId,
                   booth_number: boothNumber,
                   voter_data: JSON.stringify(voter),
@@ -424,7 +425,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           // Save voters directly to ward (no booths)
           if (wardData.voters && wardData.voters.length > 0) {
             for (const voter of wardData.voters) {
-              const { error: voterError } = await window.ezsite.apis.tableCreate(VOTERS_TABLE_ID, {
+              const { error: voterError } = await _w.ezsite.apis.tableCreate(VOTERS_TABLE_ID, {
                 ward_id: dbWardId,
                 booth_number: '',
                 voter_data: JSON.stringify(voter),
@@ -476,7 +477,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
     try {
       // Get ward from database
-      const { data: wardData, error: wardFetchError } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+      const { data: wardData, error: wardFetchError } = await _w.ezsite.apis.tablePage(WARDS_TABLE_ID, {
         PageNo: 1,
         PageSize: 1,
         OrderByField: 'id',
@@ -495,7 +496,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
       if (dbWardId) {
         // Delete voters for this ward
-        const { data: votersData, error: votersError } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+        const { data: votersData, error: votersError } = await _w.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
           PageNo: 1,
           PageSize: 100000,
           OrderByField: 'id',
@@ -509,7 +510,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
         if (votersData?.List) {
           for (const voter of votersData.List) {
-            const { error: deleteError } = await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+            const { error: deleteError } = await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
             if (deleteError) {
               throw new Error(`Failed to delete voter ${voter.id}: ${deleteError}`);
             }
@@ -517,7 +518,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         }
 
         // Delete booths for this ward
-        const { data: boothsData, error: boothsError } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+        const { data: boothsData, error: boothsError } = await _w.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
           PageNo: 1,
           PageSize: 1000,
           OrderByField: 'id',
@@ -531,7 +532,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
         if (boothsData?.List) {
           for (const booth of boothsData.List) {
-            const { error: deleteError } = await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
+            const { error: deleteError } = await _w.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
             if (deleteError) {
               throw new Error(`Failed to delete booth ${booth.id}: ${deleteError}`);
             }
@@ -539,7 +540,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         }
 
         // Delete ward
-        const { error: wardDeleteError } = await window.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: dbWardId });
+        const { error: wardDeleteError } = await _w.ezsite.apis.tableDelete(WARDS_TABLE_ID, { ID: dbWardId });
         if (wardDeleteError) {
           throw new Error(`Failed to delete ward: ${wardDeleteError}`);
         }
@@ -682,7 +683,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
     try {
       // Get ward from database
-      const { data: wardData } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+      const { data: wardData } = await _w.ezsite.apis.tablePage(WARDS_TABLE_ID, {
         PageNo: 1,
         PageSize: 1,
         OrderByField: 'id',
@@ -698,7 +699,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       if (dbWardId) {
         const boothId = crypto.randomUUID();
 
-        const { error: boothError } = await window.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
+        const { error: boothError } = await _w.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
           ward_id: dbWardId,
           booth_number: boothId,
           booth_centre: name
@@ -764,7 +765,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
     // Update database
     try {
-      const { data: boothData } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+      const { data: boothData } = await _w.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
         PageNo: 1,
         PageSize: 1,
         OrderByField: 'id',
@@ -775,7 +776,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       const dbBoothId = boothData?.List?.[0]?.id;
 
       if (dbBoothId) {
-        await window.ezsite.apis.tableUpdate(BOOTHS_TABLE_ID, {
+        await _w.ezsite.apis.tableUpdate(BOOTHS_TABLE_ID, {
           ID: dbBoothId,
           booth_centre: name
         });
@@ -790,7 +791,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
     // Delete from database
     try {
-      const { data: boothData, error: boothError } = await window.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
+      const { data: boothData, error: boothError } = await _w.ezsite.apis.tablePage(BOOTHS_TABLE_ID, {
         PageNo: 1,
         PageSize: 1,
         OrderByField: 'id',
@@ -807,7 +808,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
       if (dbBoothId) {
         // Delete voters for this booth
-        const { data: votersData, error: votersError } = await window.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
+        const { data: votersData, error: votersError } = await _w.ezsite.apis.tablePage(VOTERS_TABLE_ID, {
           PageNo: 1,
           PageSize: 100000,
           OrderByField: 'id',
@@ -824,7 +825,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
         if (votersData?.List) {
           for (const voter of votersData.List) {
-            const { error: deleteError } = await window.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
+            const { error: deleteError } = await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
             if (deleteError) {
               throw new Error(`Failed to delete voter ${voter.id}: ${deleteError}`);
             }
@@ -832,7 +833,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         }
 
         // Delete booth
-        const { error: deleteBoothError } = await window.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: dbBoothId });
+        const { error: deleteBoothError } = await _w.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: dbBoothId });
         if (deleteBoothError) {
           throw new Error(`Failed to delete booth: ${deleteBoothError}`);
         }
@@ -902,7 +903,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
     try {
       // Get ward from database
-      const { data: wardData } = await window.ezsite.apis.tablePage(WARDS_TABLE_ID, {
+      const { data: wardData } = await _w.ezsite.apis.tablePage(WARDS_TABLE_ID, {
         PageNo: 1,
         PageSize: 1,
         OrderByField: 'id',
@@ -918,7 +919,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       if (dbWardId && voters.length > 0) {
         // Save voters to database
         for (const voter of voters) {
-          const { error: voterError } = await window.ezsite.apis.tableCreate(VOTERS_TABLE_ID, {
+          const { error: voterError } = await _w.ezsite.apis.tableCreate(VOTERS_TABLE_ID, {
             ward_id: dbWardId,
             booth_number: boothId,
             voter_data: JSON.stringify(voter),

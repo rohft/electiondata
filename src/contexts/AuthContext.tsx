@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+const _w = window as any;
+
 interface User {
   ID: number;
   Name: string;
@@ -24,7 +26,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode;}> = ({ children 
 
   const checkAuth = async () => {
     try {
-      const { data, error } = await window.ezsite.apis.getUserInfo();
+      const { data, error } = await _w.ezsite.apis.getUserInfo();
       if (error || !data) {
         setUser(null);
       } else {
@@ -39,7 +41,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode;}> = ({ children 
 
   const logout = async () => {
     try {
-      await window.ezsite.apis.logout();
+      await _w.ezsite.apis.logout();
       setUser(null);
     } catch (err) {
       console.error('Logout failed:', err);
