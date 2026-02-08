@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { logError } from '@/lib/errorLogger';
 
 const _w = window as any;
 
@@ -44,7 +45,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode;}> = ({ children 
       await _w.ezsite.apis.logout();
       setUser(null);
     } catch (err) {
-      console.error('Logout failed:', err);
+      logError('Logout', err);
     }
   };
 

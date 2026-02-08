@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { logError } from '@/lib/errorLogger';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -47,7 +48,7 @@ export const WardFileUploader = ({ wards, municipalityName, onWardDataUpdate }: 
       onWardDataUpdate(wardIndex, file, records, 'uploaded');
       toast.success(`${records.length} records loaded for Ward ${wards[wardIndex].wardNumber}`);
     } catch (error) {
-      console.error('File parsing error:', error);
+      logError('WardFileUpload', error);
       onWardDataUpdate(wardIndex, file, [], 'error');
 
       // Provide specific error messages based on error type
