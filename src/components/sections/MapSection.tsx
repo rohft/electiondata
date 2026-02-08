@@ -1,14 +1,12 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useVoterData } from '@/contexts/VoterDataContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useCustomTags } from '@/contexts/CustomTagsContext';
 import { Category } from '@/types/category';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -37,7 +35,7 @@ import {
 '@/components/ui/dialog';
 import {
   ArrowRight, Save, RotateCcw, CheckCircle2, AlertCircle,
-  Plus, Trash2, PlusCircle, GripVertical, Upload, FolderTree, ChevronUp, ChevronDown, AlertTriangle } from
+  Plus, Trash2, PlusCircle, GripVertical, ChevronUp, ChevronDown, AlertTriangle } from
 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -60,7 +58,6 @@ const APP_FIELDS = [
 { id: 'surname', labelEn: 'Surname', labelNe: 'थर', aliases: ['थर', 'surname', 'family name'], isSystem: true },
 { id: 'age', labelEn: 'Age', labelNe: 'उमेर', aliases: ['उमेर', 'age'], isSystem: true },
 { id: 'gender', labelEn: 'Gender', labelNe: 'लिङ्ग', aliases: ['लिङ्ग', 'gender', 'sex'], isSystem: true },
-{ id: 'caste', labelEn: 'Caste/Ethnic Group', labelNe: 'जात/जातीय समूह', aliases: ['जात', 'caste', 'ethnicity'], isSystem: true },
 { id: 'tole', labelEn: 'Tole/Address', labelNe: 'टोल/ठेगाना', aliases: ['टोल', 'tole', 'address', 'ठेगाना'], isSystem: true },
 { id: 'spouse', labelEn: 'Spouse', labelNe: 'पति/पत्नी', aliases: ['पति/पत्नी', 'spouse', 'husband', 'wife'], isSystem: true },
 { id: 'parents', labelEn: 'Parents', labelNe: 'अभिभावक', aliases: ['बाबु/आमा', 'parents', 'father', 'mother', 'अभिभावक'], isSystem: true },
@@ -77,14 +74,11 @@ interface CustomTargetField {
   id: string;
   labelEn: string;
   labelNe: string;
-  isEthnicGroup?: boolean;
-  parentGroup?: string;
 }
 
 export const MapSection = () => {
   const { t, language } = useLanguage();
   const { municipalities, clearAllData } = useVoterData();
-  const { tags, getVisibleCastes, importCasteData } = useCustomTags();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Custom target fields added by user
@@ -96,11 +90,9 @@ export const MapSection = () => {
   // Dialog states
   const [addSourceDialogOpen, setAddSourceDialogOpen] = useState(false);
   const [addTargetDialogOpen, setAddTargetDialogOpen] = useState(false);
-  const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
   const [newSourceColumn, setNewSourceColumn] = useState('');
   const [newTargetFieldEn, setNewTargetFieldEn] = useState('');
   const [newTargetFieldNe, setNewTargetFieldNe] = useState('');
-  const [bulkCategories, setBulkCategories] = useState('');
 
   // Drag state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -119,37 +111,6 @@ export const MapSection = () => {
     });
     return Array.from(headers);
   }, [municipalities]);
-
-  // Get ethnic group categories from CustomTagsContext
-  const ethnicGroupCategories = useMemo(() => {
-    const visibleCastes = getVisibleCastes();
-    const categories: CustomTargetField[] = [];
-
-    visibleCastes.forEach((caste) => {
-      categories.push({
-        id: `ethnic_${caste.toLowerCase().replace(/\s+/g, '_')}`,
-        labelEn: caste,
-        labelNe: caste,
-        isEthnicGroup: true
-      });
-
-      // Add subfolders if they exist
-      const hierarchy = tags.casteHierarchy[caste];
-      if (hierarchy?.subfolders) {
-        hierarchy.subfolders.forEach((sub) => {
-          categories.push({
-            id: `ethnic_${caste.toLowerCase().replace(/\s+/g, '_')}_${sub.toLowerCase().replace(/\s+/g, '_')}`,
-            labelEn: `${caste} > ${sub}`,
-            labelNe: `${caste} > ${sub}`,
-            isEthnicGroup: true,
-            parentGroup: caste
-          });
-        });
-      }
-    });
-
-    return categories;
-  }, [getVisibleCastes, tags.casteHierarchy]);
 
   // Load category management categories from localStorage
   const categoryMgmtCategories = useMemo(() => {
@@ -310,53 +271,6 @@ export const MapSection = () => {
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
-  };
-
-  // Bulk upload ethnic group categories
-  const handleBulkUploadCategories = () => {
-    const lines = bulkCategories.split('\n').filter((line) => line.trim());
-    if (lines.length === 0) {
-      toast.error(language === 'ne' ? 'कुनै श्रेणी प्रविष्ट गरिएको छैन' : 'No categories entered');
-      return;
-    }
-
-    const newCastes: string[] = [];
-    const newHierarchy: Record<string, {subfolders: string[];surnames: string[];}> = {};
-
-    lines.forEach((line) => {
-      const trimmed = line.trim();
-      if (trimmed.includes('>')) {
-        // It's a subfolder: "Parent > Child"
-        const [parent, child] = trimmed.split('>').map((s) => s.trim());
-        if (parent && child) {
-          if (!newCastes.includes(parent)) {
-            newCastes.push(parent);
-          }
-          if (!newHierarchy[parent]) {
-            newHierarchy[parent] = { subfolders: [], surnames: [] };
-          }
-          if (!newHierarchy[parent].subfolders.includes(child)) {
-            newHierarchy[parent].subfolders.push(child);
-          }
-        }
-      } else if (trimmed) {
-        // It's a main category
-        if (!newCastes.includes(trimmed)) {
-          newCastes.push(trimmed);
-        }
-      }
-    });
-
-    importCasteData({
-      castes: newCastes,
-      casteHierarchy: newHierarchy
-    });
-
-    setBulkCategories('');
-    setBulkUploadDialogOpen(false);
-    toast.success(language === 'ne' ?
-    `${newCastes.length} श्रेणीहरू थपियो` :
-    `Added ${newCastes.length} categories`);
   };
 
 
@@ -544,50 +458,6 @@ export const MapSection = () => {
               </DialogContent>
             </Dialog>
 
-            {/* Bulk Upload Ethnic Categories Dialog */}
-            <Dialog open={bulkUploadDialogOpen} onOpenChange={setBulkUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <FolderTree className="h-4 w-4" />
-                  {language === 'ne' ? 'जातीय समूह थप्नुहोस्' : 'Ethnic Categories'}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>{language === 'ne' ? 'जातीय समूह श्रेणीहरू थप्नुहोस्' : 'Bulk Add Ethnic Categories'}</DialogTitle>
-                  <DialogDescription>
-                    {language === 'ne' ?
-                    'प्रति लाइन एक श्रेणी। उप-फोल्डरको लागि "अभिभावक > बच्चा" प्रयोग गर्नुहोस्।' :
-                    'One category per line. Use "Parent > Child" for subfolders.'}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <Textarea
-                    placeholder={language === 'ne' ?
-                    "ब्राह्मण\nक्षेत्री\nनेवार > श्रेष्ठ\nनेवार > जोशी\nमगर" :
-                    "Brahmin\nChhetri\nNewar > Shrestha\nNewar > Joshi\nMagar"}
-                    value={bulkCategories}
-                    onChange={(e) => setBulkCategories(e.target.value)}
-                    rows={8}
-                    className="font-mono text-sm" />
-
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'ne' ?
-                    'यी श्रेणीहरू जातीय समूह ट्याबमा थपिनेछन् र म्यापिङमा प्रयोग गर्न सकिन्छ।' :
-                    'These categories will be added to Ethnic Group tab and available for mapping.'}
-                  </p>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setBulkUploadDialogOpen(false)}>
-                    {language === 'ne' ? 'रद्द गर्नुहोस्' : 'Cancel'}
-                  </Button>
-                  <Button onClick={handleBulkUploadCategories}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    {language === 'ne' ? 'थप्नुहोस्' : 'Import'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
 
             <Button onClick={saveMappings} className="gap-2 ml-auto">
               <Save className="h-4 w-4" />
@@ -631,7 +501,6 @@ export const MapSection = () => {
               <TableBody>
                 {mappings.map((mapping, index) => {
                   const targetFieldInfo = allTargetFields.find((f) => f.id === mapping.targetField);
-                  const isEthnicTarget = mapping.targetField?.startsWith('ethnic_');
 
                   return (
                     <TableRow
@@ -693,18 +562,6 @@ export const MapSection = () => {
                               </SelectGroup>
                             }
                             
-                            {ethnicGroupCategories.length > 0 &&
-                            <SelectGroup>
-                                <SelectLabel>{language === 'ne' ? 'जातीय समूह' : 'Ethnic Groups'}</SelectLabel>
-                                {ethnicGroupCategories.map((cat) =>
-                              <SelectItem key={cat.id} value={cat.id}>
-                                    <span className={cat.parentGroup ? 'pl-2 text-muted-foreground' : ''}>
-                                      {cat.labelEn}
-                                    </span>
-                                  </SelectItem>
-                              )}
-                              </SelectGroup>
-                            }
                             
                             {categoryMgmtCategories.length > 0 &&
                             <SelectGroup>
