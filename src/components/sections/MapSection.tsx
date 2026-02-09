@@ -112,28 +112,8 @@ export const MapSection = () => {
     return Array.from(headers);
   }, [municipalities]);
 
-  // Load category management categories from localStorage
-  const categoryMgmtCategories = useMemo(() => {
-    try {
-      const saved = localStorage.getItem('voter_category_tree');
-      if (!saved) return [];
-      const cats: Category[] = JSON.parse(saved);
-      const flatten = (categories: Category[], parentPath = ''): {id: string;label: string;depth: number;}[] => {
-        const result: {id: string;label: string;depth: number;}[] = [];
-        for (const cat of categories) {
-          const path = parentPath ? `${parentPath} > ${cat.name}` : cat.name;
-          result.push({ id: `catmgmt_${cat.id}`, label: path, depth: parentPath ? 1 : 0 });
-          result.push(...flatten(cat.children, path));
-        }
-        return result;
-      };
-      return flatten(cats);
-    } catch {
-      return [];
-    }
-  }, []);
-
-  // Combined target fields (default + custom + ethnic groups)
+  // Combined target fields (default + custom)
+  // NOTE: Category Management categories are NOT included here as they should not be used as target fields
   const allTargetFields = useMemo(() => {
     return [
     ...APP_FIELDS,
@@ -557,20 +537,6 @@ export const MapSection = () => {
                                 {customTargetFields.map((field) =>
                               <SelectItem key={field.id} value={field.id}>
                                     {language === 'ne' ? field.labelNe : field.labelEn}
-                                  </SelectItem>
-                              )}
-                              </SelectGroup>
-                            }
-                            
-                            
-                            {categoryMgmtCategories.length > 0 &&
-                            <SelectGroup>
-                                <SelectLabel>{language === 'ne' ? 'श्रेणी व्यवस्थापन' : 'Category Management'}</SelectLabel>
-                                {categoryMgmtCategories.map((cat) =>
-                              <SelectItem key={cat.id} value={cat.id}>
-                                    <span className={cat.depth > 0 ? 'pl-2 text-muted-foreground' : ''}>
-                                      {cat.label}
-                                    </span>
                                   </SelectItem>
                               )}
                               </SelectGroup>
