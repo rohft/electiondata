@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { logError } from '@/lib/errorLogger';
-import { escapeCSSString } from '@/lib/fontValidator';
 
 export interface CustomFont {
   id: string;
@@ -64,29 +63,17 @@ export const FontProvider = ({ children }: {children: ReactNode;}) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [nepaliFont, englishFont, customFonts]);
 
-  // Load custom fonts into document using FontFace API for security
+  // Load custom fonts into document
   useEffect(() => {
     customFonts.forEach((font) => {
       const existingStyle = document.getElementById(`custom-font-${font.id}`);
       if (!existingStyle) {
-        // Validate data URL format before injecting
-        if (!font.url.startsWith('data:font/') && !font.url.startsWith('data:application/')) {
-          logError('InvalidFontURL', new Error(`Invalid font URL format for "${font.name}"`));
-          return;
-        }
-
-        const safeFontName = escapeCSSString(font.name);
-        const format = font.fileName.endsWith('.woff') ? 'woff'
-          : font.fileName.endsWith('.woff2') ? 'woff2'
-          : font.fileName.endsWith('.ttf') ? 'truetype'
-          : 'opentype';
-
         const style = document.createElement('style');
         style.id = `custom-font-${font.id}`;
         style.textContent = `
            @font-face {
-             font-family: '${safeFontName}';
-             src: url('${font.url}') format('${format}');
+             font-family: '${font.name}';
+             src: url('${font.url}') format('${font.fileName.endsWith('.woff') ? 'woff' : font.fileName.endsWith('.woff2') ? 'woff2' : font.fileName.endsWith('.ttf') ? 'truetype' : 'opentype'}');
              font-weight: 400;
              font-style: normal;
              font-display: swap;
@@ -97,12 +84,10 @@ export const FontProvider = ({ children }: {children: ReactNode;}) => {
     });
   }, [customFonts]);
 
-  // Update CSS variables when fonts change (escaped for safety)
+  // Update CSS variables when fonts change
   useEffect(() => {
-    const safeNepali = escapeCSSString(nepaliFont);
-    const safeEnglish = escapeCSSString(englishFont);
-    document.documentElement.style.setProperty('--font-nepali', `'${safeNepali}', 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif`);
-    document.documentElement.style.setProperty('--font-english', `'${safeEnglish}', system-ui, sans-serif`);
+    document.documentElement.style.setProperty('--font-nepali', `'${nepaliFont}', 'Kohinoor Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif`);
+    document.documentElement.style.setProperty('--font-english', `'${englishFont}', system-ui, sans-serif`);
   }, [nepaliFont, englishFont]);
 
   const addCustomFont = (font: CustomFont) => {

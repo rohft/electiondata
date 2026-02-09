@@ -118,8 +118,8 @@ export const MapSection = () => {
       const saved = localStorage.getItem('voter_category_tree');
       if (!saved) return [];
       const cats: Category[] = JSON.parse(saved);
-      const flatten = (categories: Category[], parentPath = ''): { id: string; label: string; depth: number }[] => {
-        const result: { id: string; label: string; depth: number }[] = [];
+      const flatten = (categories: Category[], parentPath = ''): {id: string;label: string;depth: number;}[] => {
+        const result: {id: string;label: string;depth: number;}[] = [];
         for (const cat of categories) {
           const path = parentPath ? `${parentPath} > ${cat.name}` : cat.name;
           result.push({ id: `catmgmt_${cat.id}`, label: path, depth: parentPath ? 1 : 0 });

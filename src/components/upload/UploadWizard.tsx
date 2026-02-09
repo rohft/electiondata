@@ -282,7 +282,7 @@ export const UploadWizard = () => {
                   if (!muni) return null;
                   const wardData = getWardDataForMunicipality(muni.id);
                   const totalVoters = wardData.reduce((sum, w) => sum + w.records.length, 0);
-                  const uploadedWards = wardData.filter(w => w.records.length > 0).length;
+                  const uploadedWards = wardData.filter((w) => w.records.length > 0).length;
                   return (
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold">{muni.name}</h3>
@@ -300,8 +300,8 @@ export const UploadWizard = () => {
                           <p className="text-xs text-muted-foreground">Total Voters</p>
                         </div>
                       </div>
-                    </div>
-                  );
+                    </div>);
+
                 })()}
               </CardContent>
             </Card>
@@ -309,20 +309,20 @@ export const UploadWizard = () => {
 
           <TabsContent value="table-view" className="mt-4">
             {currentMunicipalityData ?
-              <VoterDataTable
-                wards={getWardDataForMunicipality(currentMunicipalityData.id)}
-                municipalityName={currentMunicipalityData.name}
-                selectedWardIndex={selectedWardIndex}
-                onWardSelect={setSelectedWardIndex}
-                onUploadMore={() => setUploadDialogOpen(true)} /> :
-              municipalities.length > 0 ?
-              <VoterDataTable
-                wards={getWardDataForMunicipality(municipalities[0].id)}
-                municipalityName={municipalities[0].name}
-                selectedWardIndex={selectedWardIndex}
-                onWardSelect={setSelectedWardIndex}
-                onUploadMore={() => setUploadDialogOpen(true)} /> :
-              null}
+            <VoterDataTable
+              wards={getWardDataForMunicipality(currentMunicipalityData.id)}
+              municipalityName={currentMunicipalityData.name}
+              selectedWardIndex={selectedWardIndex}
+              onWardSelect={setSelectedWardIndex}
+              onUploadMore={() => setUploadDialogOpen(true)} /> :
+            municipalities.length > 0 ?
+            <VoterDataTable
+              wards={getWardDataForMunicipality(municipalities[0].id)}
+              municipalityName={municipalities[0].name}
+              selectedWardIndex={selectedWardIndex}
+              onWardSelect={setSelectedWardIndex}
+              onUploadMore={() => setUploadDialogOpen(true)} /> :
+            null}
           </TabsContent>
         </Tabs>
       </div>

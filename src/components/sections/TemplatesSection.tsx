@@ -372,10 +372,10 @@ export const TemplatesSection = () => {
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                              {Object.entries(segments.bySurname)
-                            .sort((a, b) => b[1] - a[1])
-                            .slice(0, 10)
-                            .map(([surname, count]) =>
+                              {Object.entries(segments.bySurname).
+                            sort((a, b) => b[1] - a[1]).
+                            slice(0, 10).
+                            map(([surname, count]) =>
                             <div key={surname} className="flex items-center justify-between p-2 bg-muted rounded">
                                     <span className="text-sm">{surname}</span>
                                     <span className="text-sm font-medium">{count.toLocaleString()}</span>

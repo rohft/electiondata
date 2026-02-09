@@ -1,10 +1,10 @@
 interface EzsiteApis {
-  getUserInfo(): Promise<{ data: any; error: any }>;
+  getUserInfo(): Promise<{data: any;error: any;}>;
   logout(): Promise<void>;
-  getDataByPage(options: any): Promise<{ data: any; error: any }>;
-  updateRow(options: any): Promise<{ data: any; error: any }>;
-  deleteRow(options: any): Promise<{ data: any; error: any }>;
-  addRow(options: any): Promise<{ data: any; error: any }>;
+  getDataByPage(options: any): Promise<{data: any;error: any;}>;
+  updateRow(options: any): Promise<{data: any;error: any;}>;
+  deleteRow(options: any): Promise<{data: any;error: any;}>;
+  addRow(options: any): Promise<{data: any;error: any;}>;
   [key: string]: any;
 }
 

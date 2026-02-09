@@ -119,11 +119,11 @@ const extractWardNumber = (wardName: string): number => {
 
 // Helper to fetch all pages from the database API
 const fetchAllPages = async (
-  tableId: number,
-  orderByField: string,
-  filters: Array<{ name: string; op: string; value: any }> = [],
-  pageSize = 500
-): Promise<any[]> => {
+tableId: number,
+orderByField: string,
+filters: Array<{name: string;op: string;value: any;}> = [],
+pageSize = 500)
+: Promise<any[]> => {
   const allItems: any[] = [];
   let pageNo = 1;
   let hasMore = true;
@@ -235,7 +235,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
               }
 
               wardBooths.push({
-                id: boothRow.booth_number,
+                id: `booth-${boothRow.id}`,
                 name: boothRow.booth_centre,
                 createdAt: new Date(),
                 voters: boothVoters,
@@ -308,8 +308,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       for (const ward of wardsList) {
         // Delete all voters for this ward
         const votersList = await fetchAllPages(VOTERS_TABLE_ID, 'id', [
-          { name: 'ward_id', op: 'Equal', value: ward.id }
-        ]);
+        { name: 'ward_id', op: 'Equal', value: ward.id }]
+        );
 
         for (const voter of votersList) {
           await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
@@ -317,8 +317,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
         // Delete all booths for this ward
         const boothsList = await fetchAllPages(BOOTHS_TABLE_ID, 'id', [
-          { name: 'ward_id', op: 'Equal', value: ward.id }
-        ]);
+        { name: 'ward_id', op: 'Equal', value: ward.id }]
+        );
 
         for (const booth of boothsList) {
           await _w.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
@@ -481,8 +481,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       if (dbWardId) {
         // Delete voters for this ward (paginated)
         const votersList = await fetchAllPages(VOTERS_TABLE_ID, 'id', [
-          { name: 'ward_id', op: 'Equal', value: dbWardId }
-        ]);
+        { name: 'ward_id', op: 'Equal', value: dbWardId }]
+        );
 
         for (const voter of votersList) {
           const { error: deleteError } = await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });
@@ -493,8 +493,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
 
         // Delete booths for this ward (paginated)
         const boothsList = await fetchAllPages(BOOTHS_TABLE_ID, 'id', [
-          { name: 'ward_id', op: 'Equal', value: dbWardId }
-        ]);
+        { name: 'ward_id', op: 'Equal', value: dbWardId }]
+        );
 
         for (const booth of boothsList) {
           const { error: deleteError } = await _w.ezsite.apis.tableDelete(BOOTHS_TABLE_ID, { ID: booth.id });
@@ -536,7 +536,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
         try {
           sessionStorage.setItem(STORAGE_KEY, serializeData(updated));
         } catch (error) {
-           logError('SaveSessionAfterDelete', error);
+          logError('SaveSessionAfterDelete', error);
         }
 
         return updated;
@@ -644,8 +644,6 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     if (!ward) return;
 
     const wardNumber = extractWardNumber(ward.name);
-    // Use a SINGLE ID for both local state and database
-    const boothId = crypto.randomUUID();
 
     try {
       // Get ward from database
@@ -663,6 +661,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       const dbWardId = wardData?.List?.[0]?.id;
 
       if (dbWardId) {
+        const boothId = crypto.randomUUID();
+
         const { error: boothError } = await _w.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
           ward_id: dbWardId,
           booth_number: boothId,
@@ -678,7 +678,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       logError('SaveBoothCentre', error);
     }
 
-    // Update local state using the SAME boothId
+    // Update local state
     setMunicipalities((prev) => {
       return prev.map((m) => {
         if (m.id === municipalityId) {
@@ -687,7 +687,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
             wards: m.wards.map((w) => {
               if (w.id === wardId) {
                 const newBooth: BoothCentre = {
-                  id: boothId,
+                  id: crypto.randomUUID(),
                   name: name.trim(),
                   createdAt: new Date(),
                   voters: []
@@ -773,9 +773,9 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       if (dbBoothId) {
         // Delete voters for this booth (paginated)
         const votersList = await fetchAllPages(VOTERS_TABLE_ID, 'id', [
-          { name: 'ward_id', op: 'Equal', value: dbWardId },
-          { name: 'booth_number', op: 'Equal', value: boothId }
-        ]);
+        { name: 'ward_id', op: 'Equal', value: dbWardId },
+        { name: 'booth_number', op: 'Equal', value: boothId }]
+        );
 
         for (const voter of votersList) {
           const { error: deleteError } = await _w.ezsite.apis.tableDelete(VOTERS_TABLE_ID, { ID: voter.id });

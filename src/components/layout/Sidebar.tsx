@@ -29,7 +29,6 @@ const navItems: NavItem[] = [
 { id: 'dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', path: '/dashboard' },
 { id: 'upload', icon: Upload, labelKey: 'nav.upload', path: '/upload' },
 { id: 'map', icon: Map, labelKey: 'nav.map', path: '/map' },
-{ id: 'caste', icon: Users2, labelKey: 'nav.ethnicGroup', path: '/caste' },
 { id: 'category-mgmt', icon: FolderTree, labelKey: 'nav.categoryMgmt', path: '/category-mgmt' },
 { id: 'segments', icon: PieChart, labelKey: 'nav.segments', path: '/segments' },
 { id: 'comparison', icon: GitCompare, labelKey: 'nav.comparison', path: '/comparison' },

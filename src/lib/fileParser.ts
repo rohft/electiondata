@@ -462,7 +462,7 @@ const validateFileSignature = async (file: File): Promise<void> => {
     }
   } else if (extension === 'csv') {
     // CSV should be text-like: check first bytes are printable ASCII or common Unicode
-    const hasNullBytes = bytes.some(b => b === 0x00);
+    const hasNullBytes = bytes.some((b) => b === 0x00);
     if (hasNullBytes) {
       throw new FileValidationError(
         'File content does not appear to be valid CSV (contains binary data)',
