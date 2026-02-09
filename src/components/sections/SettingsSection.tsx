@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sun, Moon, Monitor, Languages, Palette, Type, Upload, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { validateFontFile, sanitizeFontName, FontValidationError } from '@/lib/fontValidator';
 
 export const SettingsSection = () => {
   const { t, language, setLanguage } = useLanguage();
@@ -34,23 +35,24 @@ export const SettingsSection = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const validExtensions = ['.otf', '.ttf', '.woff', '.woff2'];
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-
-    if (!validExtensions.includes(ext)) {
-      toast.error('Invalid font format. Use .otf, .ttf, .woff, or .woff2');
-      return;
-    }
-
     try {
-      // Read file as data URL
+      // Validate file content (magic bytes, size, extension)
+      await validateFontFile(file);
+
+      // Read file as data URL only after validation passes
       const reader = new FileReader();
       reader.onload = (e) => {
         const url = e.target?.result as string;
-        const fontName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+        const rawFontName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+        const fontName = sanitizeFontName(rawFontName);
+
+        if (!fontName) {
+          toast.error('Invalid font name after sanitization');
+          return;
+        }
 
         addCustomFont({
-          id: Date.now().toString(),
+          id: crypto.randomUUID(),
           name: fontName,
           fileName: file.name,
           url: url
@@ -58,9 +60,16 @@ export const SettingsSection = () => {
 
         toast.success(`Font "${fontName}" uploaded successfully`);
       };
+      reader.onerror = () => {
+        toast.error('Failed to read font file');
+      };
       reader.readAsDataURL(file);
     } catch (error) {
-      toast.error('Failed to upload font');
+      if (error instanceof FontValidationError) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to upload font');
+      }
     }
 
     // Reset input
