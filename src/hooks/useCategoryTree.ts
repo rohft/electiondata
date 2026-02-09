@@ -1,10 +1,24 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Category } from "@/types/category";
+import { logError } from "@/lib/errorLogger";
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
+const STORAGE_KEY = "category_tree_data";
 const defaultCategories: Category[] = [];
 
+// Load initial data from localStorage
+function loadInitialCategories(): Category[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    logError("LoadCategoryTree", error);
+  }
+  return defaultCategories;
+}
 
 function findAndUpdate(
 categories: Category[],
@@ -49,8 +63,17 @@ function findCatById(categories: Category[], id: string): Category | null {
 }
 
 export function useCategoryTree() {
-  const [categories, setCategories] = useState<Category[]>(defaultCategories);
+  const [categories, setCategories] = useState<Category[]>(loadInitialCategories);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Persist categories to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
+    } catch (error) {
+      logError("SaveCategoryTree", error);
+    }
+  }, [categories]);
 
   const addCategory = useCallback((parentId: string | null, name: string) => {
     const newCat: Category = {

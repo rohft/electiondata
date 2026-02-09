@@ -1,10 +1,35 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { CategoryField, CategoryDataMap, FieldOption } from "@/types/categoryData";
+import { logError } from "@/lib/errorLogger";
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
+const STORAGE_KEY = 'category_data_map';
+
+// Load initial data from localStorage
+function loadInitialDataMap(): CategoryDataMap {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    logError('LoadCategoryDataMap', error);
+  }
+  return {};
+}
+
 export function useCategoryData() {
-  const [dataMap, setDataMap] = useState<CategoryDataMap>({});
+  const [dataMap, setDataMap] = useState<CategoryDataMap>(loadInitialDataMap);
+
+  // Persist dataMap to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataMap));
+    } catch (error) {
+      logError('SaveCategoryDataMap', error);
+    }
+  }, [dataMap]);
 
   const addField = useCallback((categoryId: string, field: Omit<CategoryField, "id">) => {
     const newField: CategoryField = { ...field, id: generateId() };

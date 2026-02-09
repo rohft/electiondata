@@ -236,7 +236,7 @@ export const CategorySection = () => {
 
           {/* View */}
           <div className="bg-card rounded-xl border min-h-[500px] overflow-auto">
-            {view === "flowchart" ? (
+            {view === "flowchart" ?
             <FlowchartTree
               categories={categories}
               selectedId={selectedId}
@@ -250,20 +250,20 @@ export const CategorySection = () => {
                 unlinkCategory(sourceId, targetId);
                 toast.success("Link removed");
               }}
-              onRenameLink={handleRenameLinkInit} />
-            ) : view === "icons" ? (
+              onRenameLink={handleRenameLinkInit} /> :
+            view === "icons" ?
             <IconGridView
               tags={getAllTags()}
               onDelete={handleDelete}
               onSelect={setSelectedId}
-              selectedId={selectedId} />
-            ) : (
+              selectedId={selectedId} /> :
+
             <CloudTagView
               tags={getAllTags()}
               onDelete={handleDelete}
               onSelect={setSelectedId}
               selectedId={selectedId} />
-            )}
+            }
           </div>
 
           {/* Linked categories panel */}

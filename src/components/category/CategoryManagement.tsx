@@ -26,6 +26,7 @@ import {
 "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { CategoryFieldMapping } from "./CategoryFieldMapping";
 
 interface CategoryManagementProps {
   categories: Category[];
@@ -419,6 +420,12 @@ export function CategoryManagement({
               <h2 className="text-lg font-bold text-foreground">{selectedCat.name}</h2>
               <p className="text-sm text-muted-foreground">Configure data inputs for this category</p>
             </div>
+
+            {/* Category Field Mapping Section */}
+            <CategoryFieldMapping 
+              categoryId={selectedId} 
+              categoryName={selectedCat.name} 
+            />
 
             {/* Add Field Buttons */}
             <div className="flex flex-wrap gap-2">
