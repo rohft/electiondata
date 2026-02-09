@@ -23,6 +23,7 @@ const translations: Translations = {
   'nav.templates': { en: 'Templates', ne: 'टेम्प्लेटहरू' },
   'nav.map': { en: 'Map Data', ne: 'डाटा म्यापिङ' },
   'nav.categoryMgmt': { en: 'Category Management', ne: 'श्रेणी व्यवस्थापन' },
+  'nav.chat': { en: 'Chat', ne: 'कुराकानी' },
   'map.title': { en: 'Map Data Fields', ne: 'डाटा फिल्डहरू म्याप गर्नुहोस्' },
   'map.description': { en: 'Map columns from your uploaded data to application fields', ne: 'अपलोड गरिएको डाटाबाट स्तम्भहरूलाई एप्लिकेशन फिल्डहरूमा म्याप गर्नुहोस्' },
   'map.sourceColumn': { en: 'Source Column', ne: 'स्रोत स्तम्भ' },

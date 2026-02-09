@@ -15,7 +15,8 @@ import {
   ChevronRight,
   FileText,
   Map,
-  FolderTree } from
+  FolderTree,
+  MessageCircle } from
 'lucide-react';
 
 type NavItem = {
@@ -34,7 +35,8 @@ const navItems: NavItem[] = [
 { id: 'comparison', icon: GitCompare, labelKey: 'nav.comparison', path: '/comparison' },
 { id: 'infographics', icon: BarChart3, labelKey: 'nav.infographics', path: '/infographics' },
 { id: 'templates', icon: FileText, labelKey: 'nav.templates', path: '/templates' },
-{ id: 'export', icon: Download, labelKey: 'nav.export', path: '/export' }];
+{ id: 'export', icon: Download, labelKey: 'nav.export', path: '/export' },
+{ id: 'chat', icon: MessageCircle, labelKey: 'nav.chat', path: '/chat' }];
 
 
 interface SidebarProps {

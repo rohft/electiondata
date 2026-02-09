@@ -16,6 +16,7 @@ import HomePage from '@/pages/Home';
 import SignUp from '@/pages/SignUp';
 import SignIn from '@/pages/SignIn';
 import OnAuthSuccess from '@/pages/OnAuthSuccess';
+import Chat from '@/pages/Chat';
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () =>
                       <Route path="/templates" element={<ProtectedRoute><MainLayout section="templates" /></ProtectedRoute>} />
                       <Route path="/export" element={<ProtectedRoute><MainLayout section="export" /></ProtectedRoute>} />
                       <Route path="/settings" element={<ProtectedRoute><MainLayout section="settings" /></ProtectedRoute>} />
+                      <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
                       
                       {/* Public Routes - Redirect if Already Authenticated */}
                       <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
