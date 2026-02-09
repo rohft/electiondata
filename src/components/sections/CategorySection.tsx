@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FlowchartTree } from "@/components/category/FlowchartTree";
 import { LinkedCategoryView } from "@/components/category/LinkedCategoryView";
 import { CloudTagView } from "@/components/category/CloudTagView";
+import { IconGridView } from "@/components/category/IconGridView";
 import { BulkUploadDialog } from "@/components/category/BulkUploadDialog";
 import { RenameDialog } from "@/components/category/RenameDialog";
 import { LinkDialog } from "@/components/category/LinkDialog";
@@ -20,7 +21,8 @@ import {
   GitBranch,
   Trash2,
   LayoutList,
-  Table2 } from
+  Table2,
+  Grid3x3 } from
 "lucide-react";
 import { toast } from "sonner";
 import { Category } from "@/types/category";
@@ -68,7 +70,7 @@ export const CategorySection = () => {
   const [renameLinkOpen, setRenameLinkOpen] = useState(false);
   const [renameLinkTarget, setRenameLinkTarget] = useState<{sourceId: string;targetId: string;currentName: string;} | null>(null);
   const [newCatName, setNewCatName] = useState("");
-  const [view, setView] = useState<"flowchart" | "tags">("flowchart");
+  const [view, setView] = useState<"flowchart" | "tags" | "icons">("flowchart");
 
   const handleAdd = (parentId: string | null) => {
     const name = parentId ? "New Subcategory" : "New Category";
@@ -208,6 +210,17 @@ export const CategorySection = () => {
                 Flowchart
               </button>
               <button
+                onClick={() => setView("icons")}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                view === "icons" ?
+                "bg-primary text-primary-foreground" :
+                "text-muted-foreground hover:text-foreground"}`
+                }>
+
+                <Grid3x3 className="w-4 h-4 inline mr-1.5" />
+                Icons
+              </button>
+              <button
                 onClick={() => setView("tags")}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 view === "tags" ?
@@ -223,7 +236,7 @@ export const CategorySection = () => {
 
           {/* View */}
           <div className="bg-card rounded-xl border min-h-[500px] overflow-auto">
-            {view === "flowchart" ?
+            {view === "flowchart" ? (
             <FlowchartTree
               categories={categories}
               selectedId={selectedId}
@@ -237,16 +250,20 @@ export const CategorySection = () => {
                 unlinkCategory(sourceId, targetId);
                 toast.success("Link removed");
               }}
-              onRenameLink={handleRenameLinkInit} /> :
-
-
+              onRenameLink={handleRenameLinkInit} />
+            ) : view === "icons" ? (
+            <IconGridView
+              tags={getAllTags()}
+              onDelete={handleDelete}
+              onSelect={setSelectedId}
+              selectedId={selectedId} />
+            ) : (
             <CloudTagView
               tags={getAllTags()}
               onDelete={handleDelete}
               onSelect={setSelectedId}
               selectedId={selectedId} />
-
-            }
+            )}
           </div>
 
           {/* Linked categories panel */}
