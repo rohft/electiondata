@@ -22,11 +22,14 @@ import {
   ListChecks,
   List,
   FileText,
-  X } from
+  X,
+  Table2,
+  LayoutList } from
 "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { CategoryFieldMapping } from "./CategoryFieldMapping";
+import { SpreadsheetTable, SpreadsheetColumn } from "@/components/data/SpreadsheetTable";
 
 interface CategoryManagementProps {
   categories: Category[];
@@ -55,6 +58,27 @@ function findCategoryById(categories: Category[], id: string): Category | null {
     if (found) return found;
   }
   return null;
+}
+
+function flattenCategories(categories: Category[], depth = 0, parentPath = ""): Array<Category & { depth: number; parentPath: string }> {
+  const result: Array<Category & { depth: number; parentPath: string }> = [];
+  for (const cat of categories) {
+    result.push({
+      ...cat,
+      depth,
+      parentPath: parentPath || "Root"
+    });
+    if (cat.children.length > 0) {
+      result.push(
+        ...flattenCategories(
+          cat.children,
+          depth + 1,
+          parentPath ? `${parentPath} > ${cat.name}` : cat.name
+        )
+      );
+    }
+  }
+  return result;
 }
 
 function CategoryNode({
@@ -335,6 +359,7 @@ export function CategoryManagement({
     categories.forEach((cat) => ids.add(cat.id));
     return ids;
   });
+  const [viewMode, setViewMode] = useState<"tree" | "table">("tree");
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -379,41 +404,100 @@ export function CategoryManagement({
     toast.success(`Added ${fieldType?.label} field`);
   };
 
-  return (
-    <div className="flex min-h-[500px]">
-      {/* Left: Category Tree */}
-      <div className="w-72 border-r border-border p-4 space-y-3 overflow-auto shrink-0">
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="New category..."
-            value={newCatName}
-            onChange={(e) => setNewCatName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAddRoot()}
-            className="h-9 text-sm" />
+  const flatCategories = flattenCategories(categories);
 
-          <Button size="icon" variant="outline" onClick={handleAddRoot} disabled={!newCatName.trim()} className="h-9 w-9 shrink-0">
-            <Plus className="w-4 h-4" />
+  const categoryColumns: SpreadsheetColumn[] = [
+    { key: "name", labelNe: "नाम", labelEn: "Name", width: "min-w-[200px]", sortable: true, visible: true },
+    { key: "parentPath", labelNe: "अभिभावक", labelEn: "Parent Path", width: "min-w-[220px]", sortable: true, visible: true },
+    { key: "depth", labelNe: "गहिराई", labelEn: "Depth", width: "w-20", sortable: true, visible: true },
+    { key: "childCount", labelNe: "बच्चा", labelEn: "Children", width: "w-24", sortable: true, visible: true },
+    { key: "linkCount", labelNe: "लिंक", labelEn: "Links", width: "w-20", sortable: true, visible: true },
+    { key: "id", labelNe: "आईडी", labelEn: "ID", width: "w-32", sortable: false, visible: false },
+  ];
+
+  return (
+    <div className="flex flex-col min-h-[500px]">
+      {/* Top: View Toggle */}
+      <div className="flex items-center justify-between border-b border-border p-4 bg-muted/30">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === "tree" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("tree")}
+            className="gap-2">
+            <LayoutList className="w-4 h-4" />
+            Tree View
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+            className="gap-2">
+            <Table2 className="w-4 h-4" />
+            Table View
           </Button>
         </div>
-        <div className="space-y-0.5">
-          {categories.map((cat) =>
-          <CategoryNode
-            key={cat.id}
-            category={cat}
-            depth={0}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onDelete={handleDelete}
-            onAddChild={handleAddChild}
-            expandedIds={expandedIds}
-            toggleExpand={toggleExpand} />
-
-          )}
-        </div>
+        {viewMode === "tree" && (
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="New category..."
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddRoot()}
+              className="h-9 text-sm w-48" />
+            <Button size="icon" variant="outline" onClick={handleAddRoot} disabled={!newCatName.trim()} className="h-9 w-9 shrink-0">
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Right: Data Panel */}
-      <div className="flex-1 p-6 overflow-auto">
+      {viewMode === "table" ? (
+        /* Table View */
+        <div className="flex-1 p-6 overflow-auto">
+          <SpreadsheetTable
+            data={flatCategories}
+            columns={categoryColumns}
+            getValue={(row, key) => {
+              if (key === "childCount") return row.children.length;
+              if (key === "linkCount") return row.linkedIds.length;
+              return (row as any)[key] || "";
+            }}
+            onRowClick={(row) => setSelectedId(row.id)}
+            getRowId={(row) => row.id}
+            title="Category Data Table"
+            exportFileName="categories"
+            showSearch={true}
+            showColumnToggle={true}
+            showLanguageToggle={false}
+            showExport={true}
+            pageSize={25}
+            emptyMessage="No categories available" />
+        </div>
+      ) : (
+        /* Tree View */
+        <div className="flex min-h-[500px]">
+          {/* Left: Category Tree */}
+          <div className="w-72 border-r border-border p-4 space-y-3 overflow-auto shrink-0">
+            <div className="space-y-0.5">
+              {categories.map((cat) =>
+              <CategoryNode
+                key={cat.id}
+                category={cat}
+                depth={0}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                onDelete={handleDelete}
+                onAddChild={handleAddChild}
+                expandedIds={expandedIds}
+                toggleExpand={toggleExpand} />
+
+              )}
+            </div>
+          </div>
+
+          {/* Right: Data Panel */}
+          <div className="flex-1 p-6 overflow-auto">
         {selectedCat ?
         <div className="space-y-6 max-w-2xl">
             <div>
@@ -476,7 +560,9 @@ export function CategoryManagement({
             <p className="text-sm">Select a category from the left to manage its data fields</p>
           </div>
         }
-      </div>
+          </div>
+        </div>
+      )}
     </div>);
 
 }
