@@ -422,10 +422,10 @@ export function CategoryManagement({
             </div>
 
             {/* Category Field Mapping Section */}
-            <CategoryFieldMapping 
-              categoryId={selectedId} 
-              categoryName={selectedCat.name} 
-            />
+            <CategoryFieldMapping
+            categoryId={selectedId}
+            categoryName={selectedCat.name} />
+
 
             {/* Add Field Buttons */}
             <div className="flex flex-wrap gap-2">

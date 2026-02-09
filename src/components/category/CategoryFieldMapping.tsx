@@ -6,30 +6,30 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
+  SelectValue } from
+'@/components/ui/select';
 import { Trash2, ArrowRight, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logError } from '@/lib/errorLogger';
 
 const _w = window as any;
-const MAPPINGS_TABLE_ID = 74772;
+const MAPPINGS_TABLE_ID = 74918;
 
 // Source columns available from voter data
 const AVAILABLE_SOURCE_COLUMNS = [
-  { value: 'age', label: 'Age' },
-  { value: 'gender', label: 'Gender' },
-  { value: 'surname', label: 'Surname' },
-  { value: 'fullName', label: 'Full Name' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'email', label: 'Email' },
-  { value: 'occupation', label: 'Occupation' },
-  { value: 'tole', label: 'Tole' },
-  { value: 'ward', label: 'Ward' },
-  { value: 'municipality', label: 'Municipality' },
-  { value: 'partyName', label: 'Party Name' },
-  { value: 'voterStatus', label: 'Voter Status' }
-];
+{ value: 'age', label: 'Age' },
+{ value: 'gender', label: 'Gender' },
+{ value: 'surname', label: 'Surname' },
+{ value: 'fullName', label: 'Full Name' },
+{ value: 'phone', label: 'Phone' },
+{ value: 'email', label: 'Email' },
+{ value: 'occupation', label: 'Occupation' },
+{ value: 'tole', label: 'Tole' },
+{ value: 'ward', label: 'Ward' },
+{ value: 'municipality', label: 'Municipality' },
+{ value: 'partyName', label: 'Party Name' },
+{ value: 'voterStatus', label: 'Voter Status' }];
+
 
 interface CategoryMapping {
   id: number;
@@ -61,8 +61,8 @@ export function CategoryFieldMapping({ categoryId, categoryName }: CategoryField
         OrderByField: 'id',
         IsAsc: true,
         Filters: [
-          { name: 'category_id', op: 'Equal', value: categoryId }
-        ]
+        { name: 'category_id', op: 'Equal', value: categoryId }]
+
       });
 
       if (error) throw error;
@@ -80,7 +80,7 @@ export function CategoryFieldMapping({ categoryId, categoryName }: CategoryField
     }
 
     // Check if mapping already exists
-    const exists = mappings.some(m => m.source_column === selectedSourceColumn);
+    const exists = mappings.some((m) => m.source_column === selectedSourceColumn);
     if (exists) {
       toast.error('This source column is already mapped to this category');
       return;
@@ -125,7 +125,7 @@ export function CategoryFieldMapping({ categoryId, categoryName }: CategoryField
   };
 
   const getSourceColumnLabel = (value: string) => {
-    return AVAILABLE_SOURCE_COLUMNS.find(col => col.value === value)?.label || value;
+    return AVAILABLE_SOURCE_COLUMNS.find((col) => col.value === value)?.label || value;
   };
 
   return (
@@ -147,34 +147,34 @@ export function CategoryFieldMapping({ categoryId, categoryName }: CategoryField
               <SelectValue placeholder="Select source column..." />
             </SelectTrigger>
             <SelectContent>
-              {AVAILABLE_SOURCE_COLUMNS.map((col) => (
-                <SelectItem key={col.value} value={col.value}>
+              {AVAILABLE_SOURCE_COLUMNS.map((col) =>
+              <SelectItem key={col.value} value={col.value}>
                   {col.label}
                 </SelectItem>
-              ))}
+              )}
             </SelectContent>
           </Select>
           <Button
             size="sm"
             onClick={handleAddMapping}
             disabled={!selectedSourceColumn || loading}
-            className="h-9"
-          >
+            className="h-9">
+
             Map
           </Button>
         </div>
       </div>
 
       {/* Display existing mappings */}
-      {mappings.length > 0 && (
-        <div className="space-y-2">
+      {mappings.length > 0 &&
+      <div className="space-y-2">
           <Label className="text-xs">Current Mappings</Label>
           <div className="space-y-1.5">
-            {mappings.map((mapping) => (
-              <div
-                key={mapping.id}
-                className="flex items-center gap-2 p-2 rounded-md bg-background border border-border hover:border-primary/50 transition-colors group"
-              >
+            {mappings.map((mapping) =>
+          <div
+            key={mapping.id}
+            className="flex items-center gap-2 p-2 rounded-md bg-background border border-border hover:border-primary/50 transition-colors group">
+
                 <div className="flex-1 flex items-center gap-2 text-sm">
                   <span className="font-medium text-muted-foreground">
                     {getSourceColumnLabel(mapping.source_column)}
@@ -186,24 +186,24 @@ export function CategoryFieldMapping({ categoryId, categoryName }: CategoryField
                   <span className="text-xs text-muted-foreground">(Target Field)</span>
                 </div>
                 <button
-                  onClick={() => handleDeleteMapping(mapping.id, mapping.source_column)}
-                  disabled={loading}
-                  className="w-7 h-7 flex items-center justify-center rounded hover:bg-destructive hover:text-destructive-foreground transition-colors opacity-0 group-hover:opacity-100"
-                  title="Remove mapping"
-                >
+              onClick={() => handleDeleteMapping(mapping.id, mapping.source_column)}
+              disabled={loading}
+              className="w-7 h-7 flex items-center justify-center rounded hover:bg-destructive hover:text-destructive-foreground transition-colors opacity-0 group-hover:opacity-100"
+              title="Remove mapping">
+
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ))}
+          )}
           </div>
         </div>
-      )}
+      }
 
-      {mappings.length === 0 && (
-        <div className="text-center py-4 text-xs text-muted-foreground">
+      {mappings.length === 0 &&
+      <div className="text-center py-4 text-xs text-muted-foreground">
           No mappings yet. Add a mapping above to connect this category to voter data.
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }

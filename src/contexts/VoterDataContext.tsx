@@ -209,10 +209,15 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
           for (const voterRow of votersList) {
             if (voterRow.ward_id === wardRow.id) {
               try {
-                const voterData = JSON.parse(voterRow.voter_data);
-                wardVoters.push(voterData);
+                // Check if voter_data exists and is not empty
+                if (voterRow.voter_data && typeof voterRow.voter_data === 'string' && voterRow.voter_data.trim()) {
+                  const voterData = JSON.parse(voterRow.voter_data);
+                  wardVoters.push(voterData);
+                } else {
+                  logError('ParseVoterData', `Empty or invalid voter_data for voter ID ${voterRow.id}`);
+                }
               } catch (e) {
-                logError('ParseVoterData', e);
+                logError('ParseVoterData', `Failed to parse voter ${voterRow.id}: ${e}`);
               }
             }
           }
@@ -226,10 +231,15 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
               for (const voterRow of votersList) {
                 if (voterRow.ward_id === wardRow.id && voterRow.booth_number === boothRow.booth_number) {
                   try {
-                    const voterData = JSON.parse(voterRow.voter_data);
-                    boothVoters.push(voterData);
+                    // Check if voter_data exists and is not empty
+                    if (voterRow.voter_data && typeof voterRow.voter_data === 'string' && voterRow.voter_data.trim()) {
+                      const voterData = JSON.parse(voterRow.voter_data);
+                      boothVoters.push(voterData);
+                    } else {
+                      logError('ParseBoothVoterData', `Empty or invalid voter_data for voter ID ${voterRow.id}`);
+                    }
                   } catch (e) {
-                    logError('ParseBoothVoterData', e);
+                    logError('ParseBoothVoterData', `Failed to parse voter ${voterRow.id}: ${e}`);
                   }
                 }
               }
