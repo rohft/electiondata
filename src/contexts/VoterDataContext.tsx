@@ -235,7 +235,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
               }
 
               wardBooths.push({
-                id: `booth-${boothRow.id}`,
+                id: boothRow.booth_number,
                 name: boothRow.booth_centre,
                 createdAt: new Date(),
                 voters: boothVoters,
@@ -644,6 +644,8 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
     if (!ward) return;
 
     const wardNumber = extractWardNumber(ward.name);
+    // Use a SINGLE ID for both local state and database
+    const boothId = crypto.randomUUID();
 
     try {
       // Get ward from database
@@ -661,8 +663,6 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       const dbWardId = wardData?.List?.[0]?.id;
 
       if (dbWardId) {
-        const boothId = crypto.randomUUID();
-
         const { error: boothError } = await _w.ezsite.apis.tableCreate(BOOTHS_TABLE_ID, {
           ward_id: dbWardId,
           booth_number: boothId,
@@ -678,7 +678,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
       logError('SaveBoothCentre', error);
     }
 
-    // Update local state
+    // Update local state using the SAME boothId
     setMunicipalities((prev) => {
       return prev.map((m) => {
         if (m.id === municipalityId) {
@@ -687,7 +687,7 @@ export const VoterDataProvider: React.FC<{children: React.ReactNode;}> = ({ chil
             wards: m.wards.map((w) => {
               if (w.id === wardId) {
                 const newBooth: BoothCentre = {
-                  id: crypto.randomUUID(),
+                  id: boothId,
                   name: name.trim(),
                   createdAt: new Date(),
                   voters: []
